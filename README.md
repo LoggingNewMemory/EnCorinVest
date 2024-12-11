@@ -1,4 +1,4 @@
-![EnCorinVest Banner](https://github.com/user-attachments/assets/dffefeac-e211-4c9f-8236-fa8bb5df0a4f)
+[EnCorinVest Banner](https://github.com/user-attachments/assets/dffefeac-e211-4c9f-8236-fa8bb5df0a4f)
 Performance Module, Collaboration between CorinXMTKVest and Encore Tweaks
 
 Dev: Kanagawa Yamada <br />
