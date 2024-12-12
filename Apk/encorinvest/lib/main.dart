@@ -5,7 +5,39 @@ void main() {
   runApp(MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
+  @override
+  _MyAppState createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  bool _hasRootAccess = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkRootAccess();
+  }
+
+  Future<void> _checkRootAccess() async {
+    try {
+      var result = await run('su', ['-c', 'id']);
+      if (result.exitCode == 0) {
+        setState(() {
+          _hasRootAccess = true;
+        });
+      } else {
+        setState(() {
+          _hasRootAccess = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _hasRootAccess = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -39,10 +71,20 @@ class MyApp extends StatelessWidget {
                     'assets/logo.png', // Replace with your image path
                     height: 100, // Adjust height as needed
                   ),
-                  SizedBox(height: 20), // Space between image and buttons
+                  SizedBox(
+                      height: 10), // Space between image and root access text
+                  Text(
+                    'Root Access: ${_hasRootAccess ? 'Yes' : 'No'}',
+                    style: TextStyle(
+                        fontSize: 16,
+                        color: _hasRootAccess
+                            ? Color(0xFF34C759)
+                            : Color(
+                                0xFFE74C3C)), // Set text color based on root access
+                  ),
+                  SizedBox(height: 20), // Space between button sections
                 ],
               ),
-              // Power Save Button with Description
               Column(
                 crossAxisAlignment:
                     CrossAxisAlignment.center, // Center the description
