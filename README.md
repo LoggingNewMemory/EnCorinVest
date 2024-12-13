@@ -3,9 +3,7 @@
 Performance Module, Collaboration between CorinXMTKVest and Encore Tweaks
 
 Dev: Kanagawa Yamada <br />
-Version: 1.0 <br />
 Support: Mediateks (Helio, Dimensity) <br />
-Download: (UPLOADING) <br />
 
 DO NOT COMBINE WITH ANY PERFORMANCE MODULE
 
