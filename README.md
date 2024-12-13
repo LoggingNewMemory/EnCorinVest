@@ -17,3 +17,4 @@ How to use?
 Dev Notes
 - Performance mode will kill any apps
 - If EnCorinVest installation fails, you have to install it by yourself (The APK is provided in GitHub)
+- A user report system crash on Android 13 - Pova 5 pro LH8n (when changing mode)
