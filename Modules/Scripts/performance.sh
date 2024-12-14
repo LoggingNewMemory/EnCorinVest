@@ -343,13 +343,7 @@ echo "1" > /sys/pnpmgr/fpsgo_boost/fbt/ultra_rescue
 # Power Save Mode Off
 settings put global low_power 0
 
-# Kill all apps
-for pkg in $(pm list packages -3 | cut -f 2 -d ":"); do am force-stop $pkg; done
-
-# Power Save Mode Off
-settings put global low_power 0
-
-su -lp 2000 -c "cmd notification post -S bigtext -t 'EnCorinVest' TagPerformance 'performance Mode! - カリン・ウィクス & 安可'"
+su -lp 2000 -c "cmd notification post -S bigtext -t 'EnCorinVest' TagPerformance 'Performance Mode! - カリン・ウィクス & 安可'"
 
 wait
 exit 0

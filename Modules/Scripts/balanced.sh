@@ -56,43 +56,6 @@ for schedtweak in /sys/devices/system/cpu/cpufreq/schedutil; do
 
 done &
 
-# Restore CCCI & debug
-tweak 2 /sys/kernel/ccci/debug
-tweak 0 /sys/kernel/tracing/tracing_on
-
-for kernelperfdebug in /proc/sys/kernel; do
-    tweak -1 "$kernelperfdebug/perf_event_paranoid"
-    tweak 75 "$kernelperfdebug/perf_cpu_time_max_percent"
-
-    tweak on "$kernelperfdebug/printk_devkmsg"
-    tweak 1 "$kernelperfdebug/sched_schedstats"
-    tweak 0 "$kernelperfdebug/sched_child_runs_first"
-    tweak 32 "$kernelperfdebug/sched_nr_migrate"
-    tweak 1 "$kernelperfdebug/sched_migration_cost_ns"
-    tweak 3000000 "$kernelperfdebug/sched_min_granularity_ns"
-    tweak 2000000 "$kernelperfdebug/sched_wakeup_granularity_ns"
-
-    tweak 1000000 "$kernelperfdebug/sched_latency_ns"
-    tweak 256 "$kernelperfdebug/sched_util_clamp_max"
-    tweak 256 "$kernelperfdebug/sched_util_clamp_min"
-    tweak 0 "$kernelperfdebug/sched_tunable_scaling"
-    tweak 1 "$kernelperfdebug/sched_energy_aware"
-    tweak 0 "$kernelperfdebug/sched_util_clamp_min_rt_default"
-    tweak 4194304 "$kernelperfdebug/sched_deadline_period_max_us"
-    tweak 100 "$kernelperfdebug/sched_deadline_period_min_us"
-
-    tweak 1000000 "$kernelperfdebug/sched_rt_period_us"
-    tweak 950000 "$kernelperfdebug/sched_rt_runtime_us"
-    tweak 1 "$kernelperfdebug/sched_pelt_multiplier"
-    tweak -1 "$kernelperfdebug/panic"
-    tweak 1 "$kernelperfdebug/panic_on_oops"
-    tweak 0 "$kernelperfdebug/panic_on_rcu_stall"
-    tweak 0 "$kernelperfdebug/panic_on_warn"
-    tweak 7 4 1 7 "$kernelperfdebug/printk"
-    tweak on "$kernelperfdebug/printk_devkmsg"
-
-done &
-
 tweak menu /sys/devices/system/cpu/cpuidle/current_governor
 tweak 0 /sys/module/kernel/parameters/panic_on_warn
 
@@ -101,6 +64,12 @@ for vmtweak in /proc/sys/vm; do
     tweak 1 "$vmtweak/stat_interval"
     tweak 20 "$vmtweak/compaction_proactiveness"
     tweak 80 "$vmtweak/vfs_cache_pressure"
+done &
+
+for schedtweak in /sys/devices/system/cpu/cpufreq/schedutil; do
+
+    tweak 1000 "$schedtweak/rate_limit_us"
+
 done &
 
 if [ -f "/sys/kernel/debug/sched_features" ]; then
@@ -154,22 +123,6 @@ done &
 
 tweak 100 /proc/sys/vm/vfs_cache_pressure
 
-# Restore CPU Frequency
-
-for path in /sys/devices/system/cpu/cpufreq/policy*; do
-	tweak schedutil $path/scaling_governor
-done &
-
-# Corin X MTKVest Script
-
-for cpus in /sys/devices/system/cpu/cpu*/online; do
-    tweak 1 $cpus 2>/dev/null
-done
-
-tweak 1 /proc/trans_scheduler/enable
-tweak 0 /proc/game_state
-tweak always_on /sys/class/misc/mali0/device/power_policy
-
 # Restore Devfreq Frequencies
 
 DEVFREQ_FILE="/sys/class/devfreq/mtk-dvfsrc-devfreq/available_frequencies"
@@ -202,66 +155,6 @@ for policy in /sys/devices/system/cpu/cpufreq/policy*/; do
         echo "$default_min" > "${policy}scaling_min_freq"
 
     fi
-done
-
-# Restore default CPU Value
-
-for cpuset_tweak in /dev/cpuset
-    do
-		tweak "0-6" $cpuset_tweak/cpus
-		tweak "0-1" $cpuset_tweak/background/cpus
-		tweak "0-3" $cpuset_tweak/system-background/cpus
-		tweak "0-6" $cpuset_tweak/foreground/cpus
-		tweak "0-6" $cpuset_tweak/top-app/cpus
-		tweak "0-2" $cpuset_tweak/restricted/cpus
-		tweak "0-6" $cpuset_tweak/camera-daemon/cpus
-        tweak 0 $cpuset_tweak/memory_pressure_enabled
-        tweak 1 $cpuset_tweak/sched_load_balance
-        tweak 1 $cpuset_tweak/foreground/sched_load_balance
-        tweak 1 $cpuset_tweak/sched_load_balance
-        tweak 1 $cpuset_tweak/foreground-l/sched_load_balance
-        tweak 1 $cpuset_tweak/dex2oat/sched_load_balance
-    done
-
-    for cpuctl_tweak in /dev/cpuctl
-    do 
-        tweak 0 $cpuctl_tweak/rt/cpu.uclamp.latency_sensitive
-        tweak 0 $cpuctl_tweak/foreground/cpu.uclamp.latency_sensitive
-        tweak 1 $cpuctl_tweak/nnapi-hal/cpu.uclamp.latency_sensitive
-        tweak 0 $cpuctl_tweak/dex2oat/cpu.uclamp.latency_sensitive
-        tweak 0 $cpuctl_tweak/top-app/cpu.uclamp.latency_sensitive
-        tweak 0 $cpuctl_tweak/foreground-l/cpu.uclamp.latency_sensitive
-
-    done
-
-# Restore Original Memory Optimization
-
-for memtweak in /sys/kernel/mm/transparent_hugepage
-    do
-        tweak never $memtweak/enabled
-        tweak never $memtweak/shmem_enabled
-    done
-
-# Restore RAM Tweaks
-
-for ramtweak in /sys/block/ram*/bdi
-    do
-    tweak 128 $ramtweak/read_ahead_kb
-done
-
-tweak 0 /sys/class/misc/mali0/device/js_ctx_scheduling_mode
-tweak 0 /sys/module/task_turbo/parameters/feats
-tweak 0 /sys/kernel/helio-dvfsrc/dvfsrc_qos_mode
-
-# Restore Virtual Memory Tweaks
-
-for vim_mem in /dev/memcg
-    do
-
-tweak 100 "$vim_mem/memory.swappiness"
-tweak 60 "$vim_mem/apps/memory.swappiness"
-tweak 60 "$vim_mem/system/memory.swappiness"
-
 done
 
 # Enable Battery Efficient
