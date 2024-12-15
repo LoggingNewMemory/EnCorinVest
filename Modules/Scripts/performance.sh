@@ -174,23 +174,27 @@ tweak $highest_freq /sys/class/devfreq/mtk-dvfsrc-devfreq/max_freq
 # CPU Max
 
 # Force CPU to highest possible OPP
+
 for path in /sys/devices/system/cpu/cpufreq/policy*; do
-	tweak performance $path/scaling_governor
+	tweak performance "$path/scaling_governor"
 done &
 
-# Set CPU Freq to Max
+if [ -d /proc/ppm ]; then
+	cluster=0
+	for path in /sys/devices/system/cpu/cpufreq/policy*; do
+		cpu_maxfreq=$(cat $path/cpuinfo_max_freq)
+		tweak "$cluster $cpu_maxfreq" /proc/ppm/policy/hard_userlimit_max_cpu_freq
+		tweak "$cluster $cpu_maxfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
+		((cluster++))
+	done
+fi
 
-for policy in /sys/devices/system/cpu/cpufreq/policy*/; do
-    if [ -d "$policy" ]; then
-        chmod 644 "${policy}scaling_max_freq"
-        chmod 644 "${policy}scaling_min_freq"
-
-        default_max=$(cat "${policy}cpuinfo_max_freq")
-
-        echo "$default_max" > "${policy}scaling_max_freq"
-        echo "$default_max" > "${policy}scaling_min_freq"
-    fi
-done &
+for path in /sys/devices/system/cpu/*/cpufreq; do
+	cpu_maxfreq=$(cat $path/cpuinfo_max_freq)
+	tweak "$cpu_maxfreq" $path/scaling_max_freq
+	tweak "$cpu_maxfreq" $path/scaling_min_freq
+	tweak "cpu$(awk '{print $1}' $path/affected_cpus) $cpu_maxfreq" /sys/devices/virtual/thermal/thermal_message/cpu_limits
+done
 
 # CPU Tweaks
 

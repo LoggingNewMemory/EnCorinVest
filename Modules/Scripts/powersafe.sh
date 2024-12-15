@@ -143,17 +143,29 @@ done &
 
 # Set CPU Freq to Minimum
 
-for policy in /sys/devices/system/cpu/cpufreq/policy*/; do
-    if [ -d "$policy" ]; then
-        chmod 644 "${policy}scaling_max_freq"
-        chmod 644 "${policy}scaling_min_freq"
-
-        default_min=$(cat "${policy}cpuinfo_min_freq")
-
-        echo "$default_min" > "${policy}scaling_max_freq"
-        echo "$default_min" > "${policy}scaling_min_freq"
-    fi
+for path in /sys/devices/system/cpu/cpufreq/policy*; do
+	tweak "$default_cpu_gov" "$path/scaling_governor"
 done &
+
+if [ -d /proc/ppm ]; then
+	cluster=0
+	for path in /sys/devices/system/cpu/cpufreq/policy*; do
+		cpu_maxfreq=$(cat $path/cpuinfo_max_freq)
+		cpu_minfreq=$(cat $path/cpuinfo_min_freq)
+		# Set the hard user limit to the minimum frequency
+		tweak "$cluster $cpu_minfreq" /proc/ppm/policy/hard_userlimit_max_cpu_freq
+		tweak "$cluster $cpu_minfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
+		((cluster++))
+	done
+fi
+
+for path in /sys/devices/system/cpu/*/cpufreq; do
+	cpu_maxfreq=$(cat $path/cpuinfo_max_freq)
+	cpu_minfreq=$(cat $path/cpuinfo_min_freq)
+	# Set the scaling frequencies to the minimum frequency
+	tweak "$cpu_minfreq" $path/scaling_max_freq
+	tweak "$cpu_minfreq" $path/scaling_min_freq
+done
 
 # Enable Battery Efficient
 
