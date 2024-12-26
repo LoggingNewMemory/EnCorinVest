@@ -15,3 +15,5 @@ if [ -f $INFO ]; then
   done < $INFO
   rm -f $INFO
 fi
+
+rm -rf /data/local/tmp/logo.png

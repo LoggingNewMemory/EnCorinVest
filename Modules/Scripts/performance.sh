@@ -111,13 +111,10 @@ if [ -f "/sys/kernel/debug/sched_features" ]; then
 	tweak NO_TTWU_QUEUE "/sys/kernel/debug/sched_features"
 fi
 
-if [ -f /proc/ppm/policy_status ]; then
-	policy_file="/proc/ppm/policy_status"
-	pwr_thro_idx=$(grep 'PPM_POLICY_PWR_THRO' $policy_file | sed 's/.*\[\(.*\)\].*/\1/')
-	thermal_idx=$(grep 'PPM_POLICY_THERMAL' $policy_file | sed 's/.*\[\(.*\)\].*/\1/')
-
-	tweak "$pwr_thro_idx 0" $policy_file
-	tweak "$thermal_idx 0" $policy_file
+if [ -d /proc/ppm ]; then
+	for idx in $(cat /proc/ppm/policy_status | grep -E 'PWR_THRO|THERMAL' | awk -F'[][]' '{print $2}'); do
+	tweak "$idx 0" /proc/ppm/policy_status
+	done
 fi
 
 for proccpu in /proc/cpufreq; do
@@ -134,7 +131,7 @@ elif [ -d /proc/gpufreqv2 ]; then
 	tweak -1 /proc/gpufreqv2/fix_target_opp_index
     tweak disable /proc/gpufreqv2/aging_mode
 fi
-
+ 
 # Disable battery current limiter
 
 tweak "stop 1" /proc/mtk_batoc_throttling/battery_oc_protect_stop
@@ -263,91 +260,54 @@ cmd looper_stats disable
 
 # FPSGo & GED Parameter
 
-chmod 644 /sys/module/sspm/holders/ged/parameters/is_GED_KPI_enabled
-echo '0' > /sys/module/sspm/holders/ged/parameters/is_GED_KPI_enabled
+for fpsgo in /sys/kernel/fpsgo
+    do
 
-chmod 644 /sys/kernel/fpsgo/fbt/*
-chmod 644 /sys/kernel/fpsgo/fstb/*
+tweak 1 $fpsgo/fbt/boost_ta
+tweak 0 $fpsgo/fbt/enable_switch_down_throttle
+tweak 0 $fpsgo/fbt/thrm_limit_cpu
+tweak 100 $fpsgo/fbt/thrm_temp_th
+tweak 2 $fpsgo/fbt/llf_task_policy
+tweak 0 $fpsgo/fstb/adopt_low_fps
+tweak 0 $fpsgo/fstb/fstb_self_ctrl_fps_enable
+tweak 1 $fpsgo/fstb/boost_ta
+tweak 0 $fpsgo/fstb/enable_switch_sync_flag
+tweak 0 $fpsgo/fstb/gpu_slowdown_check
 
-echo 1 > /sys/kernel/fpsgo/fbt/enable_uclamp_boost
+done
 
-echo "1" > /sys/pnpmgr/fpsgo_boost/boost_mode
-echo "0" > /sys/pnpmgr/mwn
-echo "2" > /sys/module/mtk_fpsgo/parameters/bhr_opp
-echo "1" > /sys/module/mtk_fpsgo/parameters/bhr_opp_l
-echo "1" > /sys/module/mtk_fpsgo/parameters/boost_affinity
-echo "1" > /sys/module/mtk_fpsgo/parameters/xgf_uboost
-echo "-1" > /sys/module/mtk_fpsgo/parameters/uboost_enhance_f
-echo "1" > /sys/module/mtk_fpsgo/parameters/gcc_fps_margin
-echo "1" > /sys/module/mtk_fpsgo/parameters/rescue_enhance_f
-echo "1" > /sys/module/mtk_fpsgo/parameters/qr_mod_frame
-echo "1" > /sys/module/mtk_fpsgo/parameters/fstb_separate_runtime_enable
-echo "1" > /sys/module/mtk_fpsgo/parameters/fstb_consider_deq
-echo "0" > /sys/pnpmgr/fpsgo_boost/fstb/fstb_tune_quantile
-echo "1" > /sys/pnpmgr/fpsgo_boost/fstb/fstb_tune_error_threshold
-echo "1" > /sys/pnpmgr/fpsgo_boost/fstb/margin_mode
-echo "2" > /sys/pnpmgr/fpsgo_boost/fbt/bhr_opp
-echo "-1" > /sys/pnpmgr/fpsgo_boost/fbt/adjust_loading
-echo "-1" > /sys/pnpmgr/fpsgo_boost/fbt/dyn_tgt_time_en
-echo "2" > /sys/pnpmgr/fpsgo_boost/fbt/floor_opp
-echo "-1" > /sys/pnpmgr/fpsgo_boost/fbt/rescue_enhance_f
-echo "-1" > /sys/pnpmgr/fpsgo_boost/fbt/rescue_opp_c
-echo "-1" > /sys/pnpmgr/fpsgo_boost/fbt/rescue_opp_f
-echo "-1" > /sys/pnpmgr/fpsgo_boost/fbt/rescue_percent
-echo "1" > /sys/pnpmgr/fpsgo_boost/fbt/ultra_rescue
-echo "0" > /sys/kernel/fpsgo/xgf/xgf_trace_enable
-echo "1" > /sys/kernel/fpsgo/fstb/tfps_to_powerhal_enable
-echo "1" > /sys/kernel/fpsgo/fstb/set_cam_active
-echo "1" > /sys/kernel/fpsgo/fbt/boost_ta
-echo "1" > /sys/module/ged/parameters/ged_smart_boost
-echo "-1" > /sys/module/ged/parameters/gpu_cust_upbound_freq
-echo "1" > /sys/module/ged/parameters/enable_gpu_boost
-echo "1" > /sys/module/ged/parameters/ged_boost_enable
-echo "1" > /sys/module/ged/parameters/boost_gpu_enable
-echo "1" > /sys/module/ged/parameters/gpu_dvfs_enable
-echo "1" > /sys/module/ged/parameters/gpu_idle
-echo "1" > /sys/module/ged/parameters/ged_monitor_3D_fence_systrace
-echo "-1" > /sys/module/ged/parameters/g_fb_dvfs_threshold
-echo "0" > /sys/module/ged/parameters/g_gpu_timer_based_emu
-echo "-1" > /sys/module/ged/parameters/gpu_cust_boost_freq
-echo "101" > /sys/kernel/ged/hal/gpu_boost_level
-echo "0" > /sys/module/ged/parameters/is_GED_KPI_enabled
-echo "-1" > /sys/kernel/ged/hal/custom_boost_gpu_freq
-echo "-1" > /sys/kernel/ged/hal/custom_upbound_gpu_freq
-echo "0" > /sys/kernel/ged/hal/dvfs_loading_mode
-echo "0" > /sys/kernel/ged/hal/dvfs_workload_mode
-echo "-1" > /sys/kernel/ged/hal/dvfs_margin_value
+tweak 101 /sys/kernel/ged/hal/gpu_boost_level
 
-# Advanced FPSGO & GED
 
-echo "15" > /sys/module/mtk_fpsgo/parameters/bhr_opp
-echo "1" > /sys/module/mtk_fpsgo/parameters/bhr_opp_l
-echo "90" > /sys/module/mtk_fpsgo/parameters/uboost_enhance_f
-echo "1" > /sys/module/mtk_fpsgo/parameters/gcc_fps_margin
-echo "90" > /sys/module/mtk_fpsgo/parameters/rescue_enhance_f
-echo "1" > /sys/module/mtk_fpsgo/parameters/qr_mod_frame
-echo "1" > /sys/module/mtk_fpsgo/parameters/fstb_separate_runtime_enable
-echo "1" > /sys/module/mtk_fpsgo/parameters/fstb_consider_deq
-echo "100" > /sys/pnpmgr/fpsgo_boost/fstb/fstb_tune_quantile
-echo "0" > /sys/pnpmgr/fpsgo_boost/fstb/fstb_tune_error_threshold
-echo "1" > /sys/pnpmgr/fpsgo_boost/fstb/margin_mode
-echo "10" > /sys/pnpmgr/fpsgo_boost/fbt/bhr_opp
-echo "1" > /sys/pnpmgr/fpsgo_boost/fbt/adjust_loading
-echo "1" > /sys/pnpmgr/fpsgo_boost/fbt/dyn_tgt_time_en
-echo "0" > /sys/pnpmgr/fpsgo_boost/fbt/floor_opp
-echo "90" > /sys/pnpmgr/fpsgo_boost/fbt/rescue_enhance_f
-echo "80" > /sys/module/mtk_fpsgo/parameters/run_time_percent
-echo "1" > /sys/module/mtk_fpsgo/parameters/loading_ignore_enable
-echo "80" > /sys/module/mtk_fpsgo/parameters/kmin
-echo "90" > /sys/pnpmgr/fpsgo_boost/fbt/rescue_opp_c
-echo "90" > /sys/pnpmgr/fpsgo_boost/fbt/rescue_opp_f
-echo "90" > /sys/pnpmgr/fpsgo_boost/fbt/rescue_percent
-echo "1" > /sys/pnpmgr/fpsgo_boost/fbt/ultra_rescue
+for ged in boost_affinity boost_LR xgf_uboost xgf_extra_sub gcc_enable gcc_hwui_hint
+    do
+    
+    tweak 1 /sys/module/mtk_fpsgo/parameters/$ged
+done
+
+ged_params="ged_smart_boost 1
+enable_gpu_boost 1
+ged_boost_enable 1
+boost_gpu_enable 1
+gpu_dvfs_enable 1
+gx_frc_mode 1
+gx_force_cpu_boost 1
+gx_boost_on 1
+gx_game_mode 1
+gx_3D_benchmark_on 1
+cpu_boost_policy 1
+boost_extra 1"
+
+echo "$ged_params" | while read -r param value; do
+    tweak "/sys/module/ged/parameters/$param" "$value"
+done
+
+tweak /sys/pnpmgr/fpsgo_boost/boost_enable default_mode
+tweak /sys/kernel/ged/hal/custom_boost_gpu_freq 00
 
 # Power Save Mode Off
 settings put global low_power 0
 
-su -lp 2000 -c "cmd notification post -S bigtext -t 'EnCorinVest' TagPerformance 'Performance Mode! - カリン・ウィクス & 安可'"
-
+su -lp 2000 -c "cmd notification post -S bigtext -t 'EnCorinVest' -i file:///data/local/tmp/logo.png -I file:///data/local/tmp/logo.png TagPowersave 'EnCorinVest Performance - カリン・ウィクス & 安可'"
 wait
 exit 0
