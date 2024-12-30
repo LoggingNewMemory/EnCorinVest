@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:process_run/process_run.dart';
+import 'dart:io';
 
 void main() {
   runApp(MyApp());
@@ -12,11 +13,35 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   bool _hasRootAccess = false;
+  String _currentMode = 'None';
+  final String _modeFile = '/data/adb/modules/EnCorinVest/current_mode.txt';
 
   @override
   void initState() {
     super.initState();
     _checkRootAccess();
+    _loadCurrentMode();
+  }
+
+  Future<void> _loadCurrentMode() async {
+    try {
+      var result = await run('su', ['-c', 'cat $_modeFile']);
+      if (result.stdout.toString().trim().isNotEmpty) {
+        setState(() {
+          _currentMode = result.stdout.toString().trim().toUpperCase();
+        });
+      }
+    } catch (e) {
+      print('Error loading mode: $e');
+    }
+  }
+
+  Future<void> _saveCurrentMode(String mode) async {
+    try {
+      await run('su', ['-c', 'echo "$mode" > $_modeFile']);
+    } catch (e) {
+      print('Error saving mode: $e');
+    }
   }
 
   Future<void> _checkRootAccess() async {
@@ -32,6 +57,22 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
+  Future<void> executeScript(String scriptName) async {
+    try {
+      var result = await run(
+          'su', ['-c', '/data/adb/modules/EnCorinVest/Scripts/$scriptName']);
+      var mode = scriptName.replaceAll('.sh', '').toUpperCase();
+      await _saveCurrentMode(mode);
+      setState(() {
+        _currentMode = mode;
+      });
+      print('Output: ${result.stdout}');
+      print('Error: ${result.stderr}');
+    } catch (e) {
+      print('Error executing script: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -43,7 +84,6 @@ class _MyAppState extends State<MyApp> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(height: 40),
-              // Header section with title, author, and logo
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -75,7 +115,6 @@ class _MyAppState extends State<MyApp> {
                 ],
               ),
               SizedBox(height: 20),
-              // Root access status
               Text(
                 'Root Access: ${_hasRootAccess ? 'Yes' : 'No'}',
                 style: TextStyle(
@@ -83,8 +122,15 @@ class _MyAppState extends State<MyApp> {
                   color: _hasRootAccess ? Color(0xFF34C759) : Color(0xFFE74C3C),
                 ),
               ),
+              Text(
+                'Current Mode: $_currentMode',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Color(0xFFECEFF4),
+                ),
+              ),
+              SizedBox(height: 10),
               SizedBox(height: 40),
-              // Control buttons section
               _buildControlRow(
                 'Set the CPU Frequency to Minimum',
                 'Power Save',
@@ -159,16 +205,5 @@ class _MyAppState extends State<MyApp> {
         ),
       ],
     );
-  }
-
-  Future<void> executeScript(String scriptName) async {
-    try {
-      var result = await run(
-          'su', ['-c', '/data/adb/modules/EnCorinVest/Scripts/$scriptName']);
-      print('Output: ${result.stdout}');
-      print('Error: ${result.stderr}');
-    } catch (e) {
-      print('Error executing script: $e');
-    }
   }
 }
