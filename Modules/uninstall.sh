@@ -17,3 +17,4 @@ if [ -f $INFO ]; then
 fi
 
 rm -rf /data/local/tmp/logo.png
+pm uninstall --user 0 com.kanagawa.yamada.encorinvest

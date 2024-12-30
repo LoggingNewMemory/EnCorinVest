@@ -1,5 +1,3 @@
-sync
-
 tweak() {
 	if [ -f $2 ]; then
 		chmod 644 $2 >/dev/null 2>&1
@@ -308,6 +306,6 @@ tweak /sys/kernel/ged/hal/custom_boost_gpu_freq 00
 # Power Save Mode Off
 settings put global low_power 0
 
-su -lp 2000 -c "cmd notification post -S bigtext -t 'EnCorinVest' -i file:///data/local/tmp/logo.png -I file:///data/local/tmp/logo.png TagPowersave 'EnCorinVest Performance - カリン・ウィクス & 安可'"
+su -lp 2000 -c "cmd notification post -S bigtext -t 'EnCorinVest' -i file:///data/local/tmp/logo.png -I file:///data/local/tmp/logo.png TagEncorin 'EnCorinVest Performance - カリン・ウィクス & 安可'"
 wait
 exit 0

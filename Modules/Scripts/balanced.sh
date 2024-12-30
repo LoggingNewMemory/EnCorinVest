@@ -1,5 +1,3 @@
-sync
-
 tweak() {
 	if [ -f $2 ]; then
 		chmod 644 $2 >/dev/null 2>&1
@@ -173,6 +171,6 @@ cmd looper_stats enable
 # Power Save Mode Off
 settings put global low_power 0
 
-su -lp 2000 -c "cmd notification post -S bigtext -t 'EnCorinVest' -i file:///data/local/tmp/logo.png -I file:///data/local/tmp/logo.png TagPowersave 'EnCorinVest Balanced - カリン・ウィクス & 安可'"
+su -lp 2000 -c "cmd notification post -S bigtext -t 'EnCorinVest' -i file:///data/local/tmp/logo.png -I file:///data/local/tmp/logo.png TagEncorin 'EnCorinVest Balanced - カリン・ウィクス & 安可'"
 wait
 exit 0

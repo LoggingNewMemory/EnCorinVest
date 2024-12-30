@@ -35,7 +35,7 @@ ui_print "-----------------🗡-----------------"
 ui_print "            MODULE INFO             "
 ui_print "-----------------🗡-----------------"
 ui_print "Name : EnCorinVest"
-ui_print "Version : V 6.0"
+ui_print "Version : V 7.0"
 ui_print "Support Root : Magisk / KernelSU / APatch"
 ui_print " "
 sleep 1.5
@@ -47,7 +47,7 @@ sleep 1.5
 unzip -o "$ZIPFILE" 'Scripts/*' -d $MODPATH >&2
 cp -r "$MODPATH"/logo.png /data/local/tmp >/dev/null 2>&1
 
-set_perm_recursive $MODPATH 0 0 0755 0644
+set_perm_recursive $MODPATH 0 0 0755 0755
 set_perm_recursive $MODPATH/Scripts 0 0 0777 0755
 
 sleep 1.5
@@ -58,4 +58,4 @@ cp "$MODPATH"/EnCorinVest.apk /data/local/tmp >/dev/null 2>&1
 pm install /data/local/tmp/EnCorinVest.apk >/dev/null 2>&1
 rm /data/local/tmp/EnCorinVest.apk >/dev/null 2>&1
 
-am start -a android.intent.action.VIEW -d https://t.me/KanagawaLabAnnouncement/305 >/dev/null 2>&1
+am start -a android.intent.action.VIEW -d https://t.me/KanagawaLabAnnouncement/317 >/dev/null 2>&1

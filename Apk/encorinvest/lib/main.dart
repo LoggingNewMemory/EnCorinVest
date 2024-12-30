@@ -22,15 +22,9 @@ class _MyAppState extends State<MyApp> {
   Future<void> _checkRootAccess() async {
     try {
       var result = await run('su', ['-c', 'id']);
-      if (result.exitCode == 0) {
-        setState(() {
-          _hasRootAccess = true;
-        });
-      } else {
-        setState(() {
-          _hasRootAccess = false;
-        });
-      }
+      setState(() {
+        _hasRootAccess = result.exitCode == 0;
+      });
     } catch (e) {
       setState(() {
         _hasRootAccess = false;
@@ -42,166 +36,88 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       home: Scaffold(
-        backgroundColor: Color(0xFF2E3440), // Set the background color here
+        backgroundColor: Color(0xFF2E3440),
         body: Padding(
-          padding: const EdgeInsets.all(16.0), // Add padding around the column
+          padding: const EdgeInsets.all(16.0),
           child: Column(
-            mainAxisAlignment:
-                MainAxisAlignment.start, // Align content at the top
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Custom Title and Subtitle
-              Column(
+              SizedBox(height: 40),
+              // Header section with title, author, and logo
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(height: 40), // Space between subtitle and image
-                  Text(
-                    'EnCorinVest',
-                    style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFFECEFF4)), // Set text color to #eceff4
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'EnCorinVest',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFECEFF4),
+                        ),
+                      ),
+                      Text(
+                        'By: Kanagawa Yamada',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Color(0xFFECEFF4),
+                        ),
+                      ),
+                    ],
                   ),
-                  Text(
-                    'By: Kanagawa Yamada',
-                    style: TextStyle(
-                        fontSize: 16,
-                        color: Color(0xFFECEFF4)), // Set text color to #eceff4
-                  ),
-                  SizedBox(height: 20), // Space between button sections
                   Image.asset(
-                    'assets/logo.png', // Replace with your image path
-                    height: 100, // Adjust height as needed
+                    'assets/logo.png',
+                    height: 60,
                   ),
-                  SizedBox(
-                      height: 10), // Space between image and root access text
-                  Text(
-                    'Root Access: ${_hasRootAccess ? 'Yes' : 'No'}',
-                    style: TextStyle(
-                        fontSize: 16,
-                        color: _hasRootAccess
-                            ? Color(0xFF34C759)
-                            : Color(
-                                0xFFE74C3C)), // Set text color based on root access
-                  ),
-                  SizedBox(height: 20), // Space between button sections
                 ],
               ),
-              Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.center, // Center the description
-                children: [
-                  Text(
-                    'Set the CPU Frequency to Minimum',
-                    style: TextStyle(
-                        fontSize: 16,
-                        color: Color(0xFFECEFF4)), // Set text color to #eceff4
-                    textAlign: TextAlign.center, // Center the text
-                  ),
-                  SizedBox(
-                    width: double.infinity, // Fill the width
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        await executeScript('powersafe.sh');
-                      },
-                      child: Text('Power Save'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFEBCB8B),
-                        foregroundColor: Color(0xFF2E3440),
-                        padding: EdgeInsets.symmetric(
-                            vertical: 12), // Adjust vertical padding
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 20), // Space between button sections
-                ],
+              SizedBox(height: 20),
+              // Root access status
+              Text(
+                'Root Access: ${_hasRootAccess ? 'Yes' : 'No'}',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: _hasRootAccess ? Color(0xFF34C759) : Color(0xFFE74C3C),
+                ),
               ),
-              // Balanced Button with Description
-              Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.center, // Center the description
-                children: [
-                  Text(
-                    'Back to default',
-                    style: TextStyle(
-                        fontSize: 16,
-                        color: Color(0xFFECEFF4)), // Set text color to #eceff4
-                    textAlign: TextAlign.center, // Center the text
-                  ),
-                  SizedBox(
-                    width: double.infinity, // Fill the width
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        await executeScript('balanced.sh');
-                      },
-                      child: Text('Balanced'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFA3BE8C),
-                        foregroundColor: Color(0xFF2E3440),
-                        padding: EdgeInsets.symmetric(
-                            vertical: 12), // Adjust vertical padding
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 20), // Space between button sections
-                ],
+              SizedBox(height: 40),
+              // Control buttons section
+              _buildControlRow(
+                'Set the CPU Frequency to Minimum',
+                'Power Save',
+                Color(0xFFEBCB8B),
+                () => executeScript('powersafe.sh'),
               ),
-              // Performance Button with Description
-              Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.center, // Center the description
-                children: [
-                  Text(
-                    'ALL IN PERFORMANCE! WHO CARES ABOUT BATTERY!',
-                    style: TextStyle(
-                        fontSize: 16,
-                        color: Color(0xFFECEFF4)), // Set text color to #eceff4
-                    textAlign: TextAlign.center, // Center the text
-                  ),
-                  SizedBox(
-                    width: double.infinity, // Fill the width
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        await executeScript('performance.sh');
-                      },
-                      child: Text('Performance'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFBF616A),
-                        foregroundColor: Color(0xFF2E3440),
-                        padding: EdgeInsets.symmetric(
-                            vertical: 12), // Adjust vertical padding
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 20), // Space between button sections
-                ],
+              SizedBox(height: 20),
+              _buildControlRow(
+                'Back to default',
+                'Balanced',
+                Color(0xFFA3BE8C),
+                () => executeScript('balanced.sh'),
               ),
-              // Kill All Apps Button with Description
-              Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.center, // Center the description
-                children: [
-                  Text(
-                    'Killing every app that runs (Including EnCorinVest app)',
-                    style: TextStyle(
-                        fontSize: 16,
-                        color: Color(0xFFECEFF4)), // Set text color to #eceff4
-                    textAlign: TextAlign.center, // Center the text
-                  ),
-                  SizedBox(
-                    width: double.infinity, // Fill the width
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        await executeScript('kill.sh');
-                      },
-                      child: Text('Kill All Apps'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFD08770),
-                        foregroundColor: Color(0xFF2E3440),
-                        padding: EdgeInsets.symmetric(
-                            vertical: 12), // Adjust vertical padding
-                      ),
-                    ),
-                  ),
-                ],
+              SizedBox(height: 20),
+              _buildControlRow(
+                'ALL IN PERFORMANCE! WHO CARES\nABOUT BATTERY!',
+                'Performance',
+                Color(0xFFBF616A),
+                () => executeScript('performance.sh'),
+              ),
+              SizedBox(height: 20),
+              _buildControlRow(
+                'Killing every app that runs\n(including EnCorinVest app)',
+                'Kill All\nApps',
+                Color(0xFFD08770),
+                () => executeScript('kill.sh'),
+              ),
+              SizedBox(height: 20),
+              _buildControlRow(
+                'Cooling The Device For 2 Minutes',
+                'Cool Down',
+                Color(0xFF88C0D0),
+                () => executeScript('cool.sh'),
               ),
             ],
           ),
@@ -210,9 +126,43 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
+  Widget _buildControlRow(String description, String buttonText,
+      Color buttonColor, VoidCallback onPressed) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(
+          flex: 2,
+          child: Text(
+            description,
+            style: TextStyle(
+              fontSize: 16,
+              color: Color(0xFFECEFF4),
+            ),
+          ),
+        ),
+        SizedBox(width: 20),
+        Expanded(
+          child: ElevatedButton(
+            onPressed: onPressed,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: buttonColor,
+              foregroundColor: Color(0xFF2E3440),
+              padding: EdgeInsets.symmetric(vertical: 12),
+            ),
+            child: Text(
+              buttonText,
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Future<void> executeScript(String scriptName) async {
     try {
-      // Replace '/path/to/' with the actual path where your scripts are located
       var result = await run(
           'su', ['-c', '/data/adb/modules/EnCorinVest/Scripts/$scriptName']);
       print('Output: ${result.stdout}');
