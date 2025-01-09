@@ -60,27 +60,17 @@ tweak 0 /sys/kernel/tracing/tracing_on
 
 for kernelperfdebug in /proc/sys/kernel; do
     tweak 0 "$kernelperfdebug/perf_event_paranoid"
-    tweak 0 "$kernelperfdebug/perf_cpu_time_max_percent"
 
     tweak off "$kernelperfdebug/printk_devkmsg"
     tweak 0 "$kernelperfdebug/sched_schedstats"
     tweak 1 "$kernelperfdebug/sched_child_runs_first"
-    tweak 32 "$kernelperfdebug/sched_nr_migrate"
-    tweak 50000 "$kernelperfdebug/sched_migration_cost_ns"
-    tweak 1000000 "$kernelperfdebug/sched_min_granularity_ns"
-    tweak 1500000 "$kernelperfdebug/sched_wakeup_granularity_ns"
 
-    tweak 1000000 "$kernelperfdebug/sched_latency_ns"
     tweak 1024 "$kernelperfdebug/sched_util_clamp_max"
     tweak 1024 "$kernelperfdebug/sched_util_clamp_min"
-    tweak 1 "$kernelperfdebug/sched_tunable_scaling"
-    tweak 0 "$kernelperfdebug/sched_energy_aware"
     tweak 1 "$kernelperfdebug/sched_util_clamp_min_rt_default"
     tweak 4194304 "$kernelperfdebug/sched_deadline_period_max_us"
     tweak 100 "$kernelperfdebug/sched_deadline_period_min_us"
 
-    tweak -1 "$kernelperfdebug/sched_rt_period_us"
-    tweak -1 "$kernelperfdebug/sched_rt_runtime_us"
     tweak 4 "$kernelperfdebug/sched_pelt_multiplier"
     tweak 0 "$kernelperfdebug/panic"
     tweak 0 "$kernelperfdebug/panic_on_oops"
@@ -172,7 +162,7 @@ tweak $highest_freq /sys/class/devfreq/mtk-dvfsrc-devfreq/max_freq
 
 for path in /sys/devices/system/cpu/cpufreq/policy*; do
 	tweak performance "$path/scaling_governor"
-done &
+done 
 
 if [ -d /proc/ppm ]; then
 	cluster=0
@@ -258,53 +248,129 @@ cmd looper_stats disable
 
 # FPSGo & GED Parameter
 
+# FPSGo
+
 for fpsgo in /sys/kernel/fpsgo
     do
 
 tweak 1 $fpsgo/fbt/boost_ta
 tweak 0 $fpsgo/fbt/enable_switch_down_throttle
-tweak 0 $fpsgo/fbt/thrm_limit_cpu
-tweak 100 $fpsgo/fbt/thrm_temp_th
-tweak 2 $fpsgo/fbt/llf_task_policy
 tweak 0 $fpsgo/fstb/adopt_low_fps
 tweak 0 $fpsgo/fstb/fstb_self_ctrl_fps_enable
 tweak 1 $fpsgo/fstb/boost_ta
 tweak 0 $fpsgo/fstb/enable_switch_sync_flag
+tweak 1 $fpsgo/fbt/boost_VIP
 tweak 0 $fpsgo/fstb/gpu_slowdown_check
-
+tweak 0 $fpsgo/fbt/thrm_limit_cpu
+tweak 100 $fpsgo/fbt/thrm_temp_th
+tweak 2 $fpsgo/fbt/llf_task_policy
 done
 
 tweak 101 /sys/kernel/ged/hal/gpu_boost_level
 
+# FPSGO Advanced
 
-for ged in boost_affinity boost_LR xgf_uboost xgf_extra_sub gcc_enable gcc_hwui_hint
+for fpsgo_adv in /sys/module/mtk_fpsgo/parameters
     do
-    
-    tweak 1 /sys/module/mtk_fpsgo/parameters/$ged
+tweak 1 $fpsgo_adv/boost_affinity
+tweak 1 $fpsgo_adv/boost_LR
+tweak 1 $fpsgo_adv/xgf_uboost
+tweak 1 $fpsgo_adv/xgf_extra_sub
+tweak 1 $fpsgo_adv/gcc_enable
+tweak 1 $fpsgo_adv/gcc_hwui_hint
 done
 
-ged_params="ged_smart_boost 1
-enable_gpu_boost 1
-ged_boost_enable 1
-boost_gpu_enable 1
-gpu_dvfs_enable 1
-gx_frc_mode 1
-gx_force_cpu_boost 1
-gx_boost_on 1
-gx_game_mode 1
-gx_3D_benchmark_on 1
-cpu_boost_policy 1
-boost_extra 1"
+# GED Extra
 
-echo "$ged_params" | while read -r param value; do
-    tweak "/sys/module/ged/parameters/$param" "$value"
+for ged_extra in /sys/module/ged/parameters
+    do
+tweak 1 $ged_extra/ged_smart_boost
+tweak 100 $ged_extra/boost_upper_bound
+tweak 1 $ged_extra/enable_gpu_boost
+tweak 1 $ged_extra/enable_cpu_boost
+tweak 1 $ged_extra/ged_boost_enable
+tweak 1 $ged_extra/boost_gpu_enable
+tweak 1 $ged_extra/gpu_dvfs_enable
+tweak 1 $ged_extra/gx_frc_mode
+tweak 1 $ged_extra/gx_dfps
+tweak 1 $ged_extra/gx_force_cpu_boost
+tweak 1 $ged_extra/gx_boost_on
+tweak 1 $ged_extra/gx_game_mode
+tweak 1 $ged_extra/gx_3D_benchmark_on
+tweak 0 $ged_extra/gpu_loading
+tweak 1 $ged_extra/cpu_boost_policy
+tweak 1 $ged_extra/boost_extra
+tweak 0 $ged_extra/is_GED_KPI_enabled
+tweak 1500000 $ged_extra/gpu_cust_boost_freq
+tweak 1800000 $ged_extra/gpu_cust_upbound_freq
+tweak 600000 $ged_extra/gpu_bottom_freq
+tweak 500 $ged_extra/ged_smart_boost
+tweak 1 $ged_extra/enable_game_self_frc_detect
+tweak 1 $ged_extra/boost_amp
+tweak 0 $ged_extra/gpu_idle
 done
 
-tweak /sys/pnpmgr/fpsgo_boost/boost_enable default_mode
-tweak /sys/kernel/ged/hal/custom_boost_gpu_freq 00
+tweak "default_mode" /sys/pnpmgr/fpsgo_boost/boost_enable
+tweak 00 /sys/kernel/ged/hal/custom_boost_gpu_freq
+
+# CrazyKT (Slightly Modified With Celestial Value)
+
+for crazyKT in /proc/sys/kernel
+do
+tweak 100000 $crazyKT/sched_migration_cost_ns
+tweak 5 $crazyKT/perf_cpu_time_max_percent
+tweak 100000 $crazyKT/sched_latency_ns
+tweak 1024 $crazyKT/sched_util_clamp_max
+tweak 1 $crazyKT/sched_util_clamp_min
+tweak 1 $crazyKT/sched_tunable_scaling
+tweak 0 $crazyKT/sched_energy_aware
+tweak 2 $crazyKT/sched_nr_migrate
+tweak 2 $crazyKT/sched_pelt_multiplier
+tweak 2 $crazyKT/sched_rr_timeslice_ms
+tweak 1 $crazyKT/sched_util_clamp_min_rt_default
+tweak 100000 $crazyKT/sched_deadline_period_max_us
+tweak 100 $crazyKT/sched_deadline_period_min_us
+tweak 0 $crazyKT/sched_schedstats
+tweak 10 $crazyKT/sched_wakeup_granularity_ns
+tweak 1000000 $crazyKT/sched_min_granularity_ns
+tweak 950000 $crazyKT/sched_rt_runtime_us
+tweak 1000000 $crazyKT/sched_rt_period_us 
+
+done
+
+# Celestial Tweaks
+
+# Optimize Priority
+settings put secure high_priority 1
+settings put secure low_priority 0
 
 # Power Save Mode Off
 settings put global low_power 0
+
+# GPU Freq Optimization
+
+for celes_gpu in /proc/gpufreq
+    do
+tweak 1 $celes_gpu/gpufreq_limited_thermal_ignore
+tweak 1 $celes_gpu/gpufreq_limited_oc_ignore
+tweak 1 $celes_gpu/gpufreq_limited_low_batt_volume_ignore
+tweak 1 $celes_gpu/gpufreq_limited_low_batt_volt_ignore
+tweak 0 $celes_gpu/gpufreq_opp_freq
+tweak 0 $celes_gpu/gpufreq_fixed_freq_volt
+tweak 0 $celes_gpu/gpufreq_opp_stress_test
+tweak 0 $celes_gpu/gpufreq_opp_stress_test
+tweak 0 $celes_gpu/gpufreq_power_dump
+tweak 0 $celes_gpu/gpufreq_power_limited
+done
+
+# Additional Kernel Tweak
+
+for celes_kernel in /proc/sys/kernel
+    do
+tweak 1 $celes_kernel/sched_autogroup_enabled
+tweak 1 $celes_kernel/sched_cstate_aware
+tweak 1 $celes_kernel/sched_sync_hint_enable
+done
 
 su -lp 2000 -c "cmd notification post -S bigtext -t 'EnCorinVest' -i file:///data/local/tmp/logo.png -I file:///data/local/tmp/logo.png TagEncorin 'EnCorinVest Performance - カリン・ウィクス & 安可'"
 wait

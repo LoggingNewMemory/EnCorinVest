@@ -14,6 +14,7 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   bool _hasRootAccess = false;
   String _currentMode = 'None';
+  String _executingScript = '';
   final String _modeFile = '/data/adb/modules/EnCorinVest/current_mode.txt';
 
   @override
@@ -57,7 +58,13 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
-  Future<void> executeScript(String scriptName) async {
+  Future<void> executeScript(String scriptName, String buttonText) async {
+    if (_executingScript.isNotEmpty) return;
+
+    setState(() {
+      _executingScript = scriptName;
+    });
+
     try {
       var result = await run(
           'su', ['-c', '/data/adb/modules/EnCorinVest/Scripts/$scriptName']);
@@ -70,6 +77,10 @@ class _MyAppState extends State<MyApp> {
       print('Error: ${result.stderr}');
     } catch (e) {
       print('Error executing script: $e');
+    } finally {
+      setState(() {
+        _executingScript = '';
+      });
     }
   }
 
@@ -133,37 +144,37 @@ class _MyAppState extends State<MyApp> {
               SizedBox(height: 40),
               _buildControlRow(
                 'Set the CPU Frequency to Minimum',
+                'powersafe.sh',
                 'Power Save',
                 Color(0xFFEBCB8B),
-                () => executeScript('powersafe.sh'),
               ),
               SizedBox(height: 20),
               _buildControlRow(
                 'Back to default',
+                'balanced.sh',
                 'Balanced',
                 Color(0xFFA3BE8C),
-                () => executeScript('balanced.sh'),
               ),
               SizedBox(height: 20),
               _buildControlRow(
                 'ALL IN PERFORMANCE! WHO CARES\nABOUT BATTERY!',
+                'performance.sh',
                 'Performance',
                 Color(0xFFBF616A),
-                () => executeScript('performance.sh'),
               ),
               SizedBox(height: 20),
               _buildControlRow(
                 'Killing every app that runs\n(including EnCorinVest app)',
+                'kill.sh',
                 'Kill All\nApps',
                 Color(0xFFD08770),
-                () => executeScript('kill.sh'),
               ),
               SizedBox(height: 20),
               _buildControlRow(
                 'Cooling The Device For 2 Minutes',
+                'cool.sh',
                 'Cool Down',
                 Color(0xFF88C0D0),
-                () => executeScript('cool.sh'),
               ),
             ],
           ),
@@ -172,8 +183,10 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-  Widget _buildControlRow(String description, String buttonText,
-      Color buttonColor, VoidCallback onPressed) {
+  Widget _buildControlRow(String description, String scriptName,
+      String buttonText, Color buttonColor) {
+    bool isExecuting = _executingScript == scriptName;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -191,14 +204,16 @@ class _MyAppState extends State<MyApp> {
         SizedBox(width: 20),
         Expanded(
           child: ElevatedButton(
-            onPressed: onPressed,
+            onPressed: isExecuting
+                ? null
+                : () => executeScript(scriptName, buttonText),
             style: ElevatedButton.styleFrom(
-              backgroundColor: buttonColor,
+              backgroundColor: isExecuting ? Color(0xFFECEFF4) : buttonColor,
               foregroundColor: Color(0xFF2E3440),
               padding: EdgeInsets.symmetric(vertical: 12),
             ),
             child: Text(
-              buttonText,
+              isExecuting ? 'Executing' : buttonText,
               textAlign: TextAlign.center,
             ),
           ),
