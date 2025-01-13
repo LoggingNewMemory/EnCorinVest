@@ -58,4 +58,4 @@ cp "$MODPATH"/EnCorinVest.apk /data/local/tmp >/dev/null 2>&1
 pm install /data/local/tmp/EnCorinVest.apk >/dev/null 2>&1
 rm /data/local/tmp/EnCorinVest.apk >/dev/null 2>&1
 
-am start -a android.intent.action.VIEW -d https://t.me/KanagawaLabAnnouncement/337 >/dev/null 2>&1
+am start -a android.intent.action.VIEW -d https://t.me/KanagawaLabAnnouncement/343 >/dev/null 2>&1

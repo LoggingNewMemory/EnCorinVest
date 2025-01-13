@@ -13,6 +13,8 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   bool _hasRootAccess = false;
+  bool _moduleInstalled = false;
+  String _moduleVersion = 'Unknown';
   String _currentMode = 'None';
   String _executingScript = '';
   final String _modeFile = '/data/adb/modules/EnCorinVest/current_mode.txt';
@@ -22,6 +24,8 @@ class _MyAppState extends State<MyApp> {
     super.initState();
     _checkRootAccess();
     _loadCurrentMode();
+    _checkModuleInstalled();
+    _getModuleVersion();
   }
 
   Future<void> _loadCurrentMode() async {
@@ -55,6 +59,37 @@ class _MyAppState extends State<MyApp> {
       setState(() {
         _hasRootAccess = false;
       });
+    }
+  }
+
+  Future<void> _checkModuleInstalled() async {
+    try {
+      var result = await run(
+          'su', ['-c', 'test -d /data/adb/modules/EnCorinVest && echo "yes"']);
+      setState(() {
+        _moduleInstalled = result.stdout.toString().trim() == 'yes';
+      });
+    } catch (e) {
+      setState(() {
+        _moduleInstalled = false;
+      });
+    }
+  }
+
+  Future<void> _getModuleVersion() async {
+    try {
+      var result = await run('su',
+          ['-c', 'grep "version=" /data/adb/modules/EnCorinVest/module.prop']);
+      String version = result.stdout.toString().trim();
+      if (version.isNotEmpty) {
+        // Extract version number after "version="
+        version = version.split('=')[1];
+        setState(() {
+          _moduleVersion = version;
+        });
+      }
+    } catch (e) {
+      print('Error getting module version: $e');
     }
   }
 
@@ -126,22 +161,82 @@ class _MyAppState extends State<MyApp> {
                 ],
               ),
               SizedBox(height: 20),
-              Text(
-                'Root Access: ${_hasRootAccess ? 'Yes' : 'No'}',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: _hasRootAccess ? Color(0xFF34C759) : Color(0xFFE74C3C),
-                ),
+              Row(
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Root Access:',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Color(0xFFECEFF4),
+                        ),
+                      ),
+                      Text(
+                        'Module Installed:',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Color(0xFFECEFF4),
+                        ),
+                      ),
+                      Text(
+                        'Module Version:',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Color(0xFFECEFF4),
+                        ),
+                      ),
+                      Text(
+                        'Current Mode:',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Color(0xFFECEFF4),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _hasRootAccess ? 'Yes' : 'No',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: _hasRootAccess
+                              ? Color(0xFF34C759)
+                              : Color(0xFFE74C3C),
+                        ),
+                      ),
+                      Text(
+                        _moduleInstalled ? 'Yes' : 'No',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: _moduleInstalled
+                              ? Color(0xFF34C759)
+                              : Color(0xFFE74C3C),
+                        ),
+                      ),
+                      Text(
+                        _moduleVersion,
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Color(0xFFECEFF4),
+                        ),
+                      ),
+                      Text(
+                        _currentMode,
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Color(0xFFECEFF4),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              Text(
-                'Current Mode: $_currentMode',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Color(0xFFECEFF4),
-                ),
-              ),
-              SizedBox(height: 10),
-              SizedBox(height: 40),
+              SizedBox(height: 20),
               _buildControlRow(
                 'Set the CPU Frequency to Minimum',
                 'powersafe.sh',
@@ -207,10 +302,22 @@ class _MyAppState extends State<MyApp> {
             onPressed: isExecuting
                 ? null
                 : () => executeScript(scriptName, buttonText),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isExecuting ? Color(0xFFECEFF4) : buttonColor,
-              foregroundColor: Color(0xFF2E3440),
-              padding: EdgeInsets.symmetric(vertical: 12),
+            style: ButtonStyle(
+              backgroundColor:
+                  MaterialStateProperty.resolveWith<Color>((states) {
+                if (states.contains(MaterialState.pressed)) {
+                  return Color(0xFFECEFF4); // Color when pressed
+                }
+                return isExecuting
+                    ? Color(0xFFECEFF4)
+                    : buttonColor; // Normal color
+              }),
+              foregroundColor:
+                  MaterialStateProperty.resolveWith<Color>((states) {
+                return Color(0xFF2E3440); // Text color stays dark
+              }),
+              padding:
+                  MaterialStateProperty.all(EdgeInsets.symmetric(vertical: 12)),
             ),
             child: Text(
               isExecuting ? 'Executing' : buttonText,
