@@ -407,15 +407,6 @@ tweak 0 $celes_gpu/gpufreq_power_dump
 tweak 0 $celes_gpu/gpufreq_power_limited
 done
 
-# Additional Kernel Tweak
-
-for celes_kernel in /proc/sys/kernel
-    do
-tweak 1 $celes_kernel/sched_autogroup_enabled
-tweak 1 $celes_kernel/sched_cstate_aware
-tweak 1 $celes_kernel/sched_sync_hint_enable
-done
-
 su -lp 2000 -c "cmd notification post -S bigtext -t 'EnCorinVest' -i file:///data/local/tmp/logo.png -I file:///data/local/tmp/logo.png TagEncorin 'EnCorinVest Performance - カリン・ウィクス & 安可'"
 wait
 exit 0

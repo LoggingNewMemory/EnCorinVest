@@ -440,14 +440,6 @@ for celes_gpu in /proc/gpufreq
     tweak 1 $celes_gpu/gpufreq_power_limited
 done
 
-# Additional Kernel Tweak with default values
-for celes_kernel in /proc/sys/kernel
-    do
-    tweak 0 $celes_kernel/sched_autogroup_enabled
-    tweak 0 $celes_kernel/sched_cstate_aware
-    tweak 0 $celes_kernel/sched_sync_hint_enable
-done
-
 # Enable Battery Efficient
 cmd power set-adaptive-power-saver-enabled true
 cmd looper_stats enable
