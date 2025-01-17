@@ -54,33 +54,6 @@ for schedtweak in /sys/devices/system/cpu/cpufreq/schedutil; do
 
 done &
 
-# Disable CCCI & debug
-tweak 0 /sys/kernel/ccci/debug
-tweak 0 /sys/kernel/tracing/tracing_on
-
-for kernelperfdebug in /proc/sys/kernel; do
-    tweak 0 "$kernelperfdebug/perf_event_paranoid"
-
-    tweak off "$kernelperfdebug/printk_devkmsg"
-    tweak 0 "$kernelperfdebug/sched_schedstats"
-    tweak 1 "$kernelperfdebug/sched_child_runs_first"
-
-    tweak 1024 "$kernelperfdebug/sched_util_clamp_max"
-    tweak 1024 "$kernelperfdebug/sched_util_clamp_min"
-    tweak 1 "$kernelperfdebug/sched_util_clamp_min_rt_default"
-    tweak 4194304 "$kernelperfdebug/sched_deadline_period_max_us"
-    tweak 100 "$kernelperfdebug/sched_deadline_period_min_us"
-
-    tweak 4 "$kernelperfdebug/sched_pelt_multiplier"
-    tweak 0 "$kernelperfdebug/panic"
-    tweak 0 "$kernelperfdebug/panic_on_oops"
-    tweak 0 "$kernelperfdebug/panic_on_rcu_stall"
-    tweak 0 "$kernelperfdebug/panic_on_warn"
-    tweak 0 0 0 0 "$kernelperfdebug/printk"
-    tweak off "$kernelperfdebug/printk_devkmsg"
-
-done &
-
 tweak teo /sys/devices/system/cpu/cpuidle/current_governor
 tweak 0 /sys/module/kernel/parameters/panic_on_warn
 
@@ -406,6 +379,19 @@ tweak 0 $celes_gpu/gpufreq_opp_stress_test
 tweak 0 $celes_gpu/gpufreq_power_dump
 tweak 0 $celes_gpu/gpufreq_power_limited
 done
+
+# Additional Kernel Tweak
+
+for celes_kernel in /proc/sys/kernel
+    do
+tweak 1 $celes_kernel/sched_autogroup_enabled
+tweak 1 $celes_kernel/sched_cstate_aware
+tweak 1 $celes_kernel/sched_sync_hint_enable
+done
+
+# Disable Battery Efficient
+cmd power set-adaptive-power-saver-enabled false
+cmd looper_stats disable
 
 su -lp 2000 -c "cmd notification post -S bigtext -t 'EnCorinVest' -i file:///data/local/tmp/logo.png -I file:///data/local/tmp/logo.png TagEncorin 'EnCorinVest Performance - カリン・ウィクス & 安可'"
 wait

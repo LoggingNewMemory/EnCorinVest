@@ -54,32 +54,6 @@ for schedtweak in /sys/devices/system/cpu/cpufreq/schedutil; do
 
 done &
 
-# Disable CCCI & debug
-tweak 1 /sys/kernel/ccci/debug
-tweak 1 /sys/kernel/tracing/tracing_on
-
-for kernelperfdebug in /proc/sys/kernel; do
-    tweak 4 "$kernelperfdebug/perf_event_paranoid"
-    
-    tweak on "$kernelperfdebug/printk_devkmsg"
-    tweak 1 "$kernelperfdebug/sched_schedstats"
-    tweak 0 "$kernelperfdebug/sched_child_runs_first"
-    
-    tweak 1024 "$kernelperfdebug/sched_util_clamp_max"
-    tweak 0 "$kernelperfdebug/sched_util_clamp_min"
-    tweak 0 "$kernelperfdebug/sched_util_clamp_min_rt_default"
-    tweak 4194304 "$kernelperfdebug/sched_deadline_period_max_us"
-    tweak 100 "$kernelperfdebug/sched_deadline_period_min_us"
-    
-    tweak 16 "$kernelperfdebug/sched_pelt_multiplier"
-    tweak 1 "$kernelperfdebug/panic"
-    tweak 1 "$kernelperfdebug/panic_on_oops"
-    tweak 1 "$kernelperfdebug/panic_on_rcu_stall"
-    tweak 1 "$kernelperfdebug/panic_on_warn"
-    tweak 4 4 1 7 "$kernelperfdebug/printk"
-    tweak on "$kernelperfdebug/printk_devkmsg"
-done &
-
 tweak menu /sys/devices/system/cpu/cpuidle/current_governor
 tweak 0 /sys/module/kernel/parameters/panic_on_warn
 
@@ -389,6 +363,14 @@ for celes_gpu in /proc/gpufreq
     tweak 1 $celes_gpu/gpufreq_opp_stress_test
     tweak 1 $celes_gpu/gpufreq_power_dump
     tweak 1 $celes_gpu/gpufreq_power_limited
+done
+
+# Additional Kernel Tweak with default values
+for celes_kernel in /proc/sys/kernel
+    do
+    tweak 0 $celes_kernel/sched_autogroup_enabled
+    tweak 0 $celes_kernel/sched_cstate_aware
+    tweak 0 $celes_kernel/sched_sync_hint_enable
 done
 
 # Enable Battery Efficient
