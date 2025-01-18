@@ -264,8 +264,8 @@ tweak 1 $ged_extra/enable_cpu_boost
 tweak 1 $ged_extra/ged_boost_enable
 tweak 1 $ged_extra/boost_gpu_enable
 tweak 1 $ged_extra/gpu_dvfs_enable
-tweak 1 $ged_extra/gx_frc_mode
-tweak 1 $ged_extra/gx_dfps
+tweak 0 $ged_extra/gx_frc_mode
+tweak "$(dumpsys display | grep -oE 'fps=[0-9]+' | awk -F '=' '{print $2}' | head -n 1)" $ged_extra/gx_dfps
 tweak 1 $ged_extra/gx_force_cpu_boost
 tweak 1 $ged_extra/gx_boost_on
 tweak 1 $ged_extra/gx_game_mode
@@ -273,26 +273,25 @@ tweak 1 $ged_extra/gx_3D_benchmark_on
 tweak 0 $ged_extra/gpu_loading
 tweak 1 $ged_extra/cpu_boost_policy
 tweak 1 $ged_extra/boost_extra
-tweak 0 $ged_extra/is_GED_KPI_enabled
-tweak 1500000 $ged_extra/gpu_cust_boost_freq
-tweak 1800000 $ged_extra/gpu_cust_upbound_freq
+tweak 1 $ged_extra/is_GED_KPI_enabled
+tweak 2000000 $ged_extra/gpu_cust_boost_freq
+tweak 2000000 $ged_extra/gpu_cust_upbound_freq
 tweak 600000 $ged_extra/gpu_bottom_freq
-tweak 500 $ged_extra/ged_smart_boost
+tweak 1000 $ged_extra/ged_smart_boost
 tweak 1 $ged_extra/enable_game_self_frc_detect
 tweak 1 $ged_extra/boost_amp
 tweak 0 $ged_extra/gpu_idle
+tweak 1 $ged_extra/g_gpu_timer_based_emu
+tweak 0 $ged_extra/ged_monitor_3D_fence_disable
+tweak 0 $ged_extra/ged_monitor_3D_fence_debug
+tweak 0 $ged_extra/gpu_bw_err_debug
+tweak 0 $ged_extra/gpu_debug_enable
 done
 
 tweak "default_mode" /sys/pnpmgr/fpsgo_boost/boost_enable
 tweak 00 /sys/kernel/ged/hal/custom_boost_gpu_freq
 
 # PKT Performance
-
-tweak 0 /sys/module/kernel/parameters/panic
-tweak 0 /proc/sys/kernel/panic_on_oops
-tweak 0 /sys/module/kernel/parameters/panic_on_warn
-tweak 0 /sys/module/kernel/parameters/pause_on_oops
-tweak 0 /proc/sys/vm/panic_on_oom
 
 tweak 1 /proc/sys/vm/overcommit_memory
 
@@ -349,12 +348,6 @@ sysctl -w kernel.sched_util_clamp_min=128
 
 tweak 1 /sys/module/workqueue/parameters/power_efficient
 
-for pkt_ipv4 in /proc/sys/net/ipv4
-    do
-tweak 0 $pkt_ipv4/tcp_timestamp
-tweak 1 $pkt_ipv4/tcp_low_latency
-done
-
 # Celestial Tweaks
 
 # Optimize Priority
@@ -366,28 +359,88 @@ settings put global low_power 0
 
 # GPU Freq Optimization
 
+if [ -d /proc/gpufreq ]; then   
 for celes_gpu in /proc/gpufreq
     do
-tweak 1 $celes_gpu/gpufreq_limited_thermal_ignore
-tweak 1 $celes_gpu/gpufreq_limited_oc_ignore
-tweak 1 $celes_gpu/gpufreq_limited_low_batt_volume_ignore
-tweak 1 $celes_gpu/gpufreq_limited_low_batt_volt_ignore
-tweak 0 $celes_gpu/gpufreq_opp_freq
-tweak 0 $celes_gpu/gpufreq_fixed_freq_volt
-tweak 0 $celes_gpu/gpufreq_opp_stress_test
-tweak 0 $celes_gpu/gpufreq_opp_stress_test
-tweak 0 $celes_gpu/gpufreq_power_dump
-tweak 0 $celes_gpu/gpufreq_power_limited
+    tweak 1 $celes_gpu/gpufreq_limited_thermal_ignore
+    tweak 1 $celes_gpu/gpufreq_limited_oc_ignore
+    tweak 1 $celes_gpu/gpufreq_limited_low_batt_volume_ignore
+    tweak 1 $celes_gpu/gpufreq_limited_low_batt_volt_ignore
+    tweak 0 $celes_gpu/gpufreq_opp_freq
+    tweak 0 $celes_gpu/gpufreq_fixed_freq_volt
+    tweak 0 $celes_gpu/gpufreq_opp_stress_test
+    tweak 0 $celes_gpu/gpufreq_opp_stress_test
+    tweak 0 $celes_gpu/gpufreq_power_dump
+    tweak 0 $celes_gpu/gpufreq_power_limited
 done
-
+fi
 # Additional Kernel Tweak
 
 for celes_kernel in /proc/sys/kernel
     do
-tweak 1 $celes_kernel/sched_autogroup_enabled
-tweak 1 $celes_kernel/sched_cstate_aware
-tweak 1 $celes_kernel/sched_sync_hint_enable
+    tweak 1 $celes_kernel/sched_autogroup_enabled
+    tweak 1 $celes_kernel/sched_cstate_aware
+    tweak 1 $celes_kernel/sched_sync_hint_enable
 done
+
+# Celestial Render
+
+# PowerVR Tweaks
+
+if [ -d "/sys/module/pvrsrvkm/parameters" ]; then
+
+    for powervr_tweaks in /sys/module/pvrsrvkm/parameters 
+        do
+    tweak 2 $powervr_tweaks/gpu_power
+    tweak 256 $powervr_tweaks/HTBufferSizeInKB
+    tweak 0 $powervr_tweaks/DisableClockGating
+    tweak 2 $powervr_tweaks/EmuMaxFreq
+    tweak 1 $powervr_tweaks/EnableFWContextSwitch
+    tweak 0 $powervr_tweaks/gPVRDebugLevel
+    tweak 1 $powervr_tweaks/gpu_dvfs_enable
+    done
+fi
+
+if [ -d "/sys/kernel/debug/pvr/apphint" ]; then
+
+    for powervr_apphint in /sys/kernel/debug/pvr/apphint
+        do
+    tweak 1 $powervr_apphint/CacheOpConfig
+    tweak 512 $powervr_apphint/CacheOpUMKMThresholdSize
+    tweak 0 $powervr_apphint/EnableFTraceGPU
+    tweak 2 $powervr_apphint/HTBOperationMode
+    tweak 1 $powervr_apphint/TimeCorrClock
+    tweak 0 $powervr_apphint/0/DisableFEDLogging
+    tweak 0 $powervr_apphint/0/EnableAPM
+    done
+fi
+
+if [ -d "/sys/class/kgsl/kgsl-3d0" ]; then
+    for kgsl_tweak in /sys/class/kgsl/kgsl-3d0
+        do
+    tweak 0 $kgsl_tweak/max_pwrlevel
+    tweak 0 $kgsl_tweak/adrenoboost
+    tweak N $kgsl_tweak/adreno_idler_active
+    tweak 0 $kgsl_tweak/throttling
+    tweak 0 $kgsl_tweak/perfcounter
+    tweak 0 $kgsl_tweak/bus_split
+    tweak 0 $kgsl_tweak/thermal_pwrlevel 
+    tweak 0 $kgsl_tweak/force_clk_on 
+    tweak 0 $kgsl_tweak/force_bus_on 
+    tweak 0 $kgsl_tweak/force_rail_on 
+    tweak 1 $kgsl_tweak/force_no_nap 
+    tweak 80 $kgsl_tweak/idle_timer 
+    tweak 1000 $kgsl_tweak/pmqos_active_latency 
+    done
+fi
+
+if [ -d "/sys/kernel/debug/ged/hal" ]; then
+    tweak 2 /sys/kernel/debug/ged/hal/gpu_boost_level
+fi
+
+if [ -d "/sys/kernel/debug/fpsgo/common" ]; then
+    tweak "100 120 0" /sys/kernel/debug/fpsgo/common/gpu_block_boost
+fi
 
 # Disable Battery Efficient
 cmd power set-adaptive-power-saver-enabled false
