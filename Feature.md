@@ -1,0 +1,13 @@
+- App to Control Modes
+- CPU Max Lock Freq
+- GPU Tweaks
+- Networking Tweaks
+- Surface Flinger Tweaks
+- Ram Tweaks
+- Storage Tweaks 
+- Disable VSYNC
+- Audio Tweaks
+- Disable Tombstone
+- Hyperthreading & Multithreading 
+- FPSGO & GED
+- Kernel Tweaks

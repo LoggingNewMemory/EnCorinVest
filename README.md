@@ -7,6 +7,8 @@ Support: Mediateks (Helio, Dimensity) <br />
 
 DO NOT COMBINE WITH ANY PERFORMANCE MODULE
 
+Feature List [HERE](https://github.com/LoggingNewMemory/EnCorinVest/blob/main/Feature.md)
+
 How to use? 
 - Install Module
 - Give EnCorinVest apk root access 
