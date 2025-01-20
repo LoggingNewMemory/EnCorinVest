@@ -11,3 +11,4 @@
 - Hyperthreading & Multithreading 
 - FPSGO & GED
 - Kernel Tweaks
+- Mali Scheduling
