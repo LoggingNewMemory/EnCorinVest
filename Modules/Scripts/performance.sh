@@ -30,7 +30,6 @@ for cpuadd_perf in /sys/devices/system/cpu/perf; do
     tweak 1000000 "$cpuadd_perf/gpu_pmu_enable"
     tweak 1 "$cpuadd_perf/fuel_gauge_enable"
     tweak 1 "$cpuadd_perf/charger_enable"
-    tweak 1 "$cpuadd_perf/enable"
 
 done &
 
@@ -56,13 +55,6 @@ done &
 
 tweak teo /sys/devices/system/cpu/cpuidle/current_governor
 tweak 0 /sys/module/kernel/parameters/panic_on_warn
-
-for vmtweak in /proc/sys/vm; do
-    tweak 0 "$vmtweak/page-cluster"
-    tweak 120 "$vmtweak/stat_interval"
-    tweak 0 "$vmtweak/compaction_proactiveness"
-    tweak 80 "$vmtweak/vfs_cache_pressure"
-done &
 
 if [ -f "/sys/kernel/debug/sched_features" ]; then
 	# Consider scheduling tasks that are eager to run
@@ -110,17 +102,26 @@ for path in /sys/class/devfreq/mmc*; do
 	tweak performance $path/governor
 done &
 
-tweak 80 /proc/sys/vm/vfs_cache_pressure
-
 # Corin X MTKVest Script
-
-for cpus in /sys/devices/system/cpu/cpu*/online; do
-    tweak 1 $cpus 2>/dev/null
-done
 
 tweak 0 /proc/trans_scheduler/enable
 tweak 1 /proc/game_state
 tweak always_on /sys/class/misc/mali0/device/power_policy
+
+# Memory Optimization
+
+for memtweak in /sys/kernel/mm/transparent_hugepage
+    do
+        tweak always $memtweak/enabled
+        tweak always $memtweak/shmem_enabled
+    done
+
+# RAM Tweaks
+
+for ramtweak in /sys/block/ram*/bdi
+    do
+    tweak 2048 $ramtweak/read_ahead_kb
+done
 
 # Devfreq Max
 
@@ -129,30 +130,25 @@ highest_freq=$(awk '{for(i=1;i<=NF;i++) if($i ~ /^[0-9]+$/ && $i > max) max=$i} 
 tweak $highest_freq /sys/class/devfreq/mtk-dvfsrc-devfreq/min_freq
 tweak $highest_freq /sys/class/devfreq/mtk-dvfsrc-devfreq/max_freq
 
-# CPU Max
-
-# Force CPU to highest possible OPP
+# Switch to performance
 
 for path in /sys/devices/system/cpu/cpufreq/policy*; do
 	tweak performance "$path/scaling_governor"
 done 
 
-if [ -d /proc/ppm ]; then
-	cluster=0
-	for path in /sys/devices/system/cpu/cpufreq/policy*; do
-		cpu_maxfreq=$(cat $path/cpuinfo_max_freq)
-		tweak "$cluster $cpu_maxfreq" /proc/ppm/policy/hard_userlimit_max_cpu_freq
-		tweak "$cluster $cpu_maxfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
-		((cluster++))
-	done
-fi
+tweak 0 /sys/class/misc/mali0/device/js_ctx_scheduling_mode
+tweak -1 /sys/module/task_turbo/parameters/feats
+tweak 1 /sys/kernel/helio-dvfsrc/dvfsrc_qos_mode
 
-for path in /sys/devices/system/cpu/*/cpufreq; do
-	cpu_maxfreq=$(cat $path/cpuinfo_max_freq)
-	tweak "$cpu_maxfreq" $path/scaling_max_freq
-	tweak "$cpu_maxfreq" $path/scaling_min_freq
-	tweak "cpu$(awk '{print $1}' $path/affected_cpus) $cpu_maxfreq" /sys/devices/virtual/thermal/thermal_message/cpu_limits
-done
+# Virtual Memory Tweaks
+
+for vim_mem in /dev/memcg
+    do
+
+tweak 30 "$vim_mem/memory.swappiness"
+tweak 30 "$vim_mem/apps/memory.swappiness"
+tweak 55 "$vim_mem/system/memory.swappiness"
+done 
 
 # CPU Tweaks
 
@@ -181,43 +177,30 @@ for cpuctl_tweak in /dev/cpuctl
         tweak 1 $cpuctl_tweak/dex2oat/cpu.uclamp.latency_sensitive
         tweak 1 $cpuctl_tweak/top-app/cpu.uclamp.latency_sensitive
         tweak 1 $cpuctl_tweak/foreground-l/cpu.uclamp.latency_sensitive
-
     done
 
-# Memory Optimization
+# Force CPU to highest possible OPP
 
-for memtweak in /sys/kernel/mm/transparent_hugepage
-    do
-        tweak always $memtweak/enabled
-        tweak always $memtweak/shmem_enabled
-    done
+for path in /sys/devices/system/cpu/cpufreq/policy*; do
+	tweak performance "$path/scaling_governor"
+done 
 
-# RAM Tweaks
+if [ -d /proc/ppm ]; then
+	cluster=0
+	for path in /sys/devices/system/cpu/cpufreq/policy*; do
+		cpu_maxfreq=$(cat $path/cpuinfo_max_freq)
+		tweak "$cluster $cpu_maxfreq" /proc/ppm/policy/hard_userlimit_max_cpu_freq
+		tweak "$cluster $cpu_maxfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
+		((cluster++))
+	done
+fi
 
-for ramtweak in /sys/block/ram*/bdi
-    do
-    tweak 2048 $ramtweak/read_ahead_kb
+for path in /sys/devices/system/cpu/*/cpufreq; do
+	cpu_maxfreq=$(cat $path/cpuinfo_max_freq)
+	tweak "$cpu_maxfreq" $path/scaling_max_freq
+	tweak "$cpu_maxfreq" $path/scaling_min_freq
+	tweak "cpu$(awk '{print $1}' $path/affected_cpus) $cpu_maxfreq" /sys/devices/virtual/thermal/thermal_message/cpu_limits
 done
-
-tweak 0 /sys/class/misc/mali0/device/js_ctx_scheduling_mode
-tweak -1 /sys/module/task_turbo/parameters/feats
-tweak 1 /sys/kernel/helio-dvfsrc/dvfsrc_qos_mode
-
-# Virtual Memory Tweaks
-
-for vim_mem in /dev/memcg
-    do
-
-tweak 30 "$vim_mem/memory.swappiness"
-tweak 30 "$vim_mem/apps/memory.swappiness"
-tweak 55 "$vim_mem/system/memory.swappiness"
-
-done
-
-# Disable Battery Efficient
-
-cmd power set-adaptive-power-saver-enabled false
-cmd looper_stats disable
 
 # FPSGo & GED Parameter
 
@@ -230,7 +213,6 @@ tweak 1 $fpsgo/fbt/boost_ta
 tweak 0 $fpsgo/fbt/enable_switch_down_throttle
 tweak 0 $fpsgo/fstb/adopt_low_fps
 tweak 0 $fpsgo/fstb/fstb_self_ctrl_fps_enable
-tweak 1 $fpsgo/fstb/boost_ta
 tweak 0 $fpsgo/fstb/enable_switch_sync_flag
 tweak 1 $fpsgo/fbt/boost_VIP
 tweak 0 $fpsgo/fstb/gpu_slowdown_check
@@ -366,9 +348,7 @@ for celes_gpu in /proc/gpufreq
     tweak 1 $celes_gpu/gpufreq_limited_oc_ignore
     tweak 1 $celes_gpu/gpufreq_limited_low_batt_volume_ignore
     tweak 1 $celes_gpu/gpufreq_limited_low_batt_volt_ignore
-    tweak 0 $celes_gpu/gpufreq_opp_freq
     tweak 0 $celes_gpu/gpufreq_fixed_freq_volt
-    tweak 0 $celes_gpu/gpufreq_opp_stress_test
     tweak 0 $celes_gpu/gpufreq_opp_stress_test
     tweak 0 $celes_gpu/gpufreq_power_dump
     tweak 0 $celes_gpu/gpufreq_power_limited
@@ -378,8 +358,6 @@ fi
 
 for celes_kernel in /proc/sys/kernel
     do
-    tweak 1 $celes_kernel/sched_autogroup_enabled
-    tweak 1 $celes_kernel/sched_cstate_aware
     tweak 1 $celes_kernel/sched_sync_hint_enable
 done
 
@@ -434,10 +412,6 @@ if [ -d "/sys/class/kgsl/kgsl-3d0" ]; then
     done
 fi
 
-if [ -d "/sys/kernel/debug/ged/hal" ]; then
-    tweak 2 /sys/kernel/debug/ged/hal/gpu_boost_level
-fi
-
 if [ -d "/sys/kernel/debug/fpsgo/common" ]; then
     tweak "100 120 0" /sys/kernel/debug/fpsgo/common/gpu_block_boost
 fi
@@ -445,6 +419,14 @@ fi
 # Disable Battery Efficient
 cmd power set-adaptive-power-saver-enabled false
 cmd looper_stats disable
+
+# Disable CCCI & Tracing
+
+tweak 0 /sys/kernel/ccci/debug
+tweak 0 /sys/kernel/tracing/tracing_on
+
+# Power Save Mode Off
+settings put global low_power 0
 
 su -lp 2000 -c "cmd notification post -S bigtext -t 'EnCorinVest' -i file:///data/local/tmp/logo.png -I file:///data/local/tmp/logo.png TagEncorin 'EnCorinVest Performance - カリン・ウィクス & 安可'"
 wait

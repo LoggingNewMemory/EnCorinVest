@@ -30,7 +30,6 @@ for cpuadd_perf in /sys/devices/system/cpu/perf; do
     tweak 0 "$cpuadd_perf/gpu_pmu_enable"
     tweak 0 "$cpuadd_perf/fuel_gauge_enable"
     tweak 0 "$cpuadd_perf/charger_enable"
-    tweak 0 "$cpuadd_perf/enable"
 
 done &
 
@@ -57,19 +56,6 @@ done &
 tweak menu /sys/devices/system/cpu/cpuidle/current_governor
 tweak 0 /sys/module/kernel/parameters/panic_on_warn
 
-for vmtweak in /proc/sys/vm; do
-    tweak 0 "$vmtweak/page-cluster"
-    tweak 1 "$vmtweak/stat_interval"
-    tweak 20 "$vmtweak/compaction_proactiveness"
-    tweak 80 "$vmtweak/vfs_cache_pressure"
-done &
-
-for schedtweak in /sys/devices/system/cpu/cpufreq/schedutil; do
-
-    tweak 1000 "$schedtweak/rate_limit_us"
-
-done &
-
 if [ -f "/sys/kernel/debug/sched_features" ]; then
 	# Consider scheduling tasks that are eager to run
 	tweak NEXT_BUDDY "/sys/kernel/debug/sched_features"
@@ -78,13 +64,10 @@ if [ -f "/sys/kernel/debug/sched_features" ]; then
 	tweak TTWU_QUEUE "/sys/kernel/debug/sched_features"
 fi
 
-if [ -f /proc/ppm/policy_status ]; then
-	policy_file="/proc/ppm/policy_status"
-	pwr_thro_idx=$(grep 'PPM_POLICY_PWR_THRO' $policy_file | sed 's/.*\[\(.*\)\].*/\1/')
-	thermal_idx=$(grep 'PPM_POLICY_THERMAL' $policy_file | sed 's/.*\[\(.*\)\].*/\1/')
-
-	tweak "$pwr_thro_idx 1" $policy_file
-	tweak "$thermal_idx 1" $policy_file
+if [ -d /proc/ppm ]; then
+	for idx in $(cat /proc/ppm/policy_status | grep -E 'PWR_THRO|THERMAL' | awk -F'[][]' '{print $2}'); do
+	tweak "$idx 1" /proc/ppm/policy_status
+	done
 fi
 
 for proccpu in /proc/cpufreq; do
@@ -102,10 +85,10 @@ elif [ -d /proc/gpufreqv2 ]; then
 fi
 
 # Disable battery current limiter
+
 tweak "stop 0" /proc/mtk_batoc_throttling/battery_oc_protect_stop
 
 # DRAM Tweak
-tweak -1 /sys/devices/platform/10012000.dvfsrc/helio-dvfsrc/dvfsrc_req_ddr_opp
 tweak -1 /sys/kernel/helio-dvfsrc/dvfsrc_force_vcore_dvfs_opp
 tweak "userspace" /sys/class/devfreq/mtk-dvfsrc-devfreq/governor
 tweak "userspace" /sys/devices/platform/soc/1c00f000.dvfsrc/mtk-dvfsrc-devfreq/devfreq/mtk-dvfsrc-devfreq/governor
@@ -120,6 +103,12 @@ done &
 
 tweak 100 /proc/sys/vm/vfs_cache_pressure
 
+# Corin X MTKVest Script
+
+tweak 1 /proc/trans_scheduler/enable
+tweak 0 /proc/game_state
+tweak coarse_demand /sys/class/misc/mali0/device/power_policy
+
 # Memory Optimization
 for memtweak in /sys/kernel/mm/transparent_hugepage
     do
@@ -132,6 +121,22 @@ for ramtweak in /sys/block/ram*/bdi
     do
     tweak 1024 $ramtweak/read_ahead_kb
 done
+
+# Restore Devfreq Frequencies
+
+DEVFREQ_FILE="/sys/class/devfreq/mtk-dvfsrc-devfreq/available_frequencies"
+MIN_FREQ_FILE="/sys/class/devfreq/mtk-dvfsrc-devfreq/min_freq"
+MAX_FREQ_FILE="/sys/class/devfreq/mtk-dvfsrc-devfreq/max_freq"
+
+frequencies=$(tr ' ' '\n' < "$DEVFREQ_FILE" | grep -E '^[0-9]+$' | sort -n)
+
+lowest_freq=$(echo "$frequencies" | head -n 1)
+highest_freq=$(echo "$frequencies" | tail -n 1)
+
+# Switch to schedutil
+for path in /sys/devices/system/cpu/cpufreq/policy*; do
+	tweak schedutil $path/scaling_governor
+done 
 
 tweak 0 /sys/class/misc/mali0/device/js_ctx_scheduling_mode
 tweak 0 /sys/module/task_turbo/parameters/feats
@@ -189,17 +194,11 @@ for path in /sys/devices/system/cpu/cpufreq/policy*; do
 	tweak powersave $path/scaling_governor
 done 
 
-# Set CPU Freq to Minimum
-for path in /sys/devices/system/cpu/cpufreq/policy*; do
-	tweak "$default_cpu_gov" "$path/scaling_governor"
-done 
-
 if [ -d /proc/ppm ]; then
 	cluster=0
 	for path in /sys/devices/system/cpu/cpufreq/policy*; do
 		cpu_maxfreq=$(cat $path/cpuinfo_max_freq)
 		cpu_minfreq=$(cat $path/cpuinfo_min_freq)
-		# Set the hard user limit to the minimum frequency
 		tweak "$cluster $cpu_minfreq" /proc/ppm/policy/hard_userlimit_max_cpu_freq
 		tweak "$cluster $cpu_minfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
 		((cluster++))
@@ -209,21 +208,21 @@ fi
 for path in /sys/devices/system/cpu/*/cpufreq; do
 	cpu_maxfreq=$(cat $path/cpuinfo_max_freq)
 	cpu_minfreq=$(cat $path/cpuinfo_min_freq)
-	# Set the scaling frequencies to the minimum frequency
 	tweak "$cpu_minfreq" $path/scaling_max_freq
 	tweak "$cpu_minfreq" $path/scaling_min_freq
+    tweak "cpu$(awk '{print $1}' $path/affected_cpus) $cpu_minfreq" /sys/devices/virtual/thermal/thermal_message/cpu_limits
 done
 
 # Revert FPSGo & GED Parameter to Default
 
 # FPSGo
+
 for fpsgo in /sys/kernel/fpsgo
 do
     tweak 0 $fpsgo/fbt/boost_ta
     tweak 1 $fpsgo/fbt/enable_switch_down_throttle
     tweak 1 $fpsgo/fstb/adopt_low_fps
     tweak 1 $fpsgo/fstb/fstb_self_ctrl_fps_enable
-    tweak 0 $fpsgo/fstb/boost_ta
     tweak 1 $fpsgo/fstb/enable_switch_sync_flag
     tweak 0 $fpsgo/fbt/boost_VIP
     tweak 1 $fpsgo/fstb/gpu_slowdown_check
@@ -235,6 +234,7 @@ done
 tweak 0 /sys/kernel/ged/hal/gpu_boost_level
 
 # FPSGO Advanced
+
 for fpsgo_adv in /sys/module/mtk_fpsgo/parameters
 do
     tweak 0 $fpsgo_adv/boost_affinity
@@ -246,7 +246,9 @@ do
 done
 
 # GED Extra
-for ged_extra in /sys/module/ged/parameters; do
+
+for ged_extra in /sys/module/ged/parameters
+    do
   tweak 0 $ged_extra/ged_smart_boost
   tweak 0 $ged_extra/boost_upper_bound 
   tweak 0 $ged_extra/enable_gpu_boost
@@ -344,6 +346,7 @@ settings put secure high_priority 0
 settings put secure low_priority 1
 
 # GPU Freq Optimization with default values
+
 if [ -d "/proc/gpufreq" ]; then
 for celes_gpu in /proc/gpufreq
     do
@@ -351,7 +354,6 @@ for celes_gpu in /proc/gpufreq
     tweak 0 $celes_gpu/gpufreq_limited_oc_ignore
     tweak 0 $celes_gpu/gpufreq_limited_low_batt_volume_ignore
     tweak 0 $celes_gpu/gpufreq_limited_low_batt_volt_ignore
-    tweak 1 $celes_gpu/gpufreq_opp_freq
     tweak 1 $celes_gpu/gpufreq_fixed_freq_volt
     tweak 1 $celes_gpu/gpufreq_opp_stress_test
     tweak 1 $celes_gpu/gpufreq_power_dump
@@ -360,14 +362,15 @@ done
 fi
 
 # Additional Kernel Tweak with default values
+
 for celes_kernel in /proc/sys/kernel
     do
-    tweak 0 $celes_kernel/sched_autogroup_enabled
-    tweak 0 $celes_kernel/sched_cstate_aware
     tweak 0 $celes_kernel/sched_sync_hint_enable
 done
 
 # Celestial Render
+
+# PowerVR Tweaks
 
 if [ -d "/sys/module/pvrsrvkm/parameters" ]; then
 
@@ -416,10 +419,6 @@ if [ -d "/sys/class/kgsl/kgsl-3d0" ]; then
     done
 fi
 
-if [ -d "/sys/kernel/debug/ged/hal" ]; then
-    tweak 0 /sys/kernel/debug/ged/hal/gpu_boost_level
-fi
-
 if [ -d "/sys/kernel/debug/fpsgo/common" ]; then
     tweak "0 0 0" /sys/kernel/debug/fpsgo/common/gpu_block_boost
 fi
@@ -427,6 +426,11 @@ fi
 # Enable Battery Efficient
 cmd power set-adaptive-power-saver-enabled true
 cmd looper_stats enable
+
+# Enable CCCI & Tracing
+
+tweak 1 /sys/kernel/ccci/debug
+tweak 1 /sys/kernel/tracing/tracing_on
 
 # Power Save Mode On
 settings put global low_power 1
