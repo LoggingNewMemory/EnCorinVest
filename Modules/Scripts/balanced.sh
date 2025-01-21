@@ -6,6 +6,160 @@ tweak() {
 	fi
 }
 
+pkt() {
+# PKT Balanced Value
+
+tweak 0 /proc/sys/vm/overcommit_memory
+
+for pkt_kernel in /proc/sys/kernel
+do
+    tweak 1 $pkt_kernel/sched_autogroup_enabled
+    tweak 0 $pkt_kernel/sched_child_runs_first
+    tweak 25 $pkt_kernel/perf_cpu_time_max_percent
+    tweak 1 $pkt_kernel/sched_cstate_aware
+    tweak "7 4 1 7" $pkt_kernel/printk
+    tweak on $pkt_kernel/printk_devkmsg
+    tweak 500000 $pkt_kernel/sched_migration_cost_ns
+    tweak 750000 $pkt_kernel/sched_min_granularity_ns
+    tweak 1000000 $pkt_kernel/sched_wakeup_granularity_ns
+    tweak 1 $pkt_kernel/timer_migration
+    tweak 15 $pkt_kernel/sched_min_task_util_for_colocation
+done
+
+for pkt_memory in /proc/sys/vm
+do
+    tweak 100 $pkt_memory/vfs_cache_pressure
+    tweak 1 $pkt_memory/stat_interval
+    tweak 20 $pkt_memory/compaction_proactiveness
+    tweak 3 $pkt_memory/page-cluster
+    tweak 60 $pkt_memory/swappiness
+    tweak 20 $pkt_memory/dirty_ratio
+done
+
+for pkt_cputweak in /dev/cpuset
+do
+    tweak 100 $pkt_cputweak/top-app/uclamp.max
+    tweak 0 $pkt_cputweak/top-app/uclamp.min
+    tweak 0 $pkt_cputweak/top-app/uclamp.boosted
+    tweak 0 $pkt_cputweak/top-app/uclamp.latency_sensitive
+
+    tweak 100 $pkt_cputweak/foreground/uclamp.max
+    tweak 0 $pkt_cputweak/foreground/uclamp.min
+    tweak 0 $pkt_cputweak/foreground/uclamp.boosted
+    tweak 0 $pkt_cputweak/foreground/uclamp.latency_sensitive
+
+    tweak 100 $pkt_cputweak/background/uclamp.max
+    tweak 0 $pkt_cputweak/background/uclamp.min
+    tweak 0 $pkt_cputweak/background/uclamp.boosted
+    tweak 0 $pkt_cputweak/background/uclamp.latency_sensitive
+
+    tweak 0 $pkt_cputweak/system-background/uclamp.min
+    tweak 100 $pkt_cputweak/system-background/uclamp.max
+    tweak 0 $pkt_cputweak/system-background/uclamp.boosted
+    tweak 0 $pkt_cputweak/system-background/uclamp.latency_sensitive
+done
+
+sysctl -w kernel.sched_util_clamp_min_rt_default=96
+sysctl -w kernel.sched_util_clamp_min=0
+
+tweak 0 /sys/module/workqueue/parameters/power_efficient
+
+# Enable Battery Efficient
+cmd power set-adaptive-power-saver-enabled true
+cmd looper_stats enable
+
+# Enable CCCI & Tracing
+
+tweak 1 /sys/kernel/ccci/debug
+tweak 1 /sys/kernel/tracing/tracing_on
+}
+encore_cpu() {
+    # Disable battery saver module
+if [ -f /sys/module/battery_saver/parameters/enabled ]; then
+    if grep -qo '[0-9]\+' /sys/module/battery_saver/parameters/enabled; then
+		tweak 0 /sys/module/battery_saver/parameters/enabled
+    else
+		tweak N /sys/module/battery_saver/parameters/enabled
+    fi
+fi
+
+if [ -f "/sys/kernel/debug/sched_features" ]; then
+    # Consider scheduling tasks that are eager to run
+    if grep -qo '[0-9]\+' /sys/kernel/debug/sched_features; then
+		tweak NEXT_BUDDY /sys/kernel/debug/sched_features
+    fi
+
+	# Schedule tasks on their origin CPU if possible
+	tweak TTWU_QUEUE /sys/kernel/debug/sched_features
+fi
+
+if [ -d "/dev/stune/" ]; then
+    # We are not concerned with prioritizing latency
+    if grep -qo '[0-9]\+' /sys/kernel/debug/sched_features; then
+		tweak 0 /dev/stune/top-app/schedtune.prefer_idle
+    fi
+
+	# Mark top-app as boosted, find high-performing CPUs
+	tweak 1 /dev/stune/top-app/schedtune.boost
+fi
+
+# Oppo/Oplus/Realme Touchpanel
+tp_path="/proc/touchpanel"
+if [ -d tp_path ]; then
+	tweak "0" $tp_path/game_switch_enable
+	tweak "1" $tp_path/oplus_tp_limit_enable
+	tweak "1" $tp_path/oppo_tp_limit_enable
+	tweak "0" $tp_path/oplus_tp_direction
+	tweak "0" $tp_path/oppo_tp_direction
+fi
+
+# Memory Tweaks
+tweak 120 /proc/sys/vm/vfs_cache_pressure
+
+# eMMC and UFS governor
+for path in /sys/class/devfreq/*.ufshc; do
+	tweak simple_ondemand $path/governor
+done &
+for path in /sys/class/devfreq/mmc*; do
+	tweak simple_ondemand $path/governor
+done &
+
+# Restore min CPU frequency
+for path in /sys/devices/system/cpu/cpufreq/policy*; do
+	tweak "$default_cpu_gov" "$path/scaling_governor"
+done &
+tweak 1 /sys/devices/system/cpu/cpu1/online
+
+if [ -d /proc/ppm ]; then
+	cluster=0
+	for path in /sys/devices/system/cpu/cpufreq/policy*; do
+		cpu_maxfreq=$(cat $path/cpuinfo_max_freq)
+		cpu_minfreq=$(cat $path/cpuinfo_min_freq)
+		tweak "$cluster $cpu_maxfreq" /proc/ppm/policy/hard_userlimit_max_cpu_freq
+		tweak "$cluster $cpu_minfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
+		((cluster++))
+	done
+	fi
+
+chmod 644 /sys/devices/virtual/thermal/thermal_message/cpu_limits
+for path in /sys/devices/system/cpu/*/cpufreq; do
+		cpu_maxfreq=$(cat $path/cpuinfo_max_freq)
+		cpu_minfreq=$(cat $path/cpuinfo_min_freq)
+		tweak "$cpu_maxfreq" $path/scaling_max_freq
+		tweak "$cpu_minfreq" $path/scaling_min_freq
+	done
+
+# Switch to schedutil
+for path in /sys/devices/system/cpu/cpufreq/policy*; do
+	tweak schedutil $path/scaling_governor
+done 
+
+# I/O Tweaks
+for dir in /sys/block/mmcblk0 /sys/block/mmcblk1 /sys/block/sd*; do
+	# Reduce heuristic read-ahead in exchange for I/O latency
+	tweak 128 "$dir/queue/read_ahead_kb"
+done &
+}
 mediatek() {
 # Encore Script
 
@@ -273,64 +427,10 @@ done
 tweak "default_mode" /sys/pnpmgr/fpsgo_boost/boost_enable
 tweak 00 /sys/kernel/ged/hal/custom_boost_gpu_freq
 
-# PKT Balanced Value
-
-tweak 0 /proc/sys/vm/overcommit_memory
-
-for pkt_kernel in /proc/sys/kernel
-do
-    tweak 1 $pkt_kernel/sched_autogroup_enabled
-    tweak 0 $pkt_kernel/sched_child_runs_first
-    tweak 25 $pkt_kernel/perf_cpu_time_max_percent
-    tweak 1 $pkt_kernel/sched_cstate_aware
-    tweak "7 4 1 7" $pkt_kernel/printk
-    tweak on $pkt_kernel/printk_devkmsg
-    tweak 500000 $pkt_kernel/sched_migration_cost_ns
-    tweak 750000 $pkt_kernel/sched_min_granularity_ns
-    tweak 1000000 $pkt_kernel/sched_wakeup_granularity_ns
-    tweak 1 $pkt_kernel/timer_migration
-    tweak 15 $pkt_kernel/sched_min_task_util_for_colocation
-done
-
-for pkt_memory in /proc/sys/vm
-do
-    tweak 100 $pkt_memory/vfs_cache_pressure
-    tweak 1 $pkt_memory/stat_interval
-    tweak 20 $pkt_memory/compaction_proactiveness
-    tweak 3 $pkt_memory/page-cluster
-    tweak 60 $pkt_memory/swappiness
-    tweak 20 $pkt_memory/dirty_ratio
-done
-
-for pkt_cputweak in /dev/cpuset
-do
-    tweak 100 $pkt_cputweak/top-app/uclamp.max
-    tweak 0 $pkt_cputweak/top-app/uclamp.min
-    tweak 0 $pkt_cputweak/top-app/uclamp.boosted
-    tweak 0 $pkt_cputweak/top-app/uclamp.latency_sensitive
-
-    tweak 100 $pkt_cputweak/foreground/uclamp.max
-    tweak 0 $pkt_cputweak/foreground/uclamp.min
-    tweak 0 $pkt_cputweak/foreground/uclamp.boosted
-    tweak 0 $pkt_cputweak/foreground/uclamp.latency_sensitive
-
-    tweak 100 $pkt_cputweak/background/uclamp.max
-    tweak 0 $pkt_cputweak/background/uclamp.min
-    tweak 0 $pkt_cputweak/background/uclamp.boosted
-    tweak 0 $pkt_cputweak/background/uclamp.latency_sensitive
-
-    tweak 0 $pkt_cputweak/system-background/uclamp.min
-    tweak 100 $pkt_cputweak/system-background/uclamp.max
-    tweak 0 $pkt_cputweak/system-background/uclamp.boosted
-    tweak 0 $pkt_cputweak/system-background/uclamp.latency_sensitive
-done
-
-sysctl -w kernel.sched_util_clamp_min_rt_default=96
-sysctl -w kernel.sched_util_clamp_min=0
-
-tweak 0 /sys/module/workqueue/parameters/power_efficient
+pkt
 
 # Celestial Tweaks
+
 # Optimize Priority with balanced values
 settings put secure high_priority 0
 settings put secure low_priority 1
@@ -412,107 +512,10 @@ fi
 if [ -d "/sys/kernel/debug/fpsgo/common" ]; then
     tweak "0 0 0" /sys/kernel/debug/fpsgo/common/gpu_block_boost
 fi
-
-
-# Enable Battery Efficient
-cmd power set-adaptive-power-saver-enabled true
-cmd looper_stats enable
-
-# Enable CCCI & Tracing
-
-tweak 1 /sys/kernel/ccci/debug
-tweak 1 /sys/kernel/tracing/tracing_on
 }
 
 snapdragon() {
-# Encore Scripts
-
-# Disable battery saver module
-if [ -f /sys/module/battery_saver/parameters/enabled ]; then
-    if grep -qo '[0-9]\+' /sys/module/battery_saver/parameters/enabled; then
-		tweak 0 /sys/module/battery_saver/parameters/enabled
-    else
-		tweak N /sys/module/battery_saver/parameters/enabled
-    fi
-fi
-
-if [ -f "/sys/kernel/debug/sched_features" ]; then
-    # Consider scheduling tasks that are eager to run
-    if grep -qo '[0-9]\+' /sys/kernel/debug/sched_features; then
-		tweak NEXT_BUDDY /sys/kernel/debug/sched_features
-    fi
-
-	# Schedule tasks on their origin CPU if possible
-	tweak TTWU_QUEUE /sys/kernel/debug/sched_features
-fi
-
-if [ -d "/dev/stune/" ]; then
-    # We are not concerned with prioritizing latency
-    if grep -qo '[0-9]\+' /sys/kernel/debug/sched_features; then
-		tweak 0 /dev/stune/top-app/schedtune.prefer_idle
-    fi
-
-	# Mark top-app as boosted, find high-performing CPUs
-	tweak 1 /dev/stune/top-app/schedtune.boost
-fi
-
-# Oppo/Oplus/Realme Touchpanel
-tp_path="/proc/touchpanel"
-if [ -d tp_path ]; then
-	tweak "0" $tp_path/game_switch_enable
-	tweak "1" $tp_path/oplus_tp_limit_enable
-	tweak "1" $tp_path/oppo_tp_limit_enable
-	tweak "0" $tp_path/oplus_tp_direction
-	tweak "0" $tp_path/oppo_tp_direction
-fi
-
-# Memory Tweaks
-tweak 120 /proc/sys/vm/vfs_cache_pressure
-
-# eMMC and UFS governor
-for path in /sys/class/devfreq/*.ufshc; do
-	tweak simple_ondemand $path/governor
-done &
-for path in /sys/class/devfreq/mmc*; do
-	tweak simple_ondemand $path/governor
-done &
-
-# Restore min CPU frequency
-for path in /sys/devices/system/cpu/cpufreq/policy*; do
-	tweak "$default_cpu_gov" "$path/scaling_governor"
-done &
-tweak 1 /sys/devices/system/cpu/cpu1/online
-
-if [ -d /proc/ppm ]; then
-	cluster=0
-	for path in /sys/devices/system/cpu/cpufreq/policy*; do
-		cpu_maxfreq=$(cat $path/cpuinfo_max_freq)
-		cpu_minfreq=$(cat $path/cpuinfo_min_freq)
-		tweak "$cluster $cpu_maxfreq" /proc/ppm/policy/hard_userlimit_max_cpu_freq
-		tweak "$cluster $cpu_minfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
-		((cluster++))
-	done
-	fi
-
-chmod 644 /sys/devices/virtual/thermal/thermal_message/cpu_limits
-for path in /sys/devices/system/cpu/*/cpufreq; do
-		cpu_maxfreq=$(cat $path/cpuinfo_max_freq)
-		cpu_minfreq=$(cat $path/cpuinfo_min_freq)
-		tweak "$cpu_maxfreq" $path/scaling_max_freq
-		tweak "$cpu_minfreq" $path/scaling_min_freq
-	done
-
-# Switch to schedutil
-for path in /sys/devices/system/cpu/cpufreq/policy*; do
-	tweak schedutil $path/scaling_governor
-done 
-
-# I/O Tweaks
-for dir in /sys/block/mmcblk0 /sys/block/mmcblk1 /sys/block/sd*; do
-	# Reduce heuristic read-ahead in exchange for I/O latency
-	tweak 128 "$dir/queue/read_ahead_kb"
-done &
-
+encore_cpu
 # Qualcomm CPU Bus and DRAM frequencies
 for path in /sys/class/devfreq/*cpu-ddr-latfloor*; do
 	tweak "compute" $path/governor
@@ -592,152 +595,11 @@ done &
 # Adreno Boost
 tweak 1 /sys/class/kgsl/kgsl-3d0/devfreq/adrenoboost
 
-# PKT Balanced Value
-
-tweak 0 /proc/sys/vm/overcommit_memory
-
-for pkt_kernel in /proc/sys/kernel
-do
-    tweak 1 $pkt_kernel/sched_autogroup_enabled
-    tweak 0 $pkt_kernel/sched_child_runs_first
-    tweak 25 $pkt_kernel/perf_cpu_time_max_percent
-    tweak 1 $pkt_kernel/sched_cstate_aware
-    tweak "7 4 1 7" $pkt_kernel/printk
-    tweak on $pkt_kernel/printk_devkmsg
-    tweak 500000 $pkt_kernel/sched_migration_cost_ns
-    tweak 750000 $pkt_kernel/sched_min_granularity_ns
-    tweak 1000000 $pkt_kernel/sched_wakeup_granularity_ns
-    tweak 1 $pkt_kernel/timer_migration
-    tweak 15 $pkt_kernel/sched_min_task_util_for_colocation
-done
-
-for pkt_memory in /proc/sys/vm
-do
-    tweak 100 $pkt_memory/vfs_cache_pressure
-    tweak 1 $pkt_memory/stat_interval
-    tweak 20 $pkt_memory/compaction_proactiveness
-    tweak 3 $pkt_memory/page-cluster
-    tweak 60 $pkt_memory/swappiness
-    tweak 20 $pkt_memory/dirty_ratio
-done
-
-for pkt_cputweak in /dev/cpuset
-do
-    tweak 100 $pkt_cputweak/top-app/uclamp.max
-    tweak 0 $pkt_cputweak/top-app/uclamp.min
-    tweak 0 $pkt_cputweak/top-app/uclamp.boosted
-    tweak 0 $pkt_cputweak/top-app/uclamp.latency_sensitive
-
-    tweak 100 $pkt_cputweak/foreground/uclamp.max
-    tweak 0 $pkt_cputweak/foreground/uclamp.min
-    tweak 0 $pkt_cputweak/foreground/uclamp.boosted
-    tweak 0 $pkt_cputweak/foreground/uclamp.latency_sensitive
-
-    tweak 100 $pkt_cputweak/background/uclamp.max
-    tweak 0 $pkt_cputweak/background/uclamp.min
-    tweak 0 $pkt_cputweak/background/uclamp.boosted
-    tweak 0 $pkt_cputweak/background/uclamp.latency_sensitive
-
-    tweak 0 $pkt_cputweak/system-background/uclamp.min
-    tweak 100 $pkt_cputweak/system-background/uclamp.max
-    tweak 0 $pkt_cputweak/system-background/uclamp.boosted
-    tweak 0 $pkt_cputweak/system-background/uclamp.latency_sensitive
-done
-
-sysctl -w kernel.sched_util_clamp_min_rt_default=96
-sysctl -w kernel.sched_util_clamp_min=0
-
-tweak 0 /sys/module/workqueue/parameters/power_efficient
+pkt
 }
 
 exynos() {
-# Encore Scripts
-
-# Disable battery saver module
-if [ -f /sys/module/battery_saver/parameters/enabled ]; then
-    if grep -qo '[0-9]\+' /sys/module/battery_saver/parameters/enabled; then
-		tweak 0 /sys/module/battery_saver/parameters/enabled
-    else
-		tweak N /sys/module/battery_saver/parameters/enabled
-    fi
-fi
-
-if [ -f "/sys/kernel/debug/sched_features" ]; then
-    # Consider scheduling tasks that are eager to run
-    if grep -qo '[0-9]\+' /sys/kernel/debug/sched_features; then
-		tweak NEXT_BUDDY /sys/kernel/debug/sched_features
-    fi
-
-	# Schedule tasks on their origin CPU if possible
-	tweak TTWU_QUEUE /sys/kernel/debug/sched_features
-fi
-
-if [ -d "/dev/stune/" ]; then
-    # We are not concerned with prioritizing latency
-    if grep -qo '[0-9]\+' /sys/kernel/debug/sched_features; then
-		tweak 0 /dev/stune/top-app/schedtune.prefer_idle
-    fi
-
-	# Mark top-app as boosted, find high-performing CPUs
-	tweak 1 /dev/stune/top-app/schedtune.boost
-fi
-
-# Oppo/Oplus/Realme Touchpanel
-tp_path="/proc/touchpanel"
-if [ -d tp_path ]; then
-	tweak "0" $tp_path/game_switch_enable
-	tweak "1" $tp_path/oplus_tp_limit_enable
-	tweak "1" $tp_path/oppo_tp_limit_enable
-	tweak "0" $tp_path/oplus_tp_direction
-	tweak "0" $tp_path/oppo_tp_direction
-fi
-
-# Memory Tweaks
-tweak 120 /proc/sys/vm/vfs_cache_pressure
-
-# eMMC and UFS governor
-for path in /sys/class/devfreq/*.ufshc; do
-	tweak simple_ondemand $path/governor
-done &
-for path in /sys/class/devfreq/mmc*; do
-	tweak simple_ondemand $path/governor
-done &
-
-# Restore min CPU frequency
-for path in /sys/devices/system/cpu/cpufreq/policy*; do
-	tweak "$default_cpu_gov" "$path/scaling_governor"
-done &
-tweak 1 /sys/devices/system/cpu/cpu1/online
-
-if [ -d /proc/ppm ]; then
-	cluster=0
-	for path in /sys/devices/system/cpu/cpufreq/policy*; do
-		cpu_maxfreq=$(cat $path/cpuinfo_max_freq)
-		cpu_minfreq=$(cat $path/cpuinfo_min_freq)
-		tweak "$cluster $cpu_maxfreq" /proc/ppm/policy/hard_userlimit_max_cpu_freq
-		tweak "$cluster $cpu_minfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
-		((cluster++))
-	done
-	fi
-
-chmod 644 /sys/devices/virtual/thermal/thermal_message/cpu_limits
-for path in /sys/devices/system/cpu/*/cpufreq; do
-		cpu_maxfreq=$(cat $path/cpuinfo_max_freq)
-		cpu_minfreq=$(cat $path/cpuinfo_min_freq)
-		tweak "$cpu_maxfreq" $path/scaling_max_freq
-		tweak "$cpu_minfreq" $path/scaling_min_freq
-	done
-
-# Switch to schedutil
-for path in /sys/devices/system/cpu/cpufreq/policy*; do
-	tweak schedutil $path/scaling_governor
-done 
-
-# I/O Tweaks
-for dir in /sys/block/mmcblk0 /sys/block/mmcblk1 /sys/block/sd*; do
-	# Reduce heuristic read-ahead in exchange for I/O latency
-	tweak 128 "$dir/queue/read_ahead_kb"
-done &
+encore_cpu
 
 # GPU Frequency
 gpu_path="/sys/kernel/gpu"
@@ -752,62 +614,7 @@ fi
 mali_sysfs=$(find /sys/devices/platform/ -iname "*.mali" -print -quit 2>/dev/null)
 	tweak coarse_demand $mali_sysfs/power_policy
 
-# PKT Balanced Value
-
-tweak 0 /proc/sys/vm/overcommit_memory
-
-for pkt_kernel in /proc/sys/kernel
-do
-    tweak 1 $pkt_kernel/sched_autogroup_enabled
-    tweak 0 $pkt_kernel/sched_child_runs_first
-    tweak 25 $pkt_kernel/perf_cpu_time_max_percent
-    tweak 1 $pkt_kernel/sched_cstate_aware
-    tweak "7 4 1 7" $pkt_kernel/printk
-    tweak on $pkt_kernel/printk_devkmsg
-    tweak 500000 $pkt_kernel/sched_migration_cost_ns
-    tweak 750000 $pkt_kernel/sched_min_granularity_ns
-    tweak 1000000 $pkt_kernel/sched_wakeup_granularity_ns
-    tweak 1 $pkt_kernel/timer_migration
-    tweak 15 $pkt_kernel/sched_min_task_util_for_colocation
-done
-
-for pkt_memory in /proc/sys/vm
-do
-    tweak 100 $pkt_memory/vfs_cache_pressure
-    tweak 1 $pkt_memory/stat_interval
-    tweak 20 $pkt_memory/compaction_proactiveness
-    tweak 3 $pkt_memory/page-cluster
-    tweak 60 $pkt_memory/swappiness
-    tweak 20 $pkt_memory/dirty_ratio
-done
-
-for pkt_cputweak in /dev/cpuset
-do
-    tweak 100 $pkt_cputweak/top-app/uclamp.max
-    tweak 0 $pkt_cputweak/top-app/uclamp.min
-    tweak 0 $pkt_cputweak/top-app/uclamp.boosted
-    tweak 0 $pkt_cputweak/top-app/uclamp.latency_sensitive
-
-    tweak 100 $pkt_cputweak/foreground/uclamp.max
-    tweak 0 $pkt_cputweak/foreground/uclamp.min
-    tweak 0 $pkt_cputweak/foreground/uclamp.boosted
-    tweak 0 $pkt_cputweak/foreground/uclamp.latency_sensitive
-
-    tweak 100 $pkt_cputweak/background/uclamp.max
-    tweak 0 $pkt_cputweak/background/uclamp.min
-    tweak 0 $pkt_cputweak/background/uclamp.boosted
-    tweak 0 $pkt_cputweak/background/uclamp.latency_sensitive
-
-    tweak 0 $pkt_cputweak/system-background/uclamp.min
-    tweak 100 $pkt_cputweak/system-background/uclamp.max
-    tweak 0 $pkt_cputweak/system-background/uclamp.boosted
-    tweak 0 $pkt_cputweak/system-background/uclamp.latency_sensitive
-done
-
-sysctl -w kernel.sched_util_clamp_min_rt_default=96
-sysctl -w kernel.sched_util_clamp_min=0
-
-tweak 0 /sys/module/workqueue/parameters/power_efficient
+pkt
 }
 # SOC Recognition 
 

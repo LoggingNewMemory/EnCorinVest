@@ -25,4 +25,7 @@ tweak 0 /sys/module/kernel/parameters/panic_on_warn
 tweak 0 /sys/module/kernel/parameters/pause_on_oops
 tweak 0 /proc/sys/vm/panic_on_oom
 
+sh /data/adb/modules/EnCorinVest/AnyaMelfissa/AnyaMelfissa.sh
+sh /data/adb/modules/EnCorinVest/KoboKanaeru/KoboKanaeru.sh
+
 su -lp 2000 -c "cmd notification post -S bigtext -t 'EnCorinVest' -i file:///data/local/tmp/logo.png -I file:///data/local/tmp/logo.png TagEncorin 'EnCorinVest - オンライン'"
