@@ -6,6 +6,7 @@ tweak() {
 	fi
 }
 
+mediatek() {
 # Encore Scripts
 
 # IO Tweaks
@@ -424,6 +425,433 @@ cmd looper_stats disable
 
 tweak 0 /sys/kernel/ccci/debug
 tweak 0 /sys/kernel/tracing/tracing_on
+}
+
+snapdragon() {
+
+# Encore Scripts
+
+# Disable battery saver module
+if [ -f /sys/module/battery_saver/parameters/enabled ]; then
+	if grep -qo '[0-9]\+' /sys/module/battery_saver/parameters/enabled; then
+		tweak 0 /sys/module/battery_saver/parameters/enabled
+	else
+		tweak N /sys/module/battery_saver/parameters/enabled
+	fi
+fi
+
+if [ -f "/sys/kernel/debug/sched_features" ]; then
+	# Consider scheduling tasks that are eager to run
+	tweak NEXT_BUDDY /sys/kernel/debug/sched_features
+
+	# Some sources report large latency spikes during large migrations
+	tweak NO_TTWU_QUEUE /sys/kernel/debug/sched_features
+fi
+
+if [ -d "/dev/stune/" ]; then
+	# Prefer to schedule top-app tasks on idle CPUs
+	tweak 1 /dev/stune/top-app/schedtune.prefer_idle
+
+	# Mark top-app as boosted, find high-performing CPUs
+	tweak 1 /dev/stune/top-app/schedtune.boost
+fi
+
+# Oppo/Oplus/Realme Touchpanel
+tp_path="/proc/touchpanel"
+if [ -d $tp_path ]; then
+	apply "1" $tp_path/game_switch_enable
+	apply "0" $tp_path/oplus_tp_limit_enable
+	apply "0" $tp_path/oppo_tp_limit_enable
+	apply "1" $tp_path/oplus_tp_direction
+	apply "1" $tp_path/oppo_tp_direction
+fi
+
+
+# Memory tweak
+tweak 80 /proc/sys/vm/vfs_cache_pressure
+
+# eMMC and UFS governor
+for path in /sys/class/devfreq/*.ufshc; do
+	tweak performance $path/governor
+done &
+for path in /sys/class/devfreq/mmc*; do
+	tweak performance $path/governor
+done &
+
+	# Force CPU to highest possible OPP
+for path in /sys/devices/system/cpu/cpufreq/policy*; do
+	tweak performance "$path/scaling_governor"
+done &
+
+if [ -d /proc/ppm ]; then
+	cluster=0
+	for path in /sys/devices/system/cpu/cpufreq/policy*; do
+		cpu_maxfreq=$(cat $path/cpuinfo_max_freq)
+		tweak "$cluster $cpu_maxfreq" /proc/ppm/policy/hard_userlimit_max_cpu_freq
+		tweak "$cluster $cpu_maxfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
+		((cluster++))
+	done
+fi
+
+chmod 644 /sys/devices/virtual/thermal/thermal_message/cpu_limits
+for path in /sys/devices/system/cpu/*/cpufreq; do
+	cpu_maxfreq=$(cat $path/cpuinfo_max_freq)
+	tweak "cpu$(awk '{print $1}' $path/affected_cpus) $cpu_maxfreq" /sys/devices/virtual/thermal/thermal_message/cpu_limits
+	tweak "$cpu_maxfreq" $path/scaling_max_freq
+	tweak "$cpu_maxfreq" $path/scaling_min_freq
+done
+chmod 000 /sys/devices/virtual/thermal/thermal_message/cpu_limits
+
+# I/O Tweaks
+for dir in /sys/block/mmcblk0 /sys/block/mmcblk1 /sys/block/sd*; do
+	# Reduce heuristic read-ahead in exchange for I/O latency
+	tweak 32 "$dir/queue/read_ahead_kb"
+done &
+
+# Qualcomm CPU Bus and DRAM frequencies
+for path in /sys/class/devfreq/*cpu-ddr-latfloor*; do
+	tweak "performance" $path/governor
+done &
+
+for path in /sys/class/devfreq/*cpu*-lat; do
+	tweak "performance" $path/governor
+done &
+for path in /sys/class/devfreq/*cpu-cpu-ddr-bw; do
+	tweak "performance" $path/governor
+done &
+
+for path in /sys/class/devfreq/*cpu-cpu-llcc-bw; do
+	tweak "performance" $path/governor
+done &
+
+if [ -d /sys/devices/system/cpu/bus_dcvs/LLCC ]; then
+	freq=$(cat /sys/devices/system/cpu/bus_dcvs/LLCC/available_frequencies | tr ' ' '\n' | sort -nr | head -n 1)
+for path in /sys/devices/system/cpu/bus_dcvs/LLCC/*/max_freq; do
+	tweak $freq $path
+	done &
+for path in /sys/devices/system/cpu/bus_dcvs/LLCC/*/min_freq; do
+	tweak $freq $path
+	done &
+fi
+
+if [ -d /sys/devices/system/cpu/bus_dcvs/L3 ]; then
+	freq=$(cat /sys/devices/system/cpu/bus_dcvs/L3/available_frequencies | tr ' ' '\n' | sort -nr | head -n 1)
+for path in /sys/devices/system/cpu/bus_dcvs/L3/*/max_freq; do
+    tweak $freq $path
+	done &
+for path in /sys/devices/system/cpu/bus_dcvs/L3/*/min_freq; do
+	tweak $freq $path
+	done &
+fi
+
+if [ -d /sys/devices/system/cpu/bus_dcvs/DDR ]; then
+	freq=$(cat /sys/devices/system/cpu/bus_dcvs/DDR/available_frequencies | tr ' ' '\n' | sort -nr | head -n 1)
+for path in /sys/devices/system/cpu/bus_dcvs/DDR/*/max_freq; do
+	tweak $freq $path
+	done &
+for path in /sys/devices/system/cpu/bus_dcvs/DDR/*/min_freq; do
+	tweak $freq $path
+	done &
+fi
+
+if [ -d /sys/devices/system/cpu/bus_dcvs/DDRQOS ]; then
+	freq=$(cat /sys/devices/system/cpu/bus_dcvs/DDRQOS/available_frequencies | tr ' ' '\n' | sort -nr | head -n 1)
+for path in /sys/devices/system/cpu/bus_dcvs/DDRQOS/*/max_freq; do
+	tweak $freq $path
+    done &
+for path in /sys/devices/system/cpu/bus_dcvs/DDRQOS/*/min_freq; do
+	tweak $freq $path
+	done &
+fi
+
+# GPU Frequency
+gpu_path="/sys/class/kgsl/kgsl-3d0/devfreq"
+
+if [ -d $gpu_path ]; then
+	freq=$(cat $gpu_path/available_frequencies | tr ' ' '\n' | sort -nr | head -n 1)
+	tweak $freq $gpu_path/min_freq
+	tweak $freq $gpu_path/max_freq
+fi
+
+# GPU Bus
+for path in /sys/class/devfreq/*gpubw*; do
+	tweak "performance" $path/governor
+done &
+
+# Adreno Boost
+	tweak 3 /sys/class/kgsl/kgsl-3d0/devfreq/adrenoboost
+
+# PKT Performance
+
+tweak 1 /proc/sys/vm/overcommit_memory
+
+for pkt_kernel in /proc/sys/kernel
+    do
+tweak 0 $pkt_kernel/sched_autogroup_enabled
+tweak 1 $pkt_kernel/sched_child_runs_first
+tweak 10 $pkt_kernel/perf_cpu_time_max_percent
+tweak 0 $pkt_kernel/sched_cstate_aware
+tweak "0 0 0 0" $pkt_kernel/printk
+tweak off $pkt_kernel/printk_devkmsg
+tweak 50000 $pkt_kernel/sched_migration_cost_ns
+tweak 1000000 $pkt_kernel/sched_min_granularity_ns
+tweak 1500000 $pkt_kernel/sched_wakeup_granularity_ns
+tweak 0 $pkt_kernel/timer_migration
+tweak 0 $pkt_kernel/sched_min_task_util_for_colocation
+done
+
+for pkt_memory in /proc/sys/vm
+    do
+tweak 50 $pkt_memory/vfs_cache_pressure
+tweak 30 $pkt_memory/stat_interval
+tweak 0 $pkt_memory/compaction_proactiveness
+tweak 0 $pkt_memory/page-cluster
+tweak 60 $pkt_memory/swappiness
+tweak 60 $pkt_memory/dirty_ratio
+done
+
+for pkt_cputweak in /dev/cpuset
+do
+    tweak max $pkt_cputweak/top-app/uclamp.max
+    tweak 10 $pkt_cputweak/top-app/uclamp.min
+    tweak 1 $pkt_cputweak/top-app/uclamp.boosted
+    tweak 1 $pkt_cputweak/top-app/uclamp.latency_sensitive
+
+    tweak 50 $pkt_cputweak/foreground/uclamp.max
+    tweak 0 $pkt_cputweak/foreground/uclamp.min
+    tweak 0 $pkt_cputweak/foreground/uclamp.boosted
+    tweak 0 $pkt_cputweak/foreground/uclamp.latency_sensitive
+
+    tweak max $pkt_cputweak/background/uclamp.max
+    tweak 20 $pkt_cputweak/background/uclamp.min
+    tweak 0 $pkt_cputweak/background/uclamp.boosted
+    tweak 0 $pkt_cputweak/background/uclamp.latency_sensitive
+
+    tweak 0 $pkt_cputweak/system-background/uclamp.min
+    tweak 40 $pkt_cputweak/system-background/uclamp.max
+    tweak 0 $pkt_cputweak/system-background/uclamp.boosted
+    tweak 0 $pkt_cputweak/system-background/uclamp.latency_sensitive
+done
+
+sysctl -w kernel.sched_util_clamp_min_rt_default=0
+sysctl -w kernel.sched_util_clamp_min=128
+
+tweak 1 /sys/module/workqueue/parameters/power_efficient
+}
+
+exynos() {
+# Encore Scripts
+
+# Disable battery saver module
+if [ -f /sys/module/battery_saver/parameters/enabled ]; then
+	if grep -qo '[0-9]\+' /sys/module/battery_saver/parameters/enabled; then
+		tweak 0 /sys/module/battery_saver/parameters/enabled
+	else
+		tweak N /sys/module/battery_saver/parameters/enabled
+	fi
+fi
+
+if [ -f "/sys/kernel/debug/sched_features" ]; then
+	# Consider scheduling tasks that are eager to run
+	tweak NEXT_BUDDY /sys/kernel/debug/sched_features
+
+	# Some sources report large latency spikes during large migrations
+	tweak NO_TTWU_QUEUE /sys/kernel/debug/sched_features
+fi
+
+if [ -d "/dev/stune/" ]; then
+	# Prefer to schedule top-app tasks on idle CPUs
+	tweak 1 /dev/stune/top-app/schedtune.prefer_idle
+
+	# Mark top-app as boosted, find high-performing CPUs
+	tweak 1 /dev/stune/top-app/schedtune.boost
+fi
+
+# Oppo/Oplus/Realme Touchpanel
+tp_path="/proc/touchpanel"
+if [ -d $tp_path ]; then
+	apply "1" $tp_path/game_switch_enable
+	apply "0" $tp_path/oplus_tp_limit_enable
+	apply "0" $tp_path/oppo_tp_limit_enable
+	apply "1" $tp_path/oplus_tp_direction
+	apply "1" $tp_path/oppo_tp_direction
+fi
+
+# Memory tweak
+tweak 80 /proc/sys/vm/vfs_cache_pressure
+
+# eMMC and UFS governor
+for path in /sys/class/devfreq/*.ufshc; do
+	tweak performance $path/governor
+done &
+for path in /sys/class/devfreq/mmc*; do
+	tweak performance $path/governor
+done &
+
+	# Force CPU to highest possible OPP
+for path in /sys/devices/system/cpu/cpufreq/policy*; do
+	tweak performance "$path/scaling_governor"
+done &
+
+if [ -d /proc/ppm ]; then
+	cluster=0
+	for path in /sys/devices/system/cpu/cpufreq/policy*; do
+		cpu_maxfreq=$(cat $path/cpuinfo_max_freq)
+		tweak "$cluster $cpu_maxfreq" /proc/ppm/policy/hard_userlimit_max_cpu_freq
+		tweak "$cluster $cpu_maxfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
+		((cluster++))
+	done
+fi
+
+chmod 644 /sys/devices/virtual/thermal/thermal_message/cpu_limits
+for path in /sys/devices/system/cpu/*/cpufreq; do
+	cpu_maxfreq=$(cat $path/cpuinfo_max_freq)
+	tweak "cpu$(awk '{print $1}' $path/affected_cpus) $cpu_maxfreq" /sys/devices/virtual/thermal/thermal_message/cpu_limits
+	tweak "$cpu_maxfreq" $path/scaling_max_freq
+	tweak "$cpu_maxfreq" $path/scaling_min_freq
+done
+chmod 000 /sys/devices/virtual/thermal/thermal_message/cpu_limits
+
+# I/O Tweaks
+for dir in /sys/block/mmcblk0 /sys/block/mmcblk1 /sys/block/sd*; do
+	# Reduce heuristic read-ahead in exchange for I/O latency
+	tweak 32 "$dir/queue/read_ahead_kb"
+done &
+
+gpu_path="/sys/kernel/gpu"
+
+if [ -d $gpu_path ]; then
+	freq=$(cat $gpu_path/gpu_available_frequencies | tr ' ' '\n' | sort -nr | head -n 1)
+	tweak $freq $gpu_path/gpu_min_clock
+	tweak $freq $gpu_path/gpu_max_clock
+fi
+
+mali_sysfs=$(find /sys/devices/platform/ -iname "*.mali" -print -quit 2>/dev/null)
+tweak always_on $mali_sysfs/power_policy
+
+# PKT Performance
+
+tweak 1 /proc/sys/vm/overcommit_memory
+
+for pkt_kernel in /proc/sys/kernel
+    do
+tweak 0 $pkt_kernel/sched_autogroup_enabled
+tweak 1 $pkt_kernel/sched_child_runs_first
+tweak 10 $pkt_kernel/perf_cpu_time_max_percent
+tweak 0 $pkt_kernel/sched_cstate_aware
+tweak "0 0 0 0" $pkt_kernel/printk
+tweak off $pkt_kernel/printk_devkmsg
+tweak 50000 $pkt_kernel/sched_migration_cost_ns
+tweak 1000000 $pkt_kernel/sched_min_granularity_ns
+tweak 1500000 $pkt_kernel/sched_wakeup_granularity_ns
+tweak 0 $pkt_kernel/timer_migration
+tweak 0 $pkt_kernel/sched_min_task_util_for_colocation
+done
+
+for pkt_memory in /proc/sys/vm
+    do
+tweak 50 $pkt_memory/vfs_cache_pressure
+tweak 30 $pkt_memory/stat_interval
+tweak 0 $pkt_memory/compaction_proactiveness
+tweak 0 $pkt_memory/page-cluster
+tweak 60 $pkt_memory/swappiness
+tweak 60 $pkt_memory/dirty_ratio
+done
+
+for pkt_cputweak in /dev/cpuset
+do
+    tweak max $pkt_cputweak/top-app/uclamp.max
+    tweak 10 $pkt_cputweak/top-app/uclamp.min
+    tweak 1 $pkt_cputweak/top-app/uclamp.boosted
+    tweak 1 $pkt_cputweak/top-app/uclamp.latency_sensitive
+
+    tweak 50 $pkt_cputweak/foreground/uclamp.max
+    tweak 0 $pkt_cputweak/foreground/uclamp.min
+    tweak 0 $pkt_cputweak/foreground/uclamp.boosted
+    tweak 0 $pkt_cputweak/foreground/uclamp.latency_sensitive
+
+    tweak max $pkt_cputweak/background/uclamp.max
+    tweak 20 $pkt_cputweak/background/uclamp.min
+    tweak 0 $pkt_cputweak/background/uclamp.boosted
+    tweak 0 $pkt_cputweak/background/uclamp.latency_sensitive
+
+    tweak 0 $pkt_cputweak/system-background/uclamp.min
+    tweak 40 $pkt_cputweak/system-background/uclamp.max
+    tweak 0 $pkt_cputweak/system-background/uclamp.boosted
+    tweak 0 $pkt_cputweak/system-background/uclamp.latency_sensitive
+done
+
+sysctl -w kernel.sched_util_clamp_min_rt_default=0
+sysctl -w kernel.sched_util_clamp_min=128
+
+tweak 1 /sys/module/workqueue/parameters/power_efficient
+}
+
+# SOC Recognition 
+
+detect_soc() {
+    # Check multiple sources for SOC information
+    local chipset=""
+    
+    # Check /proc/cpuinfo
+    if [ -f "/proc/cpuinfo" ]; then
+        chipset=$(grep -E "Hardware|Processor" /proc/cpuinfo | uniq | cut -d ':' -f 2 | sed 's/^[ \t]*//')
+    fi
+    
+    # If empty, check Android properties
+    if [ -z "$chipset" ]; then
+        if command -v getprop >/dev/null 2>&1; then
+            chipset="$(getprop ro.board.platform) $(getprop ro.hardware)"
+        fi
+    fi
+    
+    # Additional checks for Exynos
+    if [ -z "$chipset" ] || [ "$chipset" = " " ]; then
+        # Check Samsung specific properties
+        if command -v getprop >/dev/null 2>&1; then
+            local samsung_soc=$(getprop ro.hardware.chipname)
+            if [[ "$samsung_soc" == *"exynos"* ]] || [[ "$samsung_soc" == *"EXYNOS"* ]]; then
+                chipset="$samsung_soc"
+            fi
+        fi
+        
+        # Check kernel version for Exynos information
+        if [ -z "$chipset" ]; then
+            local kernel_version=$(cat /proc/version 2>/dev/null)
+            if [[ "$kernel_version" == *"exynos"* ]] || [[ "$kernel_version" == *"EXYNOS"* ]]; then
+                chipset="exynos"
+            fi
+        fi
+    fi
+    
+    echo "$chipset"
+}
+
+# Get the chipset information
+chipset=$(detect_soc)
+
+# Convert to lowercase for easier matching
+chipset_lower=$(echo "$chipset" | tr '[:upper:]' '[:lower:]')
+
+# Identify the chipset and execute the corresponding function
+case "$chipset_lower" in
+    *mt*) 
+        echo "- Implementing tweaks for Mediatek"
+        mediatek
+        ;;
+    *sm*|*qcom*|*qualcomm*) 
+        echo "- Implementing tweaks for Snapdragon"
+        snapdragon
+        ;;
+    *exynos*|*universal*|*samsung*) 
+        echo "- Implementing tweaks for Exynos"
+        exynos
+        ;;
+    *) 
+        echo "- Unknown chipset: $chipset"
+        echo "- No tweaks applied."
+        ;;
+esac
 
 # Power Save Mode Off
 settings put global low_power 0
