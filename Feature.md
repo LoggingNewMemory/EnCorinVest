@@ -6,7 +6,6 @@
 - Ram Tweaks
 - Storage Tweaks 
 - Disable VSYNC
-- Audio Tweaks
 - Disable Tombstone
 - Hyperthreading & Multithreading 
 - FPSGO & GED
