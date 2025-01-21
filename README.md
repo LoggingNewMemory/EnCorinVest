@@ -3,9 +3,11 @@
 Performance Module, Collaboration between CorinXMTKVest and Encore Tweaks
 
 Dev: Kanagawa Yamada <br />
-Support: Mediateks (Helio, Dimensity) <br />
+Support: Mediatek, Snapdragon, Exynos <br />
 
 DO NOT COMBINE WITH ANY PERFORMANCE MODULE
+
+Do not use fake device module (It will apply the wrong tweak)
 
 Feature List [HERE](https://github.com/LoggingNewMemory/EnCorinVest/blob/main/Feature.md)
 
