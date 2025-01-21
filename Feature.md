@@ -6,9 +6,10 @@
 - Ram Tweaks
 - Storage Tweaks 
 - Disable VSYNC
-- Audio Tweaks
 - Disable Tombstone
 - Hyperthreading & Multithreading 
 - FPSGO & GED
 - Kernel Tweaks
 - Mali Scheduling
+- Disable Thermal
+- Fast Charge
