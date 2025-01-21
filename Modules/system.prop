@@ -68,12 +68,5 @@ ro.surface_flinger.enable_frame_rate_override=false
 # disable cpu vsync
 debug.cpurend.vsync=false
 
-# Audio enhancer
-persist.audio.fluence.mode=endfire
-persist.audio.vr.enable=true
-persist.audio.handset.mic=digital
-af.resampler.quality=255
-mpq.audio.decode=true
-
 # disable tombstoned
 tombstoned.max_tombstone_count=0
