@@ -12,3 +12,5 @@
 - FPSGO & GED
 - Kernel Tweaks
 - Mali Scheduling
+- Disable Thermal
+- Fast Charge
