@@ -3,7 +3,7 @@
 Performance Module, Collaboration between CorinXMTKVest and Encore Tweaks
 
 Dev: Kanagawa Yamada <br />
-Support: Mediateks (Helio, Dimensity) <br />
+Support: Mediatek, Snapdragon, Exynos <br />
 
 DO NOT COMBINE WITH ANY PERFORMANCE MODULE
 
