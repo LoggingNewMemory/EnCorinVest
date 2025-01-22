@@ -17,5 +17,5 @@ How to use?
 - Done
 
 Support me?
-[HERE (Indonesia / Philiphines)](https://saweria.co/kanagawayamada)
+[HERE (Indonesia / Philiphines)](https://saweria.co/kanagawayamada) <br />
 [HERE (Global)](https://sociabuzz.com/kanagawa_yamada/tribe)
