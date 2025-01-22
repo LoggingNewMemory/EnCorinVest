@@ -15,3 +15,7 @@ How to use?
 - Install Module
 - Give EnCorinVest apk root access 
 - Done
+
+Support me?
+[HERE (Indonesia / Philiphines)](https://saweria.co/kanagawayamada)
+[HERE (Global)](https://sociabuzz.com/kanagawa_yamada/tribe)
