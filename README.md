@@ -16,6 +16,6 @@ How to use?
 - Give EnCorinVest apk root access 
 - Done
 
-Support me?
+Support me? <br />
 [HERE (Indonesia / Philiphines)](https://saweria.co/kanagawayamada) <br />
 [HERE (Global)](https://sociabuzz.com/kanagawa_yamada/tribe)
