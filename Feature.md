@@ -13,3 +13,4 @@
 - Mali Scheduling
 - Disable Thermal
 - Fast Charge
+- Imporve touch
