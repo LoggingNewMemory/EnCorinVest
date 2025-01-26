@@ -257,16 +257,19 @@ class _MainScreenState extends State<MainScreen> {
 
     setState(() {
       _executingScript = scriptName;
+      // Don't update mode for Clear button, keep previous mode
+      if (buttonText != 'Clear') {
+        _currentMode = buttonText.toUpperCase();
+      }
     });
 
     try {
+      // Only save mode if it's not Clear
+      if (buttonText != 'Clear') {
+        await _saveCurrentMode(_currentMode);
+      }
       var result = await run(
           'su', ['-c', '/data/adb/modules/EnCorinVest/Scripts/$scriptName']);
-      var mode = scriptName.replaceAll('.sh', '').toUpperCase();
-      await _saveCurrentMode(mode);
-      setState(() {
-        _currentMode = mode;
-      });
       print('Output: ${result.stdout}');
       print('Error: ${result.stderr}');
     } catch (e) {
@@ -436,6 +439,13 @@ class _MainScreenState extends State<MainScreen> {
               'cool.sh',
               'Cool Down',
               Color(0xFF88C0D0),
+            ),
+            SizedBox(height: 20),
+            _buildControlRow(
+              'Set to Performance and Kill All Apps',
+              'game.sh',
+              'Gaming Pro',
+              Color(0xFF8FBCBB),
             ),
           ],
         ),
