@@ -5,7 +5,7 @@
 - Surface Flinger Tweaks
 - Ram Tweaks
 - Storage Tweaks 
-- Disable VSYNC
+- Disable CPU VSYNC
 - Disable Tombstone
 - Hyperthreading & Multithreading 
 - FPSGO & GED
@@ -13,3 +13,4 @@
 - Mali Scheduling
 - Disable Thermal
 - Fast Charge
+- Imporve touch
