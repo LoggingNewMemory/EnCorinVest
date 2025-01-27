@@ -11,6 +11,12 @@ Do not use fake device module (It will apply the wrong tweak)
 
 Feature List [HERE](https://github.com/LoggingNewMemory/EnCorinVest/blob/main/Feature.md)
 
+Variants:
+- Gaming (Full Packet Include Anya & Kobo)
+- Phoenix (Include Anya Thermal)
+- Ubur-ubur (Include Kobo Fast Charge)
+- MurMer (Only EnCorinVest)
+
 How to use? 
 - Install Module
 - Give EnCorinVest apk root access 
