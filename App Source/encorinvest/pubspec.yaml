@@ -1,0 +1,24 @@
+name: EnCorinVest
+description: "EnCorinVest Apk By: Kanagawa Yamada"
+publish_to: 'none'
+version: 5.0.0
+
+environment:
+  sdk: ^3.5.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+  process_run: ^0.12.0
+  
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+  - assets/logo.png
+  - assets/KLC.png
