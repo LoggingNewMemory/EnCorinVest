@@ -1,3 +1,5 @@
+If your module is not listed here, you can try to combine it (Ex: SkiaVK / GL Module)
+
 - App to Control Modes
 - CPU Max Lock Freq
 - GPU Tweaks
