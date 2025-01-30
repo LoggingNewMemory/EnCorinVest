@@ -13,6 +13,6 @@ If your module is not listed here, you can try to combine it (Ex: SkiaVK / GL Mo
 - FPSGO & GED
 - Kernel Tweaks
 - Mali Scheduling
-- Disable Thermal
-- Fast Charge
+- Disable Thermal (Gaming & Phoenix variant)
+- Fast Charge (Gaming & Ubur-ubur variant)
 - Imporve touch
