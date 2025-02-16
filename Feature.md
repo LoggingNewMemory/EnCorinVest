@@ -3,8 +3,6 @@ If your module is not listed here, you can try to combine it (Ex: SkiaVK / GL Mo
 - App to Control Modes
 - CPU Max Lock Freq
 - GPU Tweaks
-- Networking Tweaks
-- Surface Flinger Tweaks
 - Ram Tweaks
 - Storage Tweaks 
 - Disable CPU VSYNC
