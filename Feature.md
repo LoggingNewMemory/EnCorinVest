@@ -15,3 +15,4 @@ If your module is not listed here, you can try to combine it (Ex: SkiaVK / GL Mo
 - Fast Charge (Gaming & Ubur-ubur variant)
 - Imporve touch
 - Surfaceflinger Tweaks
+- Audio Tweaks
