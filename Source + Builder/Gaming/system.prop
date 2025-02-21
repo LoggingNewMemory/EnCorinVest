@@ -1,0 +1,70 @@
+PERF_RES_NET_BT_AUDIO_LOW_LATENCY=1
+PERF_RES_NET_WIFI_LOW_LATENCY=1
+PERF_RES_NET_MD_WEAK_SIG_OPT=1
+PERF_RES_NET_NETD_BOOST_UID=1
+PERF_RES_NET_MD_HSR_MODE=1
+PERF_RES_THERMAL_POLICY=-1
+
+# From Celestial Render
+
+# Disable Force 4X MSAA
+debug.egl.force_msaa=false
+
+# HWUI
+ro.hwui.disable_scissor_opt=false
+debug.hwui.use_gpu_pixel_buffers=true
+debug.hwui.render_dirty_regions=false
+debug.hwui.disable_vsync=true
+debug.hwui.level=0
+
+# Reduce Texture
+ro.hwui.texture_cache_flushrate=0.4
+ro.hwui.texture_cache_size=72
+ro.hwui.layer_cache_size=48
+ro.hwui.r_buffer_cache_size=8
+ro.hwui.path_cache_size=32
+ro.hwui.gradient_cache_size=1
+ro.hwui.drop_shadow_cache_size=6
+ro.hwui.texture_cache_flushrate=0.4
+
+# Hypertheading & Multithread
+persist.sys.dalvik.hyperthreading=true
+persist.sys.dalvik.multithread=true
+
+# smooth GUI
+persist.service.lgospd.enable=0
+persist.service.pcsync.enable=0
+persist.sys.lgospd.enable=0
+persist.sys.pcsync.enable=0
+
+# vendor perf
+ro.vendor.perf.scroll_opt=1
+vendor.perf.framepacing.enable=1
+
+# for qcom
+sys.hwc.gpu_perf_mode=1
+
+# other
+debug.gr.numframebuffers=3
+
+# From Celestial Tweaks
+
+# Reduce Ram Usage
+ro.iorapd.enable=false
+iorapd.perfetto.enable=false
+iorapd.readahead.enable=false
+persist.device_config.runtime_native_boot.iorap_readahead_enable=false
+persist.sys.purgeable_assets=1
+
+# disable cpu vsync
+debug.cpurend.vsync=false
+
+# Audio enhancer
+persist.audio.fluence.mode=endfire
+persist.audio.vr.enable=true
+persist.audio.handset.mic=digital
+af.resampler.quality=255
+mpq.audio.decode=true
+
+# disable tombstoned
+tombstoned.max_tombstone_count=0

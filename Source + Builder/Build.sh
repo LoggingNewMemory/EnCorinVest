@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Define the source and target directories
-SOURCE_DIR="Paket-Gaming"
-TARGET_DIRS=("Paket-MurMer" "Paket-Phoenix" "Paket-Ubur-ubur" "Paket-Gaming")
+SOURCE_DIR="Gaming"
+TARGET_DIRS=("Core" "Phoenix" "Ubur-Ubur" "Gaming")
 BUILD_DIR="Build"
 
 # Create the Build directory if it doesn't exist
