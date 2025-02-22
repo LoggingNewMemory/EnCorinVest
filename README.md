@@ -16,6 +16,7 @@ Variants:
 - Phoenix (Include Disable Thermal)
 - Ubur-Ubur (Include Fast Charge)
 - Core (Only EnCorinVest)
+- Lite (Core, but without system.prop) (Use this if you face bootloop)
 
 How to use? 
 - Install Module
