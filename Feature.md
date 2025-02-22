@@ -13,5 +13,5 @@ If your module is not listed here, you can try to combine it (Ex: SkiaVK / GL Mo
 - Mali Scheduling
 - Disable Thermal (Gaming & Phoenix variant)
 - Fast Charge (Gaming & Ubur-ubur variant)
-- Imporve touch
 - Audio Tweaks
+- Render Tweaks (Not skiaGL / VK)
