@@ -58,27 +58,6 @@ su -lp 2000 -c "cmd notification post -S bigtext -t 'EnCorinVest' -i file:///dat
 sleep 120
 
 # Exec Balanced Script
-
-celestial_opt() {
-setprop debug.performance.tuning 0
-setprop debug.sf.hw 0
-setprop debug.egl.hw 0
-write global activity_manager_constants ""
-write global activity_starts_logging_enabled 1
-write secure high_priority 0
-cmd stats reset-pull-stats
-cmd display ab-logging-enable
-cmd display dwb-logging-enable
-cmd display set-match-content-frame-rate-pref 0
-logcat -c
-simpleperf --log info --log-to-android-buffer 1
-cmd activity reset-watch-heap
-cmd looper_stats enable
-am memory-factor reset
-cmd power set-adaptive-power-saver-enabled true
-cmd power set-fixed-performance-mode-enabled false
-cmd thermalservice reset
-}
 pkt() {
 # PKT Balanced Value
 
@@ -778,7 +757,6 @@ esac
 settings put global low_power 0
 
 freakzy_storage
-celestial_opt
 pkt
 
 su -lp 2000 -c "cmd notification post -S bigtext -t 'EnCorinVest' -i file:///data/local/tmp/logo.png -I file:///data/local/tmp/logo.png TagEncorin 'EnCorinVest - Cooling Done'"

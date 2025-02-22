@@ -6,26 +6,7 @@ tweak() {
 	fi
 }
 
-celestial_opt() {
-setprop debug.performance.tuning 1
-setprop debug.sf.hw 1
-setprop debug.egl.hw 1
-write global activity_manager_constants "power_check_max_cpu_1=0,power_check_max_cpu_2=0,power_check_max_cpu_3=0,power_check_max_cpu_4=0,power_check_max_cpu_5=0,power_check_max_cpu_6=0,power_check_max_cpu_7=0,power_check_max_cpu_8=0"
-write global activity_starts_logging_enabled 0
-write secure high_priority 1
-cmd stats clear-puller-cache
-cmd display ab-logging-disable
-cmd display dwb-logging-disable
-cmd display set-match-content-frame-rate-pref 2
-logcat -c --wrap
-simpleperf --log fatal --log-to-android-buffer 0
-cmd activity clear-watch-heap -a
-cmd looper_stats disable
-am memory-factor set CRITICAL
-cmd power set-adaptive-power-saver-enabled false
-cmd power set-fixed-performance-mode-enabled true
-cmd thermalservice override-status 0
-}
+
 encore_cpu() {
     # Disable battery saver module
 if [ -f /sys/module/battery_saver/parameters/enabled ]; then
@@ -707,7 +688,6 @@ esac
 settings put global low_power 0
 
 freakzy_storage
-celestial_opt
 pkt
 
 su -lp 2000 -c "cmd notification post -S bigtext -t 'EnCorinVest' -i file:///data/local/tmp/logo.png -I file:///data/local/tmp/logo.png TagEncorin 'EnCorinVest - Performance'"

@@ -2,7 +2,7 @@
 
 # Define the source and target directories
 SOURCE_DIR="Gaming"
-TARGET_DIRS=("Core" "Phoenix" "Ubur-Ubur" "Gaming")
+TARGET_DIRS=("Core" "Phoenix" "Ubur-Ubur" "Gaming" "Lite")
 BUILD_DIR="Build"
 
 # Create the Build directory if it doesn't exist
@@ -48,6 +48,11 @@ sync_files() {
 
         # Sync customize.sh
         cp -f "$SOURCE_DIR/customize.sh" "$TARGET_DIR/customize.sh"
+
+        # Sync system.prop for non-Lite variants
+        if [ "$TARGET_DIR" != "Lite" ]; then
+            cp -f "$SOURCE_DIR/system.prop" "$TARGET_DIR/system.prop"
+        fi
 
         # Replace the Variant and Version lines
         sed -i 's/^ui_print "Variant: .*$/ui_print "Variant: '"$(basename "$TARGET_DIR")"'"/' "$TARGET_DIR/customize.sh"

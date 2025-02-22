@@ -1,4 +1,5 @@
-sleep 30
+while [ -z "$(getprop sys.boot_completed)" ]; do
+sleep 10
 
 # Mali Scheduler Tweaks By: MiAzami
 
@@ -25,7 +26,23 @@ tweak 0 /sys/module/kernel/parameters/panic_on_warn
 tweak 0 /sys/module/kernel/parameters/pause_on_oops
 tweak 0 /proc/sys/vm/panic_on_oom
 
+# Network Tweaks
+
+tweak "bbr2" /proc/sys/net/ipv4/tcp_congestion_control
+
+for netweak in /proc/sys/net/ipv4; do
+
+    tweak 1 "$netweak/tcp_low_latency"
+    tweak 1 "$netweak/tcp_ecn"
+    tweak 3 "$netweak/tcp_fastopen"
+    tweak 1 "$netweak/tcp_sack"
+    tweak 0 "$netweak/tcp_timestamps"
+
+done &
+
 sh /data/adb/modules/EnCorinVest/AnyaMelfissa/AnyaMelfissa.sh
 sh /data/adb/modules/EnCorinVest/KoboKanaeru/KoboKanaeru.sh
 
 su -lp 2000 -c "cmd notification post -S bigtext -t 'EnCorinVest' -i file:///data/local/tmp/logo.png -I file:///data/local/tmp/logo.png TagEncorin 'EnCorinVest - オンライン'"
+
+done

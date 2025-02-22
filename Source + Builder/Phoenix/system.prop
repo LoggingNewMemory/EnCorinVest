@@ -56,15 +56,6 @@ iorapd.readahead.enable=false
 persist.device_config.runtime_native_boot.iorap_readahead_enable=false
 persist.sys.purgeable_assets=1
 
-# surface flinger
-debug.sf.gpu_freq_indeks=7
-ro.surface_flinger.max_frame_buffer_acquired_buffers=3 
-ro.surface_flinger.use_context_priority=true
-ro.surface_flinger.set_touch_timer_ms=0
-ro.surface_flinger.use_content_detection_for_refresh_rate=false
-ro.surface_flinger.game_default_frame_rate_override=90
-ro.surface_flinger.enable_frame_rate_override=false
-
 # disable cpu vsync
 debug.cpurend.vsync=false
 
