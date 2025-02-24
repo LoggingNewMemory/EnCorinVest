@@ -37,7 +37,7 @@ ui_print "-----------------🗡-----------------"
 ui_print "            MODULE INFO             "
 ui_print "-----------------🗡-----------------"
 ui_print "Name : EnCorinVest"
-ui_print "Version : 18.0"
+ui_print "Version : 19.0"
 ui_print "Variant: Gaming"
 ui_print "Support Root : Magisk / KernelSU / APatch"
 ui_print " "
@@ -49,6 +49,7 @@ sleep 1.5
 
 unzip -o "$ZIPFILE" 'Scripts/*' -d $MODPATH >&2
 cp -r "$MODPATH"/logo.png /data/local/tmp >/dev/null 2>&1
+cp -r "$MODPATH"/Anya.png /data/local/tmp >/dev/null 2>&1
 
 set_perm_recursive $MODPATH 0 0 0755 0755
 set_perm_recursive $MODPATH/Scripts 0 0 0777 0755

@@ -26,20 +26,6 @@ tweak 0 /sys/module/kernel/parameters/panic_on_warn
 tweak 0 /sys/module/kernel/parameters/pause_on_oops
 tweak 0 /proc/sys/vm/panic_on_oom
 
-# Network Tweaks
-
-tweak "bbr2" /proc/sys/net/ipv4/tcp_congestion_control
-
-for netweak in /proc/sys/net/ipv4; do
-
-    tweak 1 "$netweak/tcp_low_latency"
-    tweak 1 "$netweak/tcp_ecn"
-    tweak 3 "$netweak/tcp_fastopen"
-    tweak 1 "$netweak/tcp_sack"
-    tweak 0 "$netweak/tcp_timestamps"
-
-done &
-
 sh /data/adb/modules/EnCorinVest/AnyaMelfissa/AnyaMelfissa.sh
 sh /data/adb/modules/EnCorinVest/KoboKanaeru/KoboKanaeru.sh
 
