@@ -109,7 +109,7 @@ for pkt_kernel in /proc/sys/kernel
     do
 tweak 0 $pkt_kernel/sched_autogroup_enabled
 tweak 1 $pkt_kernel/sched_child_runs_first
-tweak 0 $pkt_kernel/perf_cpu_time_max_percent
+tweak 10 $pkt_kernel/perf_cpu_time_max_percent
 tweak 0 $pkt_kernel/sched_cstate_aware
 tweak "0 0 0 0" $pkt_kernel/printk
 tweak off $pkt_kernel/printk_devkmsg
@@ -155,6 +155,8 @@ done
 
 sysctl -w kernel.sched_util_clamp_min_rt_default=0
 sysctl -w kernel.sched_util_clamp_min=128
+
+tweak 1 /sys/module/workqueue/parameters/power_efficient
 
 # Disable Battery Efficient
 cmd power set-adaptive-power-saver-enabled false
@@ -227,7 +229,7 @@ if [ -d /proc/gpufreq ]; then
 	gpu_freq="$(cat /proc/gpufreq/gpufreq_opp_dump | grep -o 'freq = [0-9]*' | sed 's/freq = //' | sort -nr | head -n 1)"
 	tweak "$gpu_freq" /proc/gpufreq/gpufreq_opp_freq
 elif [ -d /proc/gpufreqv2 ]; then
-	tweak 00 /proc/gpufreqv2/fix_target_opp_index
+	tweak -1 /proc/gpufreqv2/fix_target_opp_index
     tweak disable /proc/gpufreqv2/aging_mode
 fi
  
@@ -367,7 +369,7 @@ tweak 100 $fpsgo/fbt/thrm_temp_th
 tweak 2 $fpsgo/fbt/llf_task_policy
 done
 
-tweak 100 /sys/kernel/ged/hal/gpu_boost_level
+tweak 101 /sys/kernel/ged/hal/gpu_boost_level
 
 # FPSGO Advanced
 
@@ -505,106 +507,6 @@ if [ -d "/sys/kernel/debug/fpsgo/common" ]; then
     tweak "100 120 0" /sys/kernel/debug/fpsgo/common/gpu_block_boost
 fi
 
-# SYNC With MTKVest
-
-for mtklpm in /proc/mtk_lpm/lpm/rc; do
-    tweak 0 $mtklpm/syspll/enable
-    tweak 0 $mtklpm/dram/enable
-    tweak 0 $mtklpm/cpu-buck-ldo/enable
-    tweak 0 $mtklpm/bus26m/enable
-done
-
-for cpu in /sys/devices/system/cpu/cpu*/cpuidle/state*; do
-    if [ -f "$cpu/disable" ]; then
-        tweak "1" > "$cpu/disable"
-    fi
-done
-
-if [ -d /sys/kernel/ged/hal ]; then
-    tweak 2 > "/sys/kernel/ged/hal/loading_base_dvfs_step"
-    tweak 1 > "/sys/kernel/ged/hal/loading_stride_size"
-    tweak 16 > "/sys/kernel/ged/hal/loading_window_size"
-fi
-
-for cpucore in /sys/devices/system/cpu/cpu*; do
-    if [ -d "$cpucore/core_ctl" ]; then
-        if [ -f "$cpucore/core_ctl/up_thres" ]; then
-            tweak "0" > "$cpucore/core_ctl/up_thres"
-        fi
-        if [ -f "$cpucore/core_ctl/offline_throttle_ms" ]; then
-            tweak "0" > "$cpucore/core_ctl/offline_throttle_ms"
-        fi
-    fi
-done
-
-# Disable Dynamic Clock Management
-tweak "disable 0xFFFFFFF" > /sys/dcm/dcm_state
-
-# Disable PBM
-tweak "1" > /proc/pbm/pbm_stop
-
-chmod 644 /proc/mtk_lpm/suspend/suspend_state
-tweak "mtk_suspend 0" > /proc/mtk_lpm/suspend/suspend_state  
-tweak "kernel_suspend 0" > /proc/mtk_lpm/suspend/suspend_state  
-
-tweak "2" > /proc/mtk_lpm/cpuidle/control/armpll_mode
-tweak "2" > /proc/mtk_lpm/cpuidle/control/buck_mode
-tweak "0" > /proc/mtk_lpm/cpuidle/cpc/auto_off
-
-# Disable CPU Idle
-tweak "100 1 0" > /proc/mtk_lpm/cpuidle/state/enabled
-tweak "100 2 0" > /proc/mtk_lpm/cpuidle/state/enabled
-tweak "100 3 0" > /proc/mtk_lpm/cpuidle/state/enabled
-tweak "100 4 0" > /proc/mtk_lpm/cpuidle/state/enabled
-tweak "100 5 0" > /proc/mtk_lpm/cpuidle/state/enabled
-tweak "100 6 0" > /proc/mtk_lpm/cpuidle/state/enabled
-tweak "100 7 0" > /proc/mtk_lpm/cpuidle/state/enabled
-
-tweak 100 1 100 > /proc/mtk_lpm/cpuidle/state/latency  
-tweak 100 2 100 > /proc/mtk_lpm/cpuidle/state/latency  
-tweak 100 3 100 > /proc/mtk_lpm/cpuidle/state/latency  
-tweak 100 4 100 > /proc/mtk_lpm/cpuidle/state/latency  
-tweak 100 5 100 > /proc/mtk_lpm/cpuidle/state/latency  
-tweak 100 6 200 > /proc/mtk_lpm/cpuidle/state/latency  
-tweak 100 7 200 > /proc/mtk_lpm/cpuidle/state/latency
-
-# Function to check and apply the correct path
-apply_spm_settings() {
-    if [ -f "/proc/mtk_lpm/spm/spm_resource_req" ]; then
-        TARGET_PATH="/proc/mtk_lpm/spm/spm_resource_req"
-    elif [ -f "/sys/kernel/debug/spm/spm_resource_req" ]; then
-        TARGET_PATH="/sys/kernel/debug/spm/spm_resource_req"
-    fi
-
-    # Apply settings to the detected path
-    tweak "enable 0" > "$TARGET_PATH"
-    tweak "enable 1" > "$TARGET_PATH"
-    tweak "enable 2" > "$TARGET_PATH"
-    tweak "request 0" > "$TARGET_PATH"
-    tweak "request 1" > "$TARGET_PATH"
-    tweak "request 2" > "$TARGET_PATH"
-    tweak "request 3" > "$TARGET_PATH"
-    tweak "request 4" > "$TARGET_PATH"
-    tweak "request 5" > "$TARGET_PATH"
-
-    tweak "SPM settings applied to: $TARGET_PATH"
-}
-
-apply_spm_settings
-
-# Workqueue settings
-tweak "N" > /sys/module/workqueue/parameters/power_efficient
-tweak "N" > /sys/module/workqueue/parameters/disable_numa
-tweak "0" > /sys/kernel/eara_thermal/enable
-tweak "0" > /sys/devices/system/cpu/eas/enable
-
-cmd power set-fixed-performance-mode-enabled true
-
-if [ -f "/proc/gpufreq/gpufreq_power_limited" ]; then
-    for setting in ignore_batt_oc ignore_batt_percent ignore_low_batt ignore_thermal_protect ignore_pbm_limited; do
-        tweak "$setting 1" > /proc/gpufreq/gpufreq_power_limited
-    done
-fi
 }
 
 snapdragon() {
@@ -760,36 +662,36 @@ detect_soc() {
         fi
     fi
     
-    tweak "$chipset"
+    echo "$chipset"
 }
 
 # Get the chipset information
 chipset=$(detect_soc)
 
 # Convert to lowercase for easier matching
-chipset_lower=$(tweak "$chipset" | tr '[:upper:]' '[:lower:]')
+chipset_lower=$(echo "$chipset" | tr '[:upper:]' '[:lower:]')
 
 # Identify the chipset and execute the corresponding function
 case "$chipset_lower" in
     *mt*) 
-        tweak "- Implementing tweaks for Mediatek"
+        echo "- Implementing tweaks for Mediatek"
         mediatek
         ;;
     *sm*|*qcom*|*qualcomm*) 
-        tweak "- Implementing tweaks for Snapdragon"
+        echo "- Implementing tweaks for Snapdragon"
         snapdragon
         ;;
     *exynos*|*universal*|*samsung*) 
-        tweak "- Implementing tweaks for Exynos"
+        echo "- Implementing tweaks for Exynos"
         exynos
         ;;
     *Unisoc* | *unisoc* | *ums*)
-        tweak "- Implementing tweaks for Unisoc"
+        echo "- Implementing tweaks for Unisoc"
         unisoc
         ;;
     *) 
-        tweak "- Unknown chipset: $chipset"
-        tweak "- No tweaks applied."
+        echo "- Unknown chipset: $chipset"
+        echo "- No tweaks applied."
         ;;
 esac
 
