@@ -41,6 +41,9 @@ sync_files() {
     # Ask for version
     read -p "Enter Version (e.g., V 1.0): " VERSION
 
+    # Copy Wallpaper.png to Build folder
+    cp -f "Wallpaper.png" "$BUILD_DIR/Wallpaper.png"
+
     # Suppress most of the output, only show essential information
     for TARGET_DIR in "${TARGET_DIRS[@]}"; do
         # Sync Scripts folder
