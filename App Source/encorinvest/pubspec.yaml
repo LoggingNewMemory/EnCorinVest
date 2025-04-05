@@ -1,7 +1,7 @@
 name: EnCorinVest
 description: "EnCorinVest Apk By: Kanagawa Yamada"
 publish_to: 'none'
-version: 5.0.0
+version: 21.0.0
 
 environment:
   sdk: ^3.5.4
@@ -11,14 +11,24 @@ dependencies:
     sdk: flutter
   process_run: ^0.12.0
   
-
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
 
 flutter:
+  fonts:
+    - family: Orbitron
+      fonts:
+        - asset: assets/fonts/Orbitron-Regular.ttf
+        - asset: assets/fonts/Orbitron-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Orbitron-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Orbitron-Black.ttf
+          weight: 900
   uses-material-design: true
   assets:
   - assets/logo.png
   - assets/KLC.png
+

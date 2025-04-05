@@ -6,7 +6,7 @@ tweak() {
 	fi
 }
 
-
+# Performance Script
 encore_cpu() {
     # Disable battery saver module
 if [ -f /sys/module/battery_saver/parameters/enabled ]; then
@@ -89,64 +89,7 @@ for path in /sys/devices/system/cpu/cpufreq/policy*; do
 	tweak performance $path/scaling_governor
 done 
 }
-pkt() {
-
-# PKT Performance
-tweak 1 /proc/sys/vm/overcommit_memory
-
-for pkt_kernel in /proc/sys/kernel
-    do
-tweak 0 $pkt_kernel/sched_autogroup_enabled
-tweak 1 $pkt_kernel/sched_child_runs_first
-tweak 10 $pkt_kernel/perf_cpu_time_max_percent
-tweak 0 $pkt_kernel/sched_cstate_aware
-tweak "0 0 0 0" $pkt_kernel/printk
-tweak off $pkt_kernel/printk_devkmsg
-tweak 50000 $pkt_kernel/sched_migration_cost_ns
-tweak 1000000 $pkt_kernel/sched_min_granularity_ns
-tweak 1500000 $pkt_kernel/sched_wakeup_granularity_ns
-tweak 0 $pkt_kernel/timer_migration
-tweak 0 $pkt_kernel/sched_min_task_util_for_colocation
-done
-
-for pkt_memory in /proc/sys/vm
-    do
-tweak 50 $pkt_memory/vfs_cache_pressure
-tweak 30 $pkt_memory/stat_interval
-tweak 0 $pkt_memory/compaction_proactiveness
-tweak 0 $pkt_memory/page-cluster
-tweak 60 $pkt_memory/swappiness
-tweak 60 $pkt_memory/dirty_ratio
-done
-
-for pkt_cputweak in /dev/cpuset
-do
-    tweak max $pkt_cputweak/top-app/uclamp.max
-    tweak 10 $pkt_cputweak/top-app/uclamp.min
-    tweak 1 $pkt_cputweak/top-app/uclamp.boosted
-    tweak 1 $pkt_cputweak/top-app/uclamp.latency_sensitive
-
-    tweak 50 $pkt_cputweak/foreground/uclamp.max
-    tweak 0 $pkt_cputweak/foreground/uclamp.min
-    tweak 0 $pkt_cputweak/foreground/uclamp.boosted
-    tweak 0 $pkt_cputweak/foreground/uclamp.latency_sensitive
-
-    tweak max $pkt_cputweak/background/uclamp.max
-    tweak 20 $pkt_cputweak/background/uclamp.min
-    tweak 0 $pkt_cputweak/background/uclamp.boosted
-    tweak 0 $pkt_cputweak/background/uclamp.latency_sensitive
-
-    tweak 0 $pkt_cputweak/system-background/uclamp.min
-    tweak 40 $pkt_cputweak/system-background/uclamp.max
-    tweak 0 $pkt_cputweak/system-background/uclamp.boosted
-    tweak 0 $pkt_cputweak/system-background/uclamp.latency_sensitive
-done
-
-sysctl -w kernel.sched_util_clamp_min_rt_default=0
-sysctl -w kernel.sched_util_clamp_min=128
-
-tweak 1 /sys/module/workqueue/parameters/power_efficient
-
+battery_ccci() {
 # Disable Battery Efficient
 cmd power set-adaptive-power-saver-enabled false
 cmd looper_stats disable
@@ -687,8 +630,8 @@ esac
 # Power Save Mode Off
 settings put global low_power 0
 
+battery_ccci
 freakzy_storage
-pkt
 
 su -lp 2000 -c "cmd notification post -S bigtext -t 'EnCorinVest' -i file:///data/local/tmp/logo.png -I file:///data/local/tmp/logo.png TagEncorin 'EnCorinVest - Performance'"
 wait

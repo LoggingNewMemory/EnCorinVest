@@ -94,64 +94,7 @@ for path in /sys/devices/system/cpu/cpufreq/policy*; do
 done 
 
 }
-pkt() {
-    # PKT Value to Powersave
-
-tweak 1 /proc/sys/vm/overcommit_memory
-
-for pkt_kernel in /proc/sys/kernel
-do
-    tweak 1 $pkt_kernel/sched_autogroup_enabled
-    tweak 0 $pkt_kernel/sched_child_runs_first
-    tweak 5 $pkt_kernel/perf_cpu_time_max_percent
-    tweak 1 $pkt_kernel/sched_cstate_aware
-    tweak "0 0 0 0" $pkt_kernel/printk
-    tweak off $pkt_kernel/printk_devkmsg
-    tweak 100000 $pkt_kernel/sched_migration_cost_ns
-    tweak 1500000 $pkt_kernel/sched_min_granularity_ns
-    tweak 2000000 $pkt_kernel/sched_wakeup_granularity_ns
-    tweak 0 $pkt_kernel/timer_migration
-    tweak 30 $pkt_kernel/sched_min_task_util_for_colocation
-done
-
-for pkt_memory in /proc/sys/vm
-do
-    tweak 200 $pkt_memory/vfs_cache_pressure
-    tweak 60 $pkt_memory/stat_interval
-    tweak 0 $pkt_memory/compaction_proactiveness
-    tweak 0 $pkt_memory/page-cluster
-    tweak 100 $pkt_memory/swappiness
-    tweak 40 $pkt_memory/dirty_ratio
-done
-
-for pkt_cputweak in /dev/cpuset
-do
-    tweak 60 $pkt_cputweak/top-app/uclamp.max
-    tweak 5 $pkt_cputweak/top-app/uclamp.min
-    tweak 0 $pkt_cputweak/top-app/uclamp.boosted
-    tweak 0 $pkt_cputweak/top-app/uclamp.latency_sensitive
-
-    tweak 40 $pkt_cputweak/foreground/uclamp.max
-    tweak 0 $pkt_cputweak/foreground/uclamp.min
-    tweak 0 $pkt_cputweak/foreground/uclamp.boosted
-    tweak 0 $pkt_cputweak/foreground/uclamp.latency_sensitive
-
-    tweak 30 $pkt_cputweak/background/uclamp.max
-    tweak 0 $pkt_cputweak/background/uclamp.min
-    tweak 0 $pkt_cputweak/background/uclamp.boosted
-    tweak 0 $pkt_cputweak/background/uclamp.latency_sensitive
-
-    tweak 0 $pkt_cputweak/system-background/uclamp.min
-    tweak 20 $pkt_cputweak/system-background/uclamp.max
-    tweak 0 $pkt_cputweak/system-background/uclamp.boosted
-    tweak 0 $pkt_cputweak/system-background/uclamp.latency_sensitive
-done
-
-sysctl -w kernel.sched_util_clamp_min_rt_default=0
-sysctl -w kernel.sched_util_clamp_min=0
-
-tweak 1 /sys/module/workqueue/parameters/power_efficient
-
+battery_ccci() {
 # Enable Battery Efficient
 
 cmd power set-adaptive-power-saver-enabled true
@@ -702,7 +645,7 @@ esac
 settings put global low_power 1
 
 freakzy_storage
-pkt
+battery_ccci
 
 su -lp 2000 -c "cmd notification post -S bigtext -t 'EnCorinVest' -i file:///data/local/tmp/logo.png -I file:///data/local/tmp/logo.png TagEncorin 'EnCorinVest - Powersave'"
 wait

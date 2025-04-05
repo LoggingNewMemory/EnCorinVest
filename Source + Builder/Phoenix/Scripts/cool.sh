@@ -57,65 +57,7 @@ su -lp 2000 -c "cmd notification post -S bigtext -t 'EnCorinVest' -i file:///dat
 
 sleep 120
 
-# Exec Balanced Script
-pkt() {
-# PKT Balanced Value
-
-tweak 0 /proc/sys/vm/overcommit_memory
-
-for pkt_kernel in /proc/sys/kernel
-do
-    tweak 1 $pkt_kernel/sched_autogroup_enabled
-    tweak 0 $pkt_kernel/sched_child_runs_first
-    tweak 25 $pkt_kernel/perf_cpu_time_max_percent
-    tweak 1 $pkt_kernel/sched_cstate_aware
-    tweak "7 4 1 7" $pkt_kernel/printk
-    tweak on $pkt_kernel/printk_devkmsg
-    tweak 500000 $pkt_kernel/sched_migration_cost_ns
-    tweak 750000 $pkt_kernel/sched_min_granularity_ns
-    tweak 1000000 $pkt_kernel/sched_wakeup_granularity_ns
-    tweak 1 $pkt_kernel/timer_migration
-    tweak 15 $pkt_kernel/sched_min_task_util_for_colocation
-done
-
-for pkt_memory in /proc/sys/vm
-do
-    tweak 100 $pkt_memory/vfs_cache_pressure
-    tweak 1 $pkt_memory/stat_interval
-    tweak 20 $pkt_memory/compaction_proactiveness
-    tweak 3 $pkt_memory/page-cluster
-    tweak 60 $pkt_memory/swappiness
-    tweak 20 $pkt_memory/dirty_ratio
-done
-
-for pkt_cputweak in /dev/cpuset
-do
-    tweak 100 $pkt_cputweak/top-app/uclamp.max
-    tweak 0 $pkt_cputweak/top-app/uclamp.min
-    tweak 0 $pkt_cputweak/top-app/uclamp.boosted
-    tweak 0 $pkt_cputweak/top-app/uclamp.latency_sensitive
-
-    tweak 100 $pkt_cputweak/foreground/uclamp.max
-    tweak 0 $pkt_cputweak/foreground/uclamp.min
-    tweak 0 $pkt_cputweak/foreground/uclamp.boosted
-    tweak 0 $pkt_cputweak/foreground/uclamp.latency_sensitive
-
-    tweak 100 $pkt_cputweak/background/uclamp.max
-    tweak 0 $pkt_cputweak/background/uclamp.min
-    tweak 0 $pkt_cputweak/background/uclamp.boosted
-    tweak 0 $pkt_cputweak/background/uclamp.latency_sensitive
-
-    tweak 0 $pkt_cputweak/system-background/uclamp.min
-    tweak 100 $pkt_cputweak/system-background/uclamp.max
-    tweak 0 $pkt_cputweak/system-background/uclamp.boosted
-    tweak 0 $pkt_cputweak/system-background/uclamp.latency_sensitive
-done
-
-sysctl -w kernel.sched_util_clamp_min_rt_default=96
-sysctl -w kernel.sched_util_clamp_min=0
-
-tweak 0 /sys/module/workqueue/parameters/power_efficient
-
+battery_ccci() {
 # Enable Battery Efficient
 cmd power set-adaptive-power-saver-enabled true
 cmd looper_stats enable
@@ -225,7 +167,7 @@ for queue in /sys/block/sd*/queue; do
 
     tweak 0 "$queue/add_random"
     tweak 0 "$queue/iostats"
-    tweak 2 "$queue/nomerges"
+    tweak 0 "$queue/nomerges"
     tweak 0 "$queue/rotational"
     tweak 128 "$queue/nr_requests"
     tweak 128 "$queue/read_ahead_kb"
@@ -684,7 +626,6 @@ freakzy_storage() {
     tweak 2 "$queue/rq_affinity"
 }
 
-
 detect_soc() {
     # Check multiple sources for SOC information
     local chipset=""
@@ -757,7 +698,7 @@ esac
 settings put global low_power 0
 
 freakzy_storage
-pkt
+battery_ccci
 
 su -lp 2000 -c "cmd notification post -S bigtext -t 'EnCorinVest' -i file:///data/local/tmp/logo.png -I file:///data/local/tmp/logo.png TagEncorin 'EnCorinVest - Cooling Done'"
 

@@ -48,6 +48,9 @@ sync_files() {
 
         # Sync customize.sh
         cp -f "$SOURCE_DIR/customize.sh" "$TARGET_DIR/customize.sh"
+        
+        # Sync service.sh
+        cp -f "$SOURCE_DIR/service.sh" "$TARGET_DIR/service.sh"
 
         # Sync system.prop for non-Lite variants
         if [ "$TARGET_DIR" != "Lite" ]; then

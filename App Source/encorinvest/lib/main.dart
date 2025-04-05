@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:process_run/process_run.dart';
-import 'dart:io';
 import 'dart:async';
 
-// lang/en.dart
 class LangEN {
   static const Map<String, String> translations = {
     'app_title': 'EnCorinVest',
@@ -32,17 +30,16 @@ class LangEN {
     'about_note':
         'EnCorinVest Is Always Free, Open Source, and Open For Improvement',
     'credits_1': 'Rem01 Gaming',
-    'credits_2': 'PersonPenggoreng',
+    'credits_2': 'VelocityFox22',
     'credits_3': 'MiAzami',
     'credits_4': 'Kazuyoo',
     'credits_5': 'RiProG',
     'credits_6': 'Lieudahbelajar',
-    'credits_7': 'KLD - Kanagawa Lab Dev',
+    'credits_7': 'KanaDev_IS',
     'credits_8': 'And All Testers That I Can\'t Mentioned One by One'
   };
 }
 
-// lang/id.dart
 class LangID {
   static const Map<String, String> translations = {
     'app_title': 'EnCorinVest',
@@ -72,17 +69,16 @@ class LangID {
     'about_note':
         'EnCorinVest Selalu Gratis, Sumber Terbuka, dan Terbuka untuk Peningkatan',
     'credits_1': 'Rem01 Gaming',
-    'credits_2': 'PersonPenggoreng',
+    'credits_2': 'VelocityFox22',
     'credits_3': 'MiAzami',
     'credits_4': 'Kazuyoo',
     'credits_5': 'RiProG',
     'credits_6': 'Lieudahbelajar',
-    'credits_7': 'KLD - Kanagawa Lab Dev',
+    'credits_7': 'KanaDev_IS',
     'credits_8': 'Dan Semua Penguji yang Tidak Bisa Disebutkan Satu per Satu'
   };
 }
 
-// lang/jp.dart
 class LangJP {
   static const Map<String, String> translations = {
     'app_title': 'エンコリンベスト',
@@ -108,17 +104,16 @@ class LangJP {
     'about_quote': '"偉大なコラボレーションは偉大なイノベーションにつながる"\n~ 神奈川山田 (メイン開発者)',
     'about_note': 'EnCorinVestは常に無料、オープンソース、そして改善に開かれています',
     'credits_1': 'Rem01 Gaming',
-    'credits_2': 'パーソンペンゴレン',
+    'credits_2': 'VelocityFox22',
     'credits_3': 'MiAzami',
     'credits_4': 'カズヨオ',
     'credits_5': 'RiProG',
     'credits_6': 'リエドラブラジャル',
-    'credits_7': 'KLD - 神奈川ラボ開発',
+    'credits_7': 'KanaDev_IS',
     'credits_8': '名前を挙げられなかったすべてのテスター'
   };
 }
 
-// lang/jv.dart
 class LangJV {
   static const Map<String, String> translations = {
     'app_title': 'EnCorinVest',
@@ -147,7 +142,7 @@ class LangJV {
     'about_note':
         'EnCorinVest Mesti Gratis, Open Source, lan Mesti Terbuka Kanggo Pengembangan',
     'credits_1': 'Rem01 Gaming',
-    'credits_2': 'PersonPenggoreng',
+    'credits_2': 'VelocityFox22',
     'credits_3': 'MiAzami',
     'credits_4': 'Kazuyoo',
     'credits_5': 'RiProG',
@@ -160,7 +155,6 @@ class LangJV {
 class AppLocalizations {
   final String langCode;
   late Map<String, String> _localizedStrings;
-
   AppLocalizations(this.langCode) {
     switch (langCode) {
       case 'EN':
@@ -188,24 +182,20 @@ class AppLocalizations {
 class LanguagePreference {
   static final String _languageFilePath =
       '/data/adb/modules/EnCorinVest/language.txt';
-
   static Future<String> getSavedLanguage() async {
     try {
       var result = await run('su', ['-c', 'cat $_languageFilePath']);
       String savedLanguage = result.stdout.toString().trim();
       return savedLanguage.isNotEmpty ? savedLanguage : 'EN';
     } catch (e) {
-      print('Error reading language file: $e');
-      return 'EN'; // Default to English
+      return 'EN';
     }
   }
 
   static Future<void> saveLanguage(String languageCode) async {
     try {
       await run('su', ['-c', 'echo "$languageCode" > $_languageFilePath']);
-    } catch (e) {
-      print('Error saving language file: $e');
-    }
+    } catch (e) {}
   }
 }
 
@@ -218,15 +208,56 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       home: MainScreen(),
+      theme: ThemeData(
+        brightness: Brightness.dark,
+        fontFamily: 'Orbitron',
+        scaffoldBackgroundColor: Color(0xFF0A0F2C),
+        appBarTheme: AppBarTheme(
+          backgroundColor: Color(0xFF0A0F2C),
+          elevation: 0,
+          iconTheme: IconThemeData(color: Color(0xFF00F0FF)),
+          titleTextStyle: TextStyle(
+            color: Color(0xFFE0E0E0),
+            fontSize: 20,
+            fontFamily: 'Orbitron',
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        textTheme: TextTheme(
+          bodyLarge: TextStyle(color: Color(0xFFE0E0E0), fontSize: 15),
+          bodyMedium: TextStyle(color: Color(0xFFE0E0E0), fontSize: 15),
+          titleLarge: TextStyle(
+            fontSize: 25,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFFE0E0E0),
+            fontFamily: 'Orbitron',
+          ),
+          titleMedium: TextStyle(
+            fontSize: 15,
+            color: Color(0xFFE0E0E0),
+            fontFamily: 'Orbitron',
+          ),
+        ),
+        dropdownMenuTheme: DropdownMenuThemeData(
+          textStyle:
+              TextStyle(color: Color(0xFFE0E0E0), fontFamily: 'Orbitron'),
+          inputDecorationTheme: InputDecorationTheme(
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Color(0xFF00F0FF), width: 2),
+            ),
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Color(0xFF00F0FF), width: 2),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
 
 class AboutPage extends StatefulWidget {
   final String selectedLanguage;
-
   AboutPage({required this.selectedLanguage});
-
   @override
   _AboutPageState createState() => _AboutPageState();
 }
@@ -235,7 +266,6 @@ class _AboutPageState extends State<AboutPage> {
   String _deviceModel = 'Loading...';
   String _cpuInfo = 'Loading...';
   String _osVersion = 'Loading...';
-
   @override
   void initState() {
     super.initState();
@@ -248,14 +278,12 @@ class _AboutPageState extends State<AboutPage> {
       var cpuResult = await run('su', ['-c', 'getprop ro.hardware']);
       var osResult =
           await run('su', ['-c', 'getprop ro.build.version.release']);
-
       setState(() {
         _deviceModel = deviceResult.stdout.toString().trim();
         _cpuInfo = cpuResult.stdout.toString().split(':').last.trim();
         _osVersion = 'Android ' + osResult.stdout.toString().trim();
       });
     } catch (e) {
-      print('Error loading device info: $e');
       setState(() {
         _deviceModel = 'Unknown';
         _cpuInfo = 'Unknown';
@@ -267,7 +295,6 @@ class _AboutPageState extends State<AboutPage> {
   @override
   Widget build(BuildContext context) {
     final localization = AppLocalizations(widget.selectedLanguage);
-
     final List<String> credits = [
       'credits_1',
       'credits_2',
@@ -278,16 +305,12 @@ class _AboutPageState extends State<AboutPage> {
       'credits_7',
       'credits_8'
     ];
-
     return Scaffold(
-      backgroundColor: Color(0xFF2E3440),
       appBar: AppBar(
-        backgroundColor: Color(0xFF2E3440),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Color(0xFF8FBCBB)),
+          icon: Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        elevation: 0,
       ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -317,40 +340,34 @@ class _AboutPageState extends State<AboutPage> {
             SizedBox(height: 20),
             Text(
               localization.translate('about_title'),
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFFECEFF4),
-              ),
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 15),
             ...credits.map((creditKey) => Padding(
                   padding: EdgeInsets.symmetric(vertical: 2),
                   child: Text(
                     '• ${localization.translate(creditKey)}',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Color(0xFFECEFF4),
-                    ),
+                    style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 )),
             SizedBox(height: 20),
             Text(
               localization.translate('about_note'),
-              style: TextStyle(
-                fontSize: 16,
-                fontStyle: FontStyle.italic,
-                color: Color(0xFFECEFF4),
-              ),
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(fontStyle: FontStyle.italic),
             ),
             SizedBox(height: 20),
             Text(
               localization.translate('about_quote'),
-              style: TextStyle(
-                fontSize: 16,
-                fontStyle: FontStyle.italic,
-                color: Color(0xFF8FBCBB),
-              ),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontStyle: FontStyle.italic,
+                    color: Color(0xFF00F0FF),
+                  ),
             ),
           ],
         ),
@@ -363,18 +380,14 @@ class _AboutPageState extends State<AboutPage> {
       children: [
         Text(
           label,
-          style: TextStyle(
-            fontSize: 16,
-            color: Color(0xFFECEFF4),
-          ),
+          style: Theme.of(context).textTheme.bodyMedium,
         ),
         SizedBox(width: 8),
         Text(
           value,
-          style: TextStyle(
-            fontSize: 16,
-            color: Color(0xFF8FBCBB),
-          ),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Color(0xFF00F0FF),
+              ),
         ),
       ],
     );
@@ -420,17 +433,13 @@ class _MainScreenState extends State<MainScreen> {
           _currentMode = result.stdout.toString().trim().toUpperCase();
         });
       }
-    } catch (e) {
-      print('Error loading mode: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> _saveCurrentMode(String mode) async {
     try {
       await run('su', ['-c', 'echo "$mode" > $_modeFile']);
-    } catch (e) {
-      print('Error saving mode: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> _checkRootAccess() async {
@@ -471,33 +480,24 @@ class _MainScreenState extends State<MainScreen> {
           _moduleVersion = version;
         });
       }
-    } catch (e) {
-      print('Error getting module version: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> executeScript(String scriptName, String buttonText) async {
     if (_executingScript.isNotEmpty) return;
-
     setState(() {
       _executingScript = scriptName;
-      // Don't update mode for Clear button, keep previous mode
       if (buttonText != 'Clear') {
         _currentMode = buttonText.toUpperCase();
       }
     });
-
     try {
-      // Only save mode if it's not Clear
       if (buttonText != 'Clear') {
         await _saveCurrentMode(_currentMode);
       }
       var result = await run(
           'su', ['-c', '/data/adb/modules/EnCorinVest/Scripts/$scriptName']);
-      print('Output: ${result.stdout}');
-      print('Error: ${result.stderr}');
     } catch (e) {
-      print('Error executing script: $e');
     } finally {
       setState(() {
         _executingScript = '';
@@ -509,215 +509,198 @@ class _MainScreenState extends State<MainScreen> {
     setState(() {
       _selectedLanguage = language;
     });
-    // Save the selected language
     LanguagePreference.saveLanguage(language);
   }
 
   @override
   Widget build(BuildContext context) {
     final localization = AppLocalizations(_selectedLanguage);
-
+    const Color neonPink = Color(0xFFFFB6C1);
+    const Color neonGreen = Color(0xFF98FB98);
+    const Color neonYellow = Color(0xFFFAFAD2);
+    const Color neonOrange = Color(0xFFFFDAB9);
+    const Color neonPurple = Color(0xFFE6E6FA);
+    const Color neonCyan = Color(0xFFAFECFF);
     return Scaffold(
-      backgroundColor: Color(0xFF2E3440),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(height: 40),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      localization.translate('app_title'),
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFFECEFF4),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(height: 40),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        localization.translate('app_title'),
+                        style: Theme.of(context).textTheme.titleLarge,
                       ),
-                    ),
-                    Text(
-                      localization.translate('by'),
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Color(0xFFECEFF4),
+                      Text(
+                        localization.translate('by'),
+                        style: Theme.of(context).textTheme.titleMedium,
                       ),
-                    ),
-                  ],
-                ),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            AboutPage(selectedLanguage: _selectedLanguage),
-                      ),
-                    );
-                  },
-                  child: Image.asset(
-                    'assets/logo.png',
-                    height: 60,
+                    ],
                   ),
-                ),
-              ],
-            ),
-            SizedBox(height: 20),
-            Row(
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      localization.translate('root_access'),
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Color(0xFFECEFF4),
-                      ),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              AboutPage(selectedLanguage: _selectedLanguage),
+                        ),
+                      );
+                    },
+                    child: Image.asset(
+                      'assets/logo.png',
+                      height: 60,
                     ),
-                    Text(
-                      localization.translate('module_installed'),
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Color(0xFFECEFF4),
-                      ),
-                    ),
-                    Text(
-                      localization.translate('module_version'),
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Color(0xFFECEFF4),
-                      ),
-                    ),
-                    Text(
-                      localization.translate('current_mode'),
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Color(0xFFECEFF4),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _hasRootAccess ? 'Yes' : 'No',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: _hasRootAccess
-                            ? Color(0xFF34C759)
-                            : Color(0xFFE74C3C),
-                      ),
-                    ),
-                    Text(
-                      _moduleInstalled ? 'Yes' : 'No',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: _moduleInstalled
-                            ? Color(0xFF34C759)
-                            : Color(0xFFE74C3C),
-                      ),
-                    ),
-                    Text(
-                      _moduleVersion,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Color(0xFFECEFF4),
-                      ),
-                    ),
-                    Text(
-                      _currentMode,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Color(0xFFECEFF4),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            SizedBox(height: 20),
-            _buildControlRow(
-              localization.translate('power_save_desc'),
-              'powersafe.sh',
-              localization.translate('power_save'),
-              Color(0xFFEBCB8B),
-            ),
-            SizedBox(height: 20),
-            _buildControlRow(
-              localization.translate('balanced_desc'),
-              'balanced.sh',
-              localization.translate('balanced'),
-              Color(0xFFA3BE8C),
-            ),
-            SizedBox(height: 20),
-            _buildControlRow(
-              localization.translate('performance_desc'),
-              'performance.sh',
-              localization.translate('performance'),
-              Color(0xFFBF616A),
-            ),
-            SizedBox(height: 20),
-            _buildControlRow(
-              localization.translate('clear_desc'),
-              'kill.sh',
-              localization.translate('clear'),
-              Color(0xFFD08770),
-            ),
-            SizedBox(height: 20),
-            _buildControlRow(
-              localization.translate('cooldown_desc'),
-              'cool.sh',
-              localization.translate('cooldown'),
-              Color(0xFF88C0D0),
-            ),
-            SizedBox(height: 20),
-            _buildControlRow(
-              localization.translate('gaming_desc'),
-              'game.sh',
-              localization.translate('gaming_pro'),
-              Color(0xFF8FBCBB),
-            ),
-            SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  localization.translate('select_language'),
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Color(0xFFECEFF4),
                   ),
-                ),
-                DropdownButton<String>(
-                  value: _selectedLanguage,
-                  items: <String>['EN', 'ID', 'JP', 'JV'].map((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
-                  onChanged: (String? newValue) {
-                    if (newValue != null) {
-                      _changeLanguage(newValue);
-                    }
-                  },
-                  dropdownColor: Color(0xFF2E3440),
-                  style: TextStyle(color: Color(0xFFECEFF4)),
-                  underline: Container(
-                    height: 2,
-                    color: Color(0xFF8FBCBB),
+                ],
+              ),
+              SizedBox(height: 20),
+              Row(
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        localization.translate('root_access'),
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      Text(
+                        localization.translate('module_installed'),
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      Text(
+                        localization.translate('module_version'),
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      Text(
+                        localization.translate('current_mode'),
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ),
-          ],
+                  SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _hasRootAccess ? 'Yes' : 'No',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontFamily: 'Orbitron',
+                          color: _hasRootAccess
+                              ? Color(0xFF00F0FF)
+                              : Color(0xFFFF007F),
+                        ),
+                      ),
+                      Text(
+                        _moduleInstalled ? 'Yes' : 'No',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontFamily: 'Orbitron',
+                          color: _moduleInstalled
+                              ? Color(0xFF00F0FF)
+                              : Color(0xFFFF007F),
+                        ),
+                      ),
+                      Text(
+                        _moduleVersion,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      Text(
+                        _currentMode,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              SizedBox(height: 20),
+              _buildControlRow(
+                localization.translate('power_save_desc'),
+                'powersafe.sh',
+                localization.translate('power_save'),
+                neonGreen,
+              ),
+              SizedBox(height: 10),
+              _buildControlRow(
+                localization.translate('balanced_desc'),
+                'balanced.sh',
+                localization.translate('balanced'),
+                neonCyan,
+              ),
+              SizedBox(height: 10),
+              _buildControlRow(
+                localization.translate('performance_desc'),
+                'performance.sh',
+                localization.translate('performance'),
+                neonOrange,
+              ),
+              SizedBox(height: 10),
+              _buildControlRow(
+                localization.translate('clear_desc'),
+                'kill.sh',
+                localization.translate('clear'),
+                neonPink,
+              ),
+              SizedBox(height: 10),
+              _buildControlRow(
+                localization.translate('cooldown_desc'),
+                'cool.sh',
+                localization.translate('cooldown'),
+                neonPurple,
+              ),
+              SizedBox(height: 10),
+              _buildControlRow(
+                localization.translate('gaming_desc'),
+                'game.sh',
+                localization.translate('gaming_pro'),
+                neonYellow,
+              ),
+              SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    localization.translate('select_language'),
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  DropdownButton<String>(
+                    value: _selectedLanguage,
+                    items: <String>['EN', 'ID', 'JP', 'JV'].map((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      );
+                    }).toList(),
+                    onChanged: (String? newValue) {
+                      if (newValue != null) {
+                        _changeLanguage(newValue);
+                      }
+                    },
+                    dropdownColor: Color(0xFF0A0F2C),
+                    style: TextStyle(
+                      color: Color(0xFFE0E0E0),
+                      fontFamily: 'Orbitron',
+                    ),
+                    underline: Container(
+                      height: 2,
+                      color: Color(0xFF00F0FF),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 20),
+            ],
+          ),
         ),
       ),
     );
@@ -726,7 +709,12 @@ class _MainScreenState extends State<MainScreen> {
   Widget _buildControlRow(String description, String scriptName,
       String buttonText, Color buttonColor) {
     bool isExecuting = _executingScript == scriptName;
-
+    Color pressedColor =
+        HSLColor.fromColor(buttonColor).withLightness(0.6).toColor();
+    Color disabledColor = buttonColor.withOpacity(0.5);
+    Color textColor =
+        buttonColor.computeLuminance() > 0.5 ? Colors.black : Colors.white;
+    Color textDisabledColor = textColor.withOpacity(0.7);
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -735,10 +723,7 @@ class _MainScreenState extends State<MainScreen> {
           flex: 2,
           child: Text(
             description,
-            style: TextStyle(
-              fontSize: 16,
-              color: Color(0xFFECEFF4),
-            ),
+            style: Theme.of(context).textTheme.bodyMedium,
           ),
         ),
         SizedBox(width: 20),
@@ -750,21 +735,46 @@ class _MainScreenState extends State<MainScreen> {
             style: ButtonStyle(
               backgroundColor:
                   MaterialStateProperty.resolveWith<Color>((states) {
-                if (states.contains(MaterialState.pressed)) {
-                  return Color(0xFFECEFF4);
+                if (states.contains(MaterialState.disabled)) {
+                  return disabledColor;
                 }
-                return isExecuting ? Color(0xFFECEFF4) : buttonColor;
+                if (states.contains(MaterialState.pressed)) {
+                  return pressedColor;
+                }
+                return buttonColor;
               }),
               foregroundColor:
                   MaterialStateProperty.resolveWith<Color>((states) {
-                return Color(0xFF2E3440);
+                if (states.contains(MaterialState.disabled)) {
+                  return textDisabledColor;
+                }
+                return textColor;
               }),
               padding:
                   MaterialStateProperty.all(EdgeInsets.symmetric(vertical: 12)),
+              shape: MaterialStateProperty.all<RoundedRectangleBorder>(
+                RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8.0),
+                  side: BorderSide(color: textColor.withOpacity(0.5), width: 1),
+                ),
+              ),
+              overlayColor:
+                  MaterialStateProperty.all(Colors.white.withOpacity(0.1)),
+              elevation: MaterialStateProperty.resolveWith<double>((states) {
+                if (states.contains(MaterialState.pressed)) return 2.0;
+                return 4.0;
+              }),
+              shadowColor:
+                  MaterialStateProperty.all(buttonColor.withOpacity(0.5)),
             ),
             child: Text(
-              isExecuting ? 'Executing' : buttonText,
+              isExecuting ? '...' : buttonText,
               textAlign: TextAlign.center,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Orbitron',
+                fontSize: 12,
+              ),
             ),
           ),
         ),

@@ -1,3 +1,8 @@
+# Deepsleep 
+pm.sleep_mode=1
+power_supply.wakeup=enable
+ro.ril.disable.power.collapse=0
+
 #######################################
 # Unlock ANGLE
 #######################################
