@@ -2,7 +2,7 @@
 
 # Define the source and target directories
 SOURCE_DIR="Gaming"
-TARGET_DIRS=("Core" "Phoenix" "Ubur-Ubur" "Gaming" "Lite")
+TARGET_DIRS=("Core" "Phoenix" "Ubur-Ubur" "Gaming" "Lite" "Lite-P" "Lite-U" "Lite-C")
 BUILD_DIR="Build"
 
 # Create the Build directory if it doesn't exist
@@ -43,22 +43,35 @@ sync_files() {
 
     # Copy Wallpaper.png to Build folder
     cp -f "Wallpaper.png" "$BUILD_DIR/Wallpaper.png"
+    
+    # Copy EnCorinVest.apk to Build folder
+    cp -f "$SOURCE_DIR/EnCorinVest.apk" "$BUILD_DIR/EnCorinVest.apk"
 
     # Suppress most of the output, only show essential information
     for TARGET_DIR in "${TARGET_DIRS[@]}"; do
+        # Create directory if it doesn't exist
+        mkdir -p "$TARGET_DIR"
+        
         # Sync Scripts folder
         rsync -a --delete "$SOURCE_DIR/Scripts/" "$TARGET_DIR/Scripts/" > /dev/null 2>&1
 
         # Sync customize.sh
         cp -f "$SOURCE_DIR/customize.sh" "$TARGET_DIR/customize.sh"
         
-        # Sync service.sh
+        # Sync service.sh with special handling for Lite variants
         cp -f "$SOURCE_DIR/service.sh" "$TARGET_DIR/service.sh"
-
-        # Sync system.prop for non-Lite variants
-        if [ "$TARGET_DIR" != "Lite" ]; then
-            cp -f "$SOURCE_DIR/system.prop" "$TARGET_DIR/system.prop"
+        
+        # For Lite variants, remove resetprop -n lines from service.sh
+        if [[ "$TARGET_DIR" == "Lite"* ]]; then
+            # Remove resetprop -n lines while preserving other content
+            sed -i '/resetprop -n/d' "$TARGET_DIR/service.sh"
         fi
+
+        # Sync system.prop for all variants
+        cp -f "$SOURCE_DIR/system.prop" "$TARGET_DIR/system.prop"
+        
+        # Sync logo.png to all variants
+        cp -f "$SOURCE_DIR/logo.png" "$TARGET_DIR/logo.png"
 
         # Replace the Variant and Version lines
         sed -i 's/^ui_print "Variant: .*$/ui_print "Variant: '"$(basename "$TARGET_DIR")"'"/' "$TARGET_DIR/customize.sh"
@@ -71,8 +84,6 @@ sync_files() {
 
         # Copy remaining files
         cp -f "$SOURCE_DIR/EnCorinVest.apk" "$TARGET_DIR/EnCorinVest.apk"
-        # Copy EnCorinVest.apk to Build folder
-        cp -f "$SOURCE_DIR/EnCorinVest.apk" "$BUILD_DIR/EnCorinVest.apk"
 
         # Create zip file without parent folder
         ZIP_NAME="EnCorinVest-$(basename "$TARGET_DIR")-$VERSION-$BUILD_TYPE.zip"
