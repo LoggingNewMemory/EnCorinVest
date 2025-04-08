@@ -20,3 +20,5 @@ If your module is not listed here, you can try to combine it (Ex: SkiaVK / GL Mo
 - Surface Flinger Optimization
 - Disable Limit 60 FPS on AOSP 15
 - Disable FPS Limit when low battery
+
+Note: Lite versions doesn't have most of the feature listed above 
