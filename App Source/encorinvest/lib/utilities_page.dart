@@ -16,6 +16,8 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
   // --- File Paths & Commands ---
   final String _serviceFilePath = '/data/adb/modules/EnCorinVest/service.sh';
   final String _gameTxtPath = '/data/adb/modules/EnCorinVest/game.txt';
+  // --- Path to the config file ---
+  final String _configFilePath = '/data/adb/modules/EnCorinVest/encorin.txt';
   final String _hamadaMarker = '# Start HamadaAI (Default is Disabled)';
   final String _hamadaProcessName =
       'HamadaAI'; // Process name for start/kill/check
@@ -25,11 +27,12 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
       'pgrep -x HamadaAI'; // Command to check if running
 
   // --- UI state ---
-  bool _hamadaAiEnabled = false; // State for the runtime toggle
+  bool _hamadaAiEnabled = false; // State reflecting the config file
   bool _hamadaStartOnBoot = false; // State for the boot toggle
   bool _isHamadaCommandRunning = false; // Loading indicator for start/stop
   bool _isServiceFileUpdating =
       false; // Loading indicator for boot toggle update
+  bool _isConfigUpdating = false; // Loading indicator for config update
   bool _resolutionServiceAvailable = false;
   bool _isResolutionChanging = false;
   double _resolutionValue = 5.0; // Default index corresponds to 100%
@@ -52,7 +55,8 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     super.initState();
     _localization =
         AppLocalizations(widget.selectedLanguage); // Instantiate localization
-    _checkInitialHamadaStatus(); // Check if HamadaAI is running initially
+    // --- UPDATED: Read config first, then check process ---
+    _readAndApplyHamadaConfig();
     _checkResolutionServiceAvailability();
     _checkHamadaStartOnBoot();
     _loadGameTxt();
@@ -60,33 +64,29 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
 
   // --- Utility Functions ---
 
-  void _showSnackbar(String messageKey,
-      {bool isError = false, Map<String, String>? args}) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(_localization.translate(messageKey, args: args)),
-        backgroundColor: isError ? Colors.red : null,
-        duration: Duration(seconds: 3),
-      ),
-    );
-  }
+  // --- REMOVED _showSnackbar function ---
+  // void _showSnackbar(String messageKey,
+  //     {bool isError = false, Map<String, String>? args}) {
+  //   if (!mounted) return;
+  //   ScaffoldMessenger.of(context).showSnackBar(
+  //     SnackBar(
+  //       content: Text(_localization.translate(messageKey, args: args)),
+  //       backgroundColor: isError ? Colors.red : null,
+  //       duration: Duration(seconds: 3),
+  //     ),
+  //   );
+  // }
 
   Future<ProcessResult> _runRootCommandAndWait(String command) async {
     print('Executing root command (and waiting): $command');
     try {
-      // Use shell explicitly for commands involving pipes or redirection
-      // if 'su -c' doesn't handle them reliably across devices.
-      // However, for simple commands, 'su -c command' is often sufficient.
-      // Let's stick with 'su -c' for now unless pipes fail.
       return await Process.run('su', ['-c', command]);
-      // Example using shell:
-      // return await Process.run('su', ['-c', 'sh -c "$command"']);
     } catch (e) {
       print('Error running root command "$command": $e');
-      if (mounted)
-        _showSnackbar('command_failed',
-            isError: true, args: {'command': command});
+      // --- REMOVED Snackbar ---
+      // if (mounted)
+      //   _showSnackbar('command_failed',
+      //       isError: true, args: {'command': command});
       return ProcessResult(0, -1, '', 'Execution failed: $e');
     }
   }
@@ -94,14 +94,14 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
   Future<void> _runRootCommandFireAndForget(String command) async {
     print('Executing root command (fire and forget): $command');
     try {
-      // Ensure the command runs in the background properly
       await Process.start('su', ['-c', '$command &'],
           runInShell: true, mode: ProcessStartMode.detached);
     } catch (e) {
       print('Error starting root command "$command": $e');
-      if (mounted)
-        _showSnackbar('command_failed',
-            isError: true, args: {'command': command});
+      // --- REMOVED Snackbar ---
+      // if (mounted)
+      //   _showSnackbar('command_failed',
+      //       isError: true, args: {'command': command});
     }
   }
 
@@ -111,59 +111,179 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
       if (result.exitCode == 0 && result.stdout.toString().contains('uid=0')) {
         return true;
       } else {
-        if (mounted) _showSnackbar('error_no_root', isError: true);
+        // --- REMOVED Snackbar ---
+        // if (mounted) _showSnackbar('error_no_root', isError: true);
+        print('Root access check failed or not granted.');
         return false;
       }
     } catch (e) {
-      if (mounted) _showSnackbar('error_no_root', isError: true);
+      // --- REMOVED Snackbar ---
+      // if (mounted) _showSnackbar('error_no_root', isError: true);
+      print('Error checking root access: $e');
       return false;
     }
   }
 
   // --- Hamada AI Logic ---
 
-  Future<void> _checkInitialHamadaStatus() async {
+  Future<bool?> _readHamadaConfig() async {
+    if (!await _checkRootAccess()) return null;
+    print("Reading HamadaAI config from $_configFilePath");
+    final result = await _runRootCommandAndWait('cat $_configFilePath');
+    if (result.exitCode == 0) {
+      try {
+        final content = result.stdout.toString();
+        final lines = content.split('\n');
+        for (var line in lines) {
+          final trimmedLine = line.trim();
+          if (trimmedLine.toLowerCase().startsWith('hamadaai=')) {
+            final value = trimmedLine.split('=')[1].trim().toLowerCase();
+            print("Found config value: $value");
+            return value == 'true';
+          }
+        }
+        print("HamadaAI setting not found in config file.");
+        return null; // Setting not found
+      } catch (e) {
+        print("Error parsing config file: $e");
+        return null; // Error parsing
+      }
+    } else {
+      print(
+          "Error reading config file: Exit code ${result.exitCode}, Stderr: ${result.stderr}");
+      // --- REMOVED Snackbar ---
+      // if (mounted)
+      //   _showSnackbar('file_read_failed',
+      //       isError: true, args: {'file': _configFilePath});
+      return null; // Error reading file
+    }
+  }
+
+  Future<bool> _writeHamadaConfig(bool enabled) async {
+    if (!await _checkRootAccess() || !mounted) return false;
+
+    setState(() => _isConfigUpdating = true);
+    // --- REMOVED Snackbar ---
+    // _showSnackbar('updating_config_file'); // Add localization key
+    print("Writing HamadaAI=$enabled to $_configFilePath");
+
+    final valueString = enabled ? 'true' : 'false';
+    final sedCommand =
+        '''sed -i -e 's#^HamadaAI=.*#HamadaAI=$valueString#' -e t -e '\$aHamadaAI=$valueString' $_configFilePath''';
+
+    try {
+      final result = await _runRootCommandAndWait(sedCommand);
+
+      if (result.exitCode == 0) {
+        print("Config file update successful.");
+        // --- REMOVED Snackbar ---
+        // _showSnackbar('config_file_updated'); // Add localization key
+        if (mounted) setState(() => _hamadaAiEnabled = enabled);
+        return true;
+      } else {
+        print(
+            'Config file update failed. Exit Code: ${result.exitCode}, Stderr: ${result.stderr}');
+        // --- REMOVED Snackbar ---
+        // if (mounted)
+        //   _showSnackbar('config_file_update_failed', isError: true); // Add localization key
+        return false;
+      }
+    } catch (e) {
+      print('Error updating config file: $e');
+      // --- REMOVED Snackbar ---
+      // if (mounted)
+      //   _showSnackbar('config_file_update_failed', isError: true); // Add localization key
+      return false;
+    } finally {
+      if (mounted) setState(() => _isConfigUpdating = false);
+    }
+  }
+
+  Future<void> _readAndApplyHamadaConfig() async {
+    bool? configState = await _readHamadaConfig();
+
+    if (mounted) {
+      setState(() {
+        _hamadaAiEnabled = configState ?? false;
+        print("Initial Hamada AI state from config: $_hamadaAiEnabled");
+      });
+      await _verifyHamadaProcessStatus();
+    }
+  }
+
+  Future<void> _verifyHamadaProcessStatus() async {
     if (!await _checkRootAccess()) return;
     final result = await _runRootCommandAndWait(_hamadaCheckCommand);
     bool isRunning = result.exitCode == 0;
-    if (mounted) {
-      setState(() => _hamadaAiEnabled = isRunning);
-      print("Initial Hamada AI running state: $isRunning");
+    print("Actual Hamada AI process running state: $isRunning");
+
+    if (mounted && _hamadaAiEnabled != isRunning) {
+      print(
+          "Warning: Hamada AI config state ($_hamadaAiEnabled) mismatches running state ($isRunning).");
     }
   }
 
   Future<void> _toggleHamadaAI(bool enable) async {
     if (!await _checkRootAccess() || !mounted) return;
+    if (_isConfigUpdating) return;
+
     setState(() => _isHamadaCommandRunning = true);
     final commandToRun = enable ? _hamadaStartCommand : _hamadaStopCommand;
     final actionKey = enable ? 'Starting' : 'Stopping';
 
-    _showSnackbar('executing_command');
+    // --- REMOVED Snackbar ---
+    // _showSnackbar('executing_command');
+    print('$actionKey Hamada AI...');
 
+    bool commandSuccess = false;
     try {
       if (enable) {
         await _runRootCommandFireAndForget(commandToRun);
+        commandSuccess = true; // Assume success for fire-and-forget
         if (mounted) {
-          setState(() => _hamadaAiEnabled = true);
-          // Use a more specific key if available, e.g., 'hamada_ai_started'
-          _showSnackbar('Command executed');
+          // --- REMOVED Snackbar ---
+          // _showSnackbar('Command executed'); // More specific key?
+          print('Start command executed.');
         }
       } else {
         final result = await _runRootCommandAndWait(commandToRun);
+        commandSuccess = result.exitCode == 0;
         if (mounted) {
-          setState(() => _hamadaAiEnabled = false);
-          // Use a more specific key if available, e.g., 'hamada_ai_stopped'
-          _showSnackbar('Command executed');
+          // --- REMOVED Snackbar ---
+          // _showSnackbar('Command executed'); // More specific key?
           print(
               'Killall result: Exit Code ${result.exitCode}, Stderr: ${result.stderr}');
+          if (!commandSuccess) {
+            print("Failed to stop Hamada AI process.");
+          } else {
+            print("Stop command executed successfully.");
+          }
+        }
+      }
+
+      if (commandSuccess) {
+        bool configWritten = await _writeHamadaConfig(enable);
+        if (!configWritten && mounted) {
+          // --- REMOVED Snackbar ---
+          // _showSnackbar('config_write_failed_after_command', isError: true); // Add localization key
+          print("Error: Config write failed after command execution.");
+        } else if (configWritten && mounted) {
+          print("Hamada AI state and config updated to $enable");
+        }
+      } else {
+        if (mounted) {
+          // --- REMOVED Snackbar ---
+          // _showSnackbar('command_failed',
+          //     isError: true, args: {'command': commandToRun});
+          print("Error: Command execution failed for $commandToRun");
         }
       }
     } catch (e) {
       print('Error $actionKey Hamada AI: $e');
       if (mounted) {
-        _showSnackbar('command_failed',
-            isError: true, args: {'command': commandToRun});
-        setState(() => _hamadaAiEnabled = !enable); // Revert state
+        // --- REMOVED Snackbar ---
+        // _showSnackbar('command_failed',
+        //     isError: true, args: {'command': commandToRun});
       }
     } finally {
       if (mounted) setState(() => _isHamadaCommandRunning = false);
@@ -183,7 +303,8 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
           for (String line in subsequentLines.skip(1)) {
             final trimmedLine = line.trim();
             if (trimmedLine.isNotEmpty && !trimmedLine.startsWith('#')) {
-              found = trimmedLine == _hamadaProcessName;
+              found = trimmedLine == _hamadaProcessName ||
+                  trimmedLine == _hamadaStartCommand;
               break;
             }
           }
@@ -197,81 +318,68 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     }
   }
 
-  /// Updates the service.sh file using base64 encoding to avoid escaping issues.
   Future<void> _setHamadaStartOnBoot(bool enable) async {
     if (!await _checkRootAccess() || !mounted) return;
 
     setState(() => _isServiceFileUpdating = true);
-    _showSnackbar('writing_service_file');
+    // --- REMOVED Snackbar ---
+    // _showSnackbar('writing_service_file');
+    print('Writing service file...');
 
     try {
-      // 1. Read current content
       final readResult = await _runRootCommandAndWait('cat $_serviceFilePath');
       if (readResult.exitCode != 0) {
         throw Exception('Failed read: ${readResult.stderr}');
       }
       String content = readResult.stdout.toString();
-      // Normalize line endings to Unix style (\n)
       List<String> lines = content.replaceAll('\r\n', '\n').split('\n');
 
-      // Remove trailing empty line if present from split
       if (lines.isNotEmpty && lines.last.isEmpty) {
         lines.removeLast();
       }
 
-      // 2. Find marker
       int markerIndex =
           lines.indexWhere((line) => line.contains(_hamadaMarker));
       if (markerIndex == -1) {
         throw Exception('Marker "$_hamadaMarker" not found.');
       }
 
-      // 3. Find and remove existing command line below marker
       int commandLineIndex = -1;
       for (int i = markerIndex + 1; i < lines.length; i++) {
         final trimmedLine = lines[i].trim();
         if (trimmedLine.isNotEmpty && !trimmedLine.startsWith('#')) {
-          if (trimmedLine == _hamadaProcessName) commandLineIndex = i;
-          break; // Only check first relevant line
+          if (trimmedLine == _hamadaProcessName ||
+              trimmedLine == _hamadaStartCommand) commandLineIndex = i;
+          break;
         }
       }
       if (commandLineIndex != -1) lines.removeAt(commandLineIndex);
 
-      // 4. Add command if enabling
-      if (enable) lines.insert(markerIndex + 1, _hamadaProcessName);
+      if (enable) lines.insert(markerIndex + 1, _hamadaStartCommand);
 
-      // 5. Prepare new content string (ensure trailing newline)
       String newContent = lines.join('\n') + '\n';
-
-      // 6. Encode content to Base64
       String base64Content = base64Encode(utf8.encode(newContent));
-
-      // 7. Construct write command using base64 decode
-      // Ensure the base64 utility is available (standard on most Android systems)
-      // Use single quotes around the base64 string to prevent shell interpretation
       final writeCmd =
           '''echo '$base64Content' | base64 -d > $_serviceFilePath''';
 
-      // 8. Execute write command
-      print("Attempting to write service file..."); // Log before execution
+      print("Attempting to write service file...");
       final writeResult = await _runRootCommandAndWait(writeCmd);
 
       if (writeResult.exitCode != 0) {
-        // Log detailed error output from the command
         print('Write failed. Exit Code: ${writeResult.exitCode}');
         print('Stderr: ${writeResult.stderr}');
-        print(
-            'Stdout: ${writeResult.stdout}'); // Stdout might also contain errors from the pipe
+        print('Stdout: ${writeResult.stdout}');
         throw Exception('Failed write: ${writeResult.stderr}');
       }
 
-      // 9. Update state on success
       if (mounted) setState(() => _hamadaStartOnBoot = enable);
-      _showSnackbar('service_file_updated');
+      // --- REMOVED Snackbar ---
+      // _showSnackbar('service_file_updated');
       print("Service file write successful.");
     } catch (e) {
       print('Error updating service file: $e');
-      if (mounted) _showSnackbar('service_file_update_failed', isError: true);
+      // --- REMOVED Snackbar ---
+      // if (mounted) _showSnackbar('service_file_update_failed', isError: true);
       if (mounted)
         setState(() => _hamadaStartOnBoot = !enable); // Revert visual state
     } finally {
@@ -279,7 +387,6 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     }
   }
 
-  // --- Resolution Logic --- (No changes needed)
   Future<void> _checkResolutionServiceAvailability() async {
     bool canGetSize = false;
     bool canGetDensity = false;
@@ -302,6 +409,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
               (_resolutionPercentages.length - 1).toDouble());
       }
     } catch (e) {
+      print('Error checking resolution service availability: $e');
       if (mounted) setState(() => _resolutionServiceAvailable = false);
     }
   }
@@ -315,6 +423,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
       if (sm != null && sm.group(1) != null)
         _originalSize = sm.group(1)!;
       else {
+        print("Failed to parse original screen size.");
         if (mounted) setState(() => _resolutionServiceAvailable = false);
         return;
       }
@@ -323,12 +432,18 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
           .firstMatch(dr.stdout.toString());
       if (dm != null && dm.group(1) != null) {
         _originalDensity = int.tryParse(dm.group(1)!) ?? 0;
-        if (_originalDensity == 0) if (mounted)
-          setState(() => _resolutionServiceAvailable = false);
+        if (_originalDensity == 0) {
+          print("Failed to parse original screen density or density is zero.");
+          if (mounted) setState(() => _resolutionServiceAvailable = false);
+        }
       } else {
+        print("Failed to parse original screen density.");
         if (mounted) setState(() => _resolutionServiceAvailable = false);
       }
+      print(
+          "Original resolution saved: $_originalSize @ ${_originalDensity}dpi");
     } catch (e) {
+      print("Error saving original resolution: $e");
       if (mounted) setState(() => _resolutionServiceAvailable = false);
     }
   }
@@ -343,7 +458,10 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     if (!_resolutionServiceAvailable ||
         _originalSize.isEmpty ||
         _originalDensity <= 0) {
-      _showSnackbar('Resolution change unavailable.', isError: true);
+      // --- REMOVED Snackbar ---
+      // _showSnackbar('Resolution change unavailable.', isError: true);
+      print(
+          'Resolution change unavailable. Service not available or original values missing.');
       if (mounted)
         setState(() =>
             _resolutionValue = (_resolutionPercentages.length - 1).toDouble());
@@ -352,6 +470,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     if (mounted) setState(() => _isResolutionChanging = true);
     final idx = value.round().clamp(0, _resolutionPercentages.length - 1);
     final pct = _resolutionPercentages[idx];
+    print("Applying resolution: $pct%");
     try {
       final parts = _originalSize.split('x');
       final origW = int.tryParse(parts[0]);
@@ -360,28 +479,39 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
           origW == null ||
           origH == null ||
           origW <= 0 ||
-          origH <= 0) throw FormatException('Invalid size');
+          origH <= 0)
+        throw FormatException('Invalid original size format: $_originalSize');
       final newW = (origW * pct / 100).floor();
       final newH = (origH * pct / 100).floor();
       final newD = (_originalDensity * pct / 100).floor();
       if (newW <= 0 || newH <= 0 || newD <= 0)
-        throw FormatException('Calculated zero/negative');
+        throw FormatException(
+            'Calculated zero/negative dimensions or density. W:$newW, H:$newH, D:$newD');
+
+      print("Calculated new resolution: ${newW}x${newH} @ ${newD}dpi");
+
       final sr = await _runRootCommandAndWait('wm size ${newW}x${newH}');
       if (sr.exitCode != 0) throw Exception('Set size failed: ${sr.stderr}');
       final dr = await _runRootCommandAndWait('wm density $newD');
       if (dr.exitCode != 0) {
-        await _runRootCommandAndWait('wm size reset');
+        print("Set density failed, attempting to reset size...");
+        await _runRootCommandAndWait(
+            'wm size reset'); // Attempt to revert size if density fails
         throw Exception('Set density failed: ${dr.stderr}');
       }
       if (mounted) setState(() => _resolutionValue = value);
-      _showSnackbar('Resolution set to $pct%'); // Add localization key
+      // --- REMOVED Snackbar ---
+      // _showSnackbar('Resolution set to $pct%'); // Add localization key
+      print('Resolution successfully set to $pct%');
     } catch (e) {
-      _showSnackbar('Error changing resolution: ${e.toString()}',
-          isError: true);
-      await _resetResolution(showSnackbar: false);
+      // --- REMOVED Snackbar ---
+      // _showSnackbar('Error changing resolution: ${e.toString()}',
+      //     isError: true);
+      print('Error changing resolution: ${e.toString()}');
+      await _resetResolution(showSnackbar: false); // Attempt reset on error
       if (mounted)
-        setState(() =>
-            _resolutionValue = (_resolutionPercentages.length - 1).toDouble());
+        setState(() => _resolutionValue =
+            (_resolutionPercentages.length - 1).toDouble()); // Reset slider
     } finally {
       if (mounted) setState(() => _isResolutionChanging = false);
     }
@@ -390,27 +520,37 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
   Future<void> _resetResolution({bool showSnackbar = true}) async {
     if (!_resolutionServiceAvailable) return;
     if (mounted) setState(() => _isResolutionChanging = true);
+    print("Resetting resolution...");
     try {
       final sr = await _runRootCommandAndWait('wm size reset');
       final dr = await _runRootCommandAndWait('wm density reset');
-      if (sr.exitCode != 0 || dr.exitCode != 0) throw Exception('Reset failed');
+      if (sr.exitCode != 0 || dr.exitCode != 0) {
+        print(
+            "Resolution reset command failed. Size exit: ${sr.exitCode}, Density exit: ${dr.exitCode}");
+        throw Exception('Reset failed');
+      }
       if (mounted)
         setState(() =>
             _resolutionValue = (_resolutionPercentages.length - 1).toDouble());
-      if (showSnackbar)
-        _showSnackbar('Resolution reset to original'); // Add localization key
+      if (showSnackbar) {
+        // --- REMOVED Snackbar ---
+        // _showSnackbar('Resolution reset to original'); // Add localization key
+        print("Resolution reset to original.");
+      }
     } catch (e) {
-      if (showSnackbar)
-        _showSnackbar('Error resetting resolution', isError: true);
+      print('Error resetting resolution: $e');
+      // --- REMOVED Snackbar ---
+      // if (showSnackbar)
+      //   _showSnackbar('Error resetting resolution', isError: true);
     } finally {
       if (mounted) setState(() => _isResolutionChanging = false);
     }
   }
 
-  // --- game.txt Logic --- (No changes needed)
   Future<void> _loadGameTxt() async {
     if (!await _checkRootAccess() || !mounted) return;
     setState(() => _isGameTxtLoading = true);
+    print("Loading game.txt...");
     try {
       final result = await _runRootCommandAndWait('cat $_gameTxtPath');
       if (mounted) {
@@ -419,19 +559,27 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
             _gameTxtContent = result.stdout.toString();
             _gameTxtController.text = _gameTxtContent;
           });
+          print("game.txt loaded successfully.");
         } else {
-          _showSnackbar('file_read_failed', isError: true);
+          // --- REMOVED Snackbar ---
+          // _showSnackbar('file_read_failed', isError: true, args: {'file': _gameTxtPath});
+          print("Failed to read game.txt: ${result.stderr}");
           setState(() {
             _gameTxtContent = '';
             _gameTxtController.text = '';
           });
+          // --- REMOVED Snackbar ---
+          // if (result.stderr.toString().toLowerCase().contains('no such file'))
+          //   _showSnackbar('error_file_not_found', isError: true, args: {'file': _gameTxtPath});
           if (result.stderr.toString().toLowerCase().contains('no such file'))
-            _showSnackbar('error_file_not_found', isError: true);
+            print("game.txt not found.");
         }
       }
     } catch (e) {
       if (mounted) {
-        _showSnackbar('file_read_failed', isError: true);
+        // --- REMOVED Snackbar ---
+        // _showSnackbar('file_read_failed', isError: true, args: {'file': _gameTxtPath});
+        print("Error loading game.txt: $e");
         setState(() {
           _gameTxtContent = '';
           _gameTxtController.text = '';
@@ -445,10 +593,11 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
   Future<void> _saveGameTxt() async {
     if (!await _checkRootAccess() || !mounted) return;
     setState(() => _isGameTxtSaving = true);
-    _showSnackbar('saving_file');
+    // --- REMOVED Snackbar ---
+    // _showSnackbar('saving_file');
+    print("Saving game.txt...");
     final newContent = _gameTxtController.text;
     try {
-      // Use base64 for game.txt as well for consistency and robustness
       String base64Content = base64Encode(utf8.encode(newContent));
       final writeCmd = '''echo '$base64Content' | base64 -d > $_gameTxtPath''';
       final result = await _runRootCommandAndWait(writeCmd);
@@ -457,14 +606,19 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
           setState(() {
             _gameTxtContent = newContent;
           });
-          _showSnackbar('file_saved');
+          // --- REMOVED Snackbar ---
+          // _showSnackbar('file_saved');
+          print("game.txt saved successfully.");
         } else {
-          _showSnackbar('file_save_failed', isError: true);
+          // --- REMOVED Snackbar ---
+          // _showSnackbar('file_save_failed', isError: true, args: {'file': _gameTxtPath});
           print('Failed save game.txt: ${result.stderr}');
         }
       }
     } catch (e) {
-      if (mounted) _showSnackbar('file_save_failed', isError: true);
+      // --- REMOVED Snackbar ---
+      // if (mounted) _showSnackbar('file_save_failed', isError: true, args: {'file': _gameTxtPath});
+      print('Error saving game.txt: $e');
     } finally {
       if (mounted) setState(() => _isGameTxtSaving = false);
     }
@@ -472,15 +626,10 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
 
   @override
   void dispose() {
-    // Attempt to stop Hamada AI if it was left enabled by the toggle
-    if (_hamadaAiEnabled) {
-      print("Stopping Hamada AI on dispose...");
-      _runRootCommandAndWait(
-          _hamadaStopCommand); // Run stop command on dispose if needed
-    }
     if (_resolutionServiceAvailable &&
         _resolutionValue != (_resolutionPercentages.length - 1).toDouble()) {
-      _resetResolution(showSnackbar: false);
+      _resetResolution(
+          showSnackbar: false); // Keep reset logic, just no snackbar
     }
     _gameTxtController.dispose();
     super.dispose();
@@ -488,8 +637,6 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
 
   @override
   Widget build(BuildContext context) {
-    // --- Build method remains the same as the previous version ---
-    // (Using SwitchListTile for Hamada AI runtime toggle)
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final cardShape =
@@ -498,6 +645,9 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     final cardMargin = const EdgeInsets.only(bottom: 16);
     final cardPadding =
         const EdgeInsets.symmetric(horizontal: 16, vertical: 16);
+
+    bool isHamadaBusy =
+        _isHamadaCommandRunning || _isServiceFileUpdating || _isConfigUpdating;
 
     return Scaffold(
       appBar: AppBar(
@@ -532,13 +682,12 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                       title: Text(
                           _localization.translate('hamada_ai_toggle_title')),
                       value: _hamadaAiEnabled,
-                      onChanged:
-                          _isHamadaCommandRunning || _isServiceFileUpdating
-                              ? null
-                              : (bool value) {
-                                  _toggleHamadaAI(value);
-                                },
-                      secondary: _isHamadaCommandRunning
+                      onChanged: isHamadaBusy
+                          ? null
+                          : (bool value) {
+                              _toggleHamadaAI(value);
+                            },
+                      secondary: _isHamadaCommandRunning || _isConfigUpdating
                           ? SizedBox(
                               width: 20,
                               height: 20,
@@ -554,12 +703,11 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                       title: Text(
                           _localization.translate('hamada_ai_start_on_boot')),
                       value: _hamadaStartOnBoot,
-                      onChanged:
-                          _isServiceFileUpdating || _isHamadaCommandRunning
-                              ? null
-                              : (bool value) {
-                                  _setHamadaStartOnBoot(value);
-                                },
+                      onChanged: isHamadaBusy
+                          ? null
+                          : (bool value) {
+                              _setHamadaStartOnBoot(value);
+                            },
                       secondary: _isServiceFileUpdating
                           ? SizedBox(
                               width: 20,
@@ -601,7 +749,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                         minLines: 5,
                         keyboardType: TextInputType.multiline,
                         decoration: InputDecoration(
-                          hintText: 'Content of game.txt',
+                          hintText: _localization.translate('game_txt_hint'),
                           border: OutlineInputBorder(
                             borderSide: BorderSide(color: colorScheme.outline),
                             borderRadius: BorderRadius.circular(8),
@@ -672,7 +820,8 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 16.0),
                         child: Text(
-                          'Resolution changing requires root and working \'wm\' commands.',
+                          _localization
+                              .translate('resolution_unavailable_message'),
                           style: textTheme.bodyMedium
                               ?.copyWith(color: colorScheme.error),
                         ),
@@ -689,7 +838,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                                 child:
                                     CircularProgressIndicator(strokeWidth: 3)),
                             SizedBox(width: 12),
-                            Text("Applying changes...",
+                            Text(_localization.translate('applying_changes'),
                                 style: textTheme.bodyMedium),
                           ],
                         ),
@@ -741,7 +890,8 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                           ),
                           onPressed: _isResolutionChanging
                               ? null
-                              : () => _resetResolution(),
+                              : () =>
+                                  _resetResolution(), // Call without showSnackbar: true
                           child:
                               Text(_localization.translate('reset_resolution')),
                         ),
