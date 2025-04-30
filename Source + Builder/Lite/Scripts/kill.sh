@@ -6,5 +6,3 @@ done
 
 echo 3 > /proc/sys/vm/drop_caches
 am kill-all
-
-su -lp 2000 -c "cmd notification post -S bigtext -t 'EnCorinVest' -i file:///data/local/tmp/logo.png -I file:///data/local/tmp/logo.png TagEncorin 'EnCorinVest - Killed All Apps'"

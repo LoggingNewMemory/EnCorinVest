@@ -37,7 +37,7 @@ ui_print "-----------------🗡-----------------"
 ui_print "            MODULE INFO             "
 ui_print "-----------------🗡-----------------"
 ui_print "Name : EnCorinVest"
-ui_print "Version : 21.1"
+ui_print "Version : 22.0"
 ui_print "Variant: Phoenix"
 ui_print "Support Root : Magisk / KernelSU / APatch"
 ui_print " "
@@ -63,6 +63,67 @@ cp "$MODPATH"/EnCorinVest.apk /data/local/tmp >/dev/null 2>&1
 pm install /data/local/tmp/EnCorinVest.apk >/dev/null 2>&1
 rm /data/local/tmp/EnCorinVest.apk >/dev/null 2>&1
 
+ui_print " "
+ui_print "    INSTALLING HAMADA AI NEXT GEN     "
+ui_print " "
+
+# Define paths and target binary name
+BIN_PATH=$MODPATH/system/bin
+TARGET_BIN_NAME=HamadaAI
+TARGET_BIN_PATH=$BIN_PATH/$TARGET_BIN_NAME
+TEMP_EXTRACT_DIR=$TMPDIR/hamada_extract # Use a temporary directory for extraction
+
+# Create necessary directories
+mkdir -p $BIN_PATH
+mkdir -p $TEMP_EXTRACT_DIR
+
+# Detect architecture
+ARCH=$(getprop ro.product.cpu.abi)
+
+# Determine which binary to extract based on architecture
+if [[ "$ARCH" == *"arm64"* ]]; then
+  # 64-bit architecture
+  ui_print "- Detected 64-bit ARM architecture ($ARCH)"
+  SOURCE_BIN_ZIP_PATH='HamadaAI/hamadaAI_arm64' # Path inside the zip file
+  SOURCE_BIN_EXTRACTED_PATH=$TEMP_EXTRACT_DIR/HamadaAI/hamadaAI_arm64 # Path after extraction to temp dir
+  ui_print "- Extracting $SOURCE_BIN_ZIP_PATH..."
+  unzip -o "$ZIPFILE" "$SOURCE_BIN_ZIP_PATH" -d $TEMP_EXTRACT_DIR >&2
+else
+  # Assume 32-bit architecture (or non-arm64)
+  ui_print "- Detected 32-bit ARM architecture or other ($ARCH)"
+  SOURCE_BIN_ZIP_PATH='HamadaAI/hamadaAI_arm32' # Path inside the zip file
+  SOURCE_BIN_EXTRACTED_PATH=$TEMP_EXTRACT_DIR/HamadaAI/hamadaAI_arm32 # Path after extraction to temp dir
+  ui_print "- Extracting $SOURCE_BIN_ZIP_PATH..."
+  unzip -o "$ZIPFILE" "$SOURCE_BIN_ZIP_PATH" -d $TEMP_EXTRACT_DIR >&2
+fi
+
+# Check if extraction was successful and the source file exists
+if [ -f "$SOURCE_BIN_EXTRACTED_PATH" ]; then
+  ui_print "- Moving and renaming binary to $TARGET_BIN_PATH"
+  # Move the extracted binary to the final destination and rename it
+  mv "$SOURCE_BIN_EXTRACTED_PATH" "$TARGET_BIN_PATH"
+
+  # Check if the final binary exists
+  if [ -f "$TARGET_BIN_PATH" ]; then
+    ui_print "- Setting permissions for $TARGET_BIN_NAME"
+    set_perm $TARGET_BIN_PATH 0 0 0755 0755
+  else
+    ui_print "! ERROR: Failed to move binary to $TARGET_BIN_PATH"
+    # Optional: abort installation if binary is crucial
+    # abort "! Binary installation failed."
+  fi
+else
+  ui_print "! ERROR: Failed to extract binary from $SOURCE_BIN_ZIP_PATH"
+  # Optional: abort installation
+  # abort "! Binary extraction failed."
+fi
+
+# Clean up temporary extraction directory
+rm -rf $TEMP_EXTRACT_DIR
+
+sleep 1.5
+
+ui_print " "
 case "$((RANDOM % 14 + 1))" in
 1) ui_print "- Wooly's Fairy Tale [Rem01 Gaming]" ;;
 2) ui_print "- Sheep-counting Lullaby [Rem01 Gaming]" ;;

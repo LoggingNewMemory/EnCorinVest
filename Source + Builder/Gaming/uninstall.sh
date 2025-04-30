@@ -18,4 +18,4 @@ fi
 
 rm -rf /data/local/tmp/logo.png
 rm -rf /data/local/tmp/Anya.png
-pm uninstall --user 0 com.kanagawa.yamada.encorinvest
+pm uninstall com.kanagawa.yamada.encorinvest
