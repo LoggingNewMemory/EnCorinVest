@@ -3,7 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdbool.h>
-Nigga
+
 #define GAME_FILE "/data/adb/modules/EnCorinVest/game.txt"
 #define SCRIPTS_DIR "/data/adb/modules/EnCorinVest/Scripts"
 #define MAX_LINE 1024
