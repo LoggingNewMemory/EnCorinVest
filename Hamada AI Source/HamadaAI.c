@@ -33,7 +33,6 @@ char **load_game_list(size_t *count) {
     fclose(fp);
     return list;
 }
-
 int main() {
     size_t game_count;
     char **game_list = load_game_list(&game_count);
