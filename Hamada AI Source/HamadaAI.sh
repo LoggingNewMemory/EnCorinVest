@@ -1,83 +1,105 @@
-#!/system/bin/sh
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <stdbool.h>
 
-# HamadaAI Next Gen Algorithm
-# Target: Android 64/32 bit
-# Function: Auto switch performance profiles based on detected package name
+#define BUFFER_SIZE 256
+#define GAME_FILE_PATH "/data/adb/modules/EnCorinVest/game.txt"
+#define SCRIPT_PATH "/data/adb/modules/EnCorinVest/Scripts/"
+#define PERFORMANCE_SCRIPT "performance.sh"
+#define BALANCED_SCRIPT "balanced.sh"
+#define DELAY_ON 5
+#define DELAY_OFF 10
 
-MODULE_PATH="/data/adb/modules/EnCorinVest"
-GAME_LIST="$MODULE_PATH/game.txt"
-SCRIPTS_PATH="$MODULE_PATH/Scripts"
-PERFORMANCE_SCRIPT="$SCRIPTS_PATH/performance.sh"
-BALANCED_SCRIPT="$SCRIPTS_PATH/balanced.sh"
+bool isGamePackage(const char *packageName) {
+    FILE *file = fopen(GAME_FILE_PATH, "r");
+    if (!file) {
+        perror("Failed to open game.txt");
+        return false;
+    }
 
-# Initialize variables
-current_package=""
-previous_package=""
-screen_state="on"
-delay=2
+    char line[BUFFER_SIZE];
+    while (fgets(line, sizeof(line), file)) {
+        line[strcspn(line, "\n")] = 0; // Remove newline character
+        if (strcmp(line, packageName) == 0) {
+            fclose(file);
+            return true;
+        }
+    }
 
-# Function to get current package name
-get_current_package() {
-    dumpsys window | grep -E 'mCurrentFocus|mFocusedApp' | grep -o 'com\.[^/]*' | head -n 1
+    fclose(file);
+    return false;
 }
 
-# Function to check if package is in game list
-is_game_package() {
-    if [ -f "$GAME_LIST" ]; then
-        grep -q "$1" "$GAME_LIST"
-        return $?
-    fi
-    return 1
+void executeScript(const char *script) {
+    char command[BUFFER_SIZE];
+    snprintf(command, sizeof(command), "sh %s%s", SCRIPT_PATH, script);
+    system(command);
 }
 
-# Function to check screen state
-check_screen_state() {
-    if [ "$(dumpsys power | grep 'mDisplayPowerState' | cut -d '=' -f 2 | tr -d ' ')" = "OFF" ]; then
-        echo "off"
-    else
-        echo "on"
-    fi
+void getCurrentPackage(char *packageName, size_t size) {
+    FILE *fp = popen("dumpsys window | grep -E 'mCurrentFocus|mFocusedApp' | grep com...", "r");
+    if (fp == NULL) {
+        perror("Failed to run command");
+        return;
+    }
+
+    if (fgets(packageName, size, fp) != NULL) {
+        // Extract package name from the output
+        char *start = strstr(packageName, "com.");
+        if (start) {
+            strncpy(packageName, start, size);
+            packageName[size - 1] = '\0'; // Ensure null termination
+        }
+    }
+    pclose(fp);
 }
 
-# Main loop
-while true; do
-    # Check screen state
-    new_screen_state=$(check_screen_state)
+bool isScreenOn() {
+    FILE *fp = popen("dumpsys window | grep mScreen", "r");
+    if (fp == NULL) {
+        perror("Failed to run command");
+        return false;
+    }
 
-    # If screen state changed, update delay
-    if [ "$new_screen_state" != "$screen_state" ]; then
-        screen_state="$new_screen_state"
-        if [ "$screen_state" = "off" ]; then
-            delay=5
-        else
-            delay=2
-        fi
-    fi
+    char buffer[BUFFER_SIZE];
+    bool screenOn = true;
+    while (fgets(buffer, sizeof(buffer), fp) != NULL) {
+        if (strstr(buffer, "mScreen=false")) {
+            screenOn = false;
+            break;
+        }
+    }
+    pclose(fp);
+    return screenOn;
+}
 
-    # Get current package
-    current_package=$(get_current_package)
+int main() {
+    char currentPackage[BUFFER_SIZE] = {0};
+    char lastPackage[BUFFER_SIZE] = {0};
+    int delay = DELAY_ON;
 
-    # Only process if package name changed
-    if [ "$current_package" != "$previous_package" ] && [ -n "$current_package" ]; then
-        # Check if the package is in game list
-        if is_game_package "$current_package"; then
-            # Execute performance script if exists
-            if [ -f "$PERFORMANCE_SCRIPT" ]; then
-                sh "$PERFORMANCE_SCRIPT"
-                echo "Applied performance profile for $current_package"
-            fi
-        else
-            # Execute balanced script if exists
-            if [ -f "$BALANCED_SCRIPT" ]; then
-                sh "$BALANCED_SCRIPT"
-                echo "Applied balanced profile for $current_package"
-            fi
-        fi
+    while (true) {
+        getCurrentPackage(currentPackage, sizeof(currentPackage));
 
-        # Update previous package
-        previous_package="$current_package"
-    fi
+        if (strcmp(currentPackage, lastPackage) != 0) {
+            if (isGamePackage(currentPackage)) {
+                executeScript(PERFORMANCE_SCRIPT);
+            } else {
+                executeScript(BALANCED_SCRIPT);
+            }
+            strncpy(lastPackage, currentPackage, sizeof(lastPackage));
+        }
 
-    # Sleep based on current delay
-    sleep $delay
-done
+        if (!isScreenOn()) {
+            delay = DELAY_OFF;
+        } else {
+            delay = DELAY_ON;
+        }
+
+        sleep(delay);
+    }
+
+    return 0;
+}

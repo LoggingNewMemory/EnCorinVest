@@ -181,10 +181,10 @@ resetprop -n touch.pressure.scale 0.00001
 resetprop -n touch.size.calibration 100
 
 # ANGLE Driver Enable
-setprop ro.gfx.angle.supported true
+resetprop -n ro.gfx.angle.supported true
 
 # ANGLE For A15
-setprop debug.graphics.angle.developeroption.enable true
+resetprop -n debug.graphics.angle.developeroption.enable true
 
 # Disable Low Battery FPS Drop
 resetprop -n ro.tran_low_battery_60hz_refresh_rate.support 0

@@ -75,10 +75,8 @@ tweak 0 /proc/sys/kernel/panic
 
 
 # ANGLE Driver Enable
-setprop ro.gfx.angle.supported true
 
 # ANGLE For A15
-setprop debug.graphics.angle.developeroption.enable true
 
 # Disable Low Battery FPS Drop
 
