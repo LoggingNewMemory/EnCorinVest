@@ -22,7 +22,7 @@ unisoc() {
 	encore_perfcommon
 	encore_perfprofile
 	encore_unisoc_perf
-	# corin_perf
+	#corin_perf
 }
 exynos() {
 	encore_perfcommon
