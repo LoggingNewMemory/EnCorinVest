@@ -6,8 +6,6 @@ tweak() {
 	fi
 }
 
-tweak 38 /sys/class/power_supply/battery/temperature
-
 for bms in /sys/devices/platform/bms/*; do
     tweak 150 $bms/temp_cool
     tweak 460 $bms/temp_hot
