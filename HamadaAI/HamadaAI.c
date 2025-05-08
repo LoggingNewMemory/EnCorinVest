@@ -4,102 +4,89 @@
 #include <unistd.h>
 #include <stdbool.h>
 
-#define BUFFER_SIZE 256
-#define GAME_FILE_PATH "/data/adb/modules/EnCorinVest/game.txt"
-#define SCRIPT_PATH "/data/adb/modules/EnCorinVest/Scripts/"
-#define PERFORMANCE_SCRIPT "performance.sh"
-#define BALANCED_SCRIPT "balanced.sh"
-#define DELAY_ON 5
-#define DELAY_OFF 10
+#define GAME_FILE "/data/adb/modules/EnCorinVest/game.txt"
+#define SCRIPTS_DIR "/data/adb/modules/EnCorinVest/Scripts"
+#define MAX_LINE 1024
 
-bool isGamePackage(const char *packageName) {
-    FILE *file = fopen(GAME_FILE_PATH, "r");
-    if (!file) {
+// Dynamic array for game package names
+char **load_game_list(size_t *count) {
+    FILE *fp = fopen(GAME_FILE, "r");
+    if (!fp) {
         perror("Failed to open game.txt");
-        return false;
+        exit(EXIT_FAILURE);
     }
-
-    char line[BUFFER_SIZE];
-    while (fgets(line, sizeof(line), file)) {
-        line[strcspn(line, "\n")] = 0; // Remove newline character
-        if (strcmp(line, packageName) == 0) {
-            fclose(file);
-            return true;
+    char line[MAX_LINE];
+    size_t capacity = 16;
+    char **list = malloc(capacity * sizeof(char*));
+    *count = 0;
+    while (fgets(line, sizeof(line), fp)) {
+        // Remove newline
+        line[strcspn(line, "\r\n")] = '\0';
+        if (strlen(line) == 0) continue;
+        if (*count >= capacity) {
+            capacity *= 2;
+            list = realloc(list, capacity * sizeof(char*));
         }
+        list[*count] = strdup(line);
+        (*count)++;
     }
-
-    fclose(file);
-    return false;
+    fclose(fp);
+    return list;
 }
-
-void executeScript(const char *script) {
-    char command[BUFFER_SIZE];
-    snprintf(command, sizeof(command), "sh %s%s", SCRIPT_PATH, script);
-    system(command);
-}
-
-void getCurrentPackage(char *packageName, size_t size) {
-    FILE *fp = popen("dumpsys window | grep -E 'mCurrentFocus|mFocusedApp'", "r");
-    if (fp == NULL) {
-        perror("Failed to run command");
-        return;
-    }
-
-    if (fgets(packageName, size, fp) != NULL) {
-        // Extract package name from the output
-        char *start = strstr(packageName, "com.");
-        if (start) {
-            strncpy(packageName, start, size);
-            packageName[size - 1] = '\0'; // Ensure null termination
-        }
-    }
-    pclose(fp);
-}
-
-bool isScreenOn() {
-    FILE *fp = popen("dumpsys window | grep mScreen", "r");
-    if (fp == NULL) {
-        perror("Failed to run command");
-        return false;
-    }
-
-    char buffer[BUFFER_SIZE];
-    bool screenOn = true;
-    while (fgets(buffer, sizeof(buffer), fp) != NULL) {
-        if (strstr(buffer, "mScreen=false")) {
-            screenOn = false;
-            break;
-        }
-    }
-    pclose(fp);
-    return screenOn;
-}
-
 int main() {
-    char currentPackage[BUFFER_SIZE] = {0};
-    char lastPackage[BUFFER_SIZE] = {0};
-    int delay = DELAY_ON;
+    size_t game_count;
+    char **game_list = load_game_list(&game_count);
+    char current_mode[16] = "";
 
     while (true) {
-        getCurrentPackage(currentPackage, sizeof(currentPackage));
+        FILE *pipe = popen("dumpsys window", "r");
+        if (!pipe) {
+            perror("popen dumpsys failed");
+            break;
+        }
 
-        if (strcmp(currentPackage, lastPackage) != 0) {
-            if (isGamePackage(currentPackage)) {
-                executeScript(PERFORMANCE_SCRIPT);
-            } else {
-                executeScript(BALANCED_SCRIPT);
+        bool game_detected = false;
+        bool screen_off = false;
+        char buf[MAX_LINE];
+
+        while (fgets(buf, sizeof(buf), pipe)) {
+            // Detect active window
+            if (strstr(buf, "mCurrentFocus") || strstr(buf, "mFocusedApp")) {
+                for (size_t i = 0; i < game_count; i++) {
+                    if (strstr(buf, game_list[i])) {
+                        game_detected = true;
+                        break;
+                    }
+                }
             }
-            strncpy(lastPackage, currentPackage, sizeof(lastPackage));
+            // Detect screen off
+            if (strstr(buf, "mScreen") && strstr(buf, "false")) {
+                screen_off = true;
+            }
+        }
+        pclose(pipe);
+
+        // Determine target mode
+        const char *target = game_detected ? "performance" : "balanced";
+        if (strcmp(target, current_mode) != 0) {
+            char script_path[MAX_LINE];
+            snprintf(script_path, sizeof(script_path), "%s/%s.sh", SCRIPTS_DIR, target);
+            // Execute the script
+            if (system(script_path) == -1) {
+                perror("Failed to execute script");
+            }
+            // Update current mode
+            strncpy(current_mode, target, sizeof(current_mode)-1);
+            current_mode[sizeof(current_mode)-1] = '\0';
         }
 
-        if (!isScreenOn()) {
-            delay = DELAY_OFF;
-        } else {
-            delay = DELAY_ON;
-        }
-
+        // Set delay based on screen state
+        int delay = screen_off ? 10 : 5;
         sleep(delay);
     }
 
+    // Cleanup
+    for (size_t i = 0; i < game_count; i++) free(game_list[i]);
+    free(game_list);
     return 0;
 }
