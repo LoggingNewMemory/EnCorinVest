@@ -39,18 +39,30 @@ void executeScript(const char *script) {
 }
 
 void getCurrentPackage(char *packageName, size_t size) {
-    FILE *fp = popen("dumpsys window | grep -E 'mCurrentFocus|mFocusedApp' | grep com...", "r");
+    FILE *fp = popen("dumpsys window | grep -E 'mCurrentFocus|mFocusedApp'", "r");
     if (fp == NULL) {
         perror("Failed to run command");
         return;
     }
 
-    if (fgets(packageName, size, fp) != NULL) {
-        // Extract package name from the output
-        char *start = strstr(packageName, "com.");
+    char buffer[BUFFER_SIZE];
+    packageName[0] = '\0';
+    
+    if (fgets(buffer, sizeof(buffer), fp) != NULL) {
+        char *start = strstr(buffer, "/");
         if (start) {
-            strncpy(packageName, start, size);
-            packageName[size - 1] = '\0'; // Ensure null termination
+            start++; // Skip the '/'
+            char *end = strpbrk(start, " :/\n\r\t");
+            if (end) {
+                int length = end - start;
+                if (length < size) {
+                    strncpy(packageName, start, length);
+                    packageName[length] = '\0';
+                } else {
+                    strncpy(packageName, start, size - 1);
+                    packageName[size - 1] = '\0';
+                }
+            }
         }
     }
     pclose(fp);
@@ -83,7 +95,7 @@ int main() {
     while (true) {
         getCurrentPackage(currentPackage, sizeof(currentPackage));
 
-        if (strcmp(currentPackage, lastPackage) != 0) {
+        if (strlen(currentPackage) > 0 && strcmp(currentPackage, lastPackage) != 0) {
             if (isGamePackage(currentPackage)) {
                 executeScript(PERFORMANCE_SCRIPT);
             } else {
