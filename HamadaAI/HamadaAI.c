@@ -39,30 +39,18 @@ void executeScript(const char *script) {
 }
 
 void getCurrentPackage(char *packageName, size_t size) {
-    FILE *fp = popen("dumpsys window | grep -E 'mCurrentFocus|mFocusedApp'", "r");
+    FILE *fp = popen("dumpsys window | grep -E 'mCurrentFocus|mFocusedApp' | grep com...", "r");
     if (fp == NULL) {
         perror("Failed to run command");
         return;
     }
 
-    char buffer[BUFFER_SIZE];
-    packageName[0] = '\0';
-    
-    if (fgets(buffer, sizeof(buffer), fp) != NULL) {
-        char *start = strstr(buffer, "/");
+    if (fgets(packageName, size, fp) != NULL) {
+        // Extract package name from the output
+        char *start = strstr(packageName, "com.");
         if (start) {
-            start++; // Skip the '/'
-            char *end = strpbrk(start, " :/\n\r\t");
-            if (end) {
-                int length = end - start;
-                if (length < size) {
-                    strncpy(packageName, start, length);
-                    packageName[length] = '\0';
-                } else {
-                    strncpy(packageName, start, size - 1);
-                    packageName[size - 1] = '\0';
-                }
-            }
+            strncpy(packageName, start, size);
+            packageName[size - 1] = '\0'; // Ensure null termination
         }
     }
     pclose(fp);
@@ -91,40 +79,27 @@ int main() {
     char currentPackage[BUFFER_SIZE] = {0};
     char lastPackage[BUFFER_SIZE] = {0};
     int delay = DELAY_ON;
-    bool lastWasGame = false;
-    bool currentIsGame = false;
 
     while (true) {
         getCurrentPackage(currentPackage, sizeof(currentPackage));
-        
-        // Only process if package name is not empty
-        if (strlen(currentPackage) > 0) {
-            currentIsGame = isGamePackage(currentPackage);
-            
-            // Execute scripts only when there's a state change
-            if (strcmp(currentPackage, lastPackage) != 0 || currentIsGame != lastWasGame) {
-                if (currentIsGame) {
-                    executeScript(PERFORMANCE_SCRIPT);
-                } else {
-                    executeScript(BALANCED_SCRIPT);
-                }
-                
-                // Update last states
-                strncpy(lastPackage, currentPackage, sizeof(lastPackage));
-                lastWasGame = currentIsGame;
+
+        if (strcmp(currentPackage, lastPackage) != 0) {
+            if (isGamePackage(currentPackage)) {
+                executeScript(PERFORMANCE_SCRIPT);
+            } else {
+                executeScript(BALANCED_SCRIPT);
             }
+            strncpy(lastPackage, currentPackage, sizeof(lastPackage));
         }
-        
-        // Adjust delay based on screen state
+
         if (!isScreenOn()) {
-            delay = DELAY_OFF;  // 10 seconds when screen is off
+            delay = DELAY_OFF;
         } else {
-            delay = DELAY_ON;   // 5 seconds when screen is on
+            delay = DELAY_ON;
         }
-        
-        // Wait before next detection cycle
+
         sleep(delay);
     }
-    
+
     return 0;
 }
