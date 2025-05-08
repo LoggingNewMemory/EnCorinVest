@@ -39,7 +39,7 @@ void executeScript(const char *script) {
 }
 
 void getCurrentPackage(char *packageName, size_t size) {
-    FILE *fp = popen("dumpsys window | grep -E 'mCurrentFocus|mFocusedApp' | grep com...", "r");
+    FILE *fp = popen("dumpsys window | grep -E 'mCurrentFocus|mFocusedApp'", "r");
     if (fp == NULL) {
         perror("Failed to run command");
         return;
