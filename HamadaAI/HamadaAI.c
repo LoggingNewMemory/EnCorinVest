@@ -91,27 +91,40 @@ int main() {
     char currentPackage[BUFFER_SIZE] = {0};
     char lastPackage[BUFFER_SIZE] = {0};
     int delay = DELAY_ON;
+    bool lastWasGame = false;
+    bool currentIsGame = false;
 
     while (true) {
         getCurrentPackage(currentPackage, sizeof(currentPackage));
-
-        if (strlen(currentPackage) > 0 && strcmp(currentPackage, lastPackage) != 0) {
-            if (isGamePackage(currentPackage)) {
-                executeScript(PERFORMANCE_SCRIPT);
-            } else {
-                executeScript(BALANCED_SCRIPT);
+        
+        // Only process if package name is not empty
+        if (strlen(currentPackage) > 0) {
+            currentIsGame = isGamePackage(currentPackage);
+            
+            // Execute scripts only when there's a state change
+            if (strcmp(currentPackage, lastPackage) != 0 || currentIsGame != lastWasGame) {
+                if (currentIsGame) {
+                    executeScript(PERFORMANCE_SCRIPT);
+                } else {
+                    executeScript(BALANCED_SCRIPT);
+                }
+                
+                // Update last states
+                strncpy(lastPackage, currentPackage, sizeof(lastPackage));
+                lastWasGame = currentIsGame;
             }
-            strncpy(lastPackage, currentPackage, sizeof(lastPackage));
         }
-
+        
+        // Adjust delay based on screen state
         if (!isScreenOn()) {
-            delay = DELAY_OFF;
+            delay = DELAY_OFF;  // 10 seconds when screen is off
         } else {
-            delay = DELAY_ON;
+            delay = DELAY_ON;   // 5 seconds when screen is on
         }
-
+        
+        // Wait before next detection cycle
         sleep(delay);
     }
-
+    
     return 0;
 }
