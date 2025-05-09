@@ -1,2 +1,0 @@
-/mnt/FA5C20055C1FBB79/Code/EnCorinVest/encorinvest/android/app/.cxx/Debug/6m2m1qg3/x86/CMakeFiles/edit_cache.dir
-/mnt/FA5C20055C1FBB79/Code/EnCorinVest/encorinvest/android/app/.cxx/Debug/6m2m1qg3/x86/CMakeFiles/rebuild_cache.dir

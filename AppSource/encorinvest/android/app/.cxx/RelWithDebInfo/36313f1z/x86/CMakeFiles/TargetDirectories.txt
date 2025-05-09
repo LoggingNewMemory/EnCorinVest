@@ -1,2 +1,0 @@
-/mnt/FA5C20055C1FBB79/Code/Flutter Project/encorinvest/android/app/.cxx/RelWithDebInfo/36313f1z/x86/CMakeFiles/edit_cache.dir
-/mnt/FA5C20055C1FBB79/Code/Flutter Project/encorinvest/android/app/.cxx/RelWithDebInfo/36313f1z/x86/CMakeFiles/rebuild_cache.dir
