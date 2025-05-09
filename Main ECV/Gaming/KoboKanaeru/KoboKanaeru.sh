@@ -5,7 +5,7 @@ tweak() {
 		chmod 444 $2 >/dev/null 2>&1
 	fi
 }
-
+# Placeholder
 for bms in /sys/devices/platform/bms/*; do
     tweak 150 $bms/temp_cool
     tweak 460 $bms/temp_hot
