@@ -1,0 +1,22 @@
+name: EnCorinVest
+description: "EnCorinVest Apk By: Kanagawa Yamada"
+publish_to: 'none'
+version: 22.0.0
+
+environment:
+  sdk: ^3.5.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+  process_run: ^0.12.0
+  flutter_lints: ^4.0.0
+  dynamic_color: ^1.7.0
+  url_launcher: ^6.3.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  
+flutter:
+  uses-material-design: true
