@@ -126,7 +126,12 @@ fi
 # Clean up temporary extraction directory
 rm -rf $TEMP_EXTRACT_DIR
 
-sleep 1.5
+ui_print " "
+ui_print "    There's A Wallpaper Souvenir In The Github    "
+ui_print "    Go Check it Out!                              "
+ui_print " "
+
+sleep 2
 
 ui_print " "
 case "$((RANDOM % 14 + 1))" in
