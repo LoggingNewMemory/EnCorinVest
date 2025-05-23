@@ -14,7 +14,6 @@ If your module is not listed here, you can try to combine it (Ex: SkiaVK / GL Mo
 - Fast Charge (Gaming & Ubur-ubur variant)
 - Audio Tweaks
 - Render Tweaks (Not skiaGL / VK)
-- Unlock ANGLE Driver
 - Dalvik Optimization
 - LMK Optimization
 - Surface Flinger Optimization
