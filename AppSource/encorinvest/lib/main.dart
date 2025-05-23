@@ -594,13 +594,14 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
-  // Changes the application language and saves it to the config file
+// Changes the application language and saves it to the config file
   void _changeLanguage(String language) {
     if (language == _selectedLanguage) return; // No change needed
 
     if (mounted) {
       setState(() {
-        _selectedLanguage = language.toUpperCase();
+        _selectedLanguage = language.toUpperCase(); // Update only the language
+        // Do not reset _currentMode or HamadaAI state
       });
     }
     // Save the new language using ConfigManager
