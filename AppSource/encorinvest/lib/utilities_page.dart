@@ -101,31 +101,14 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
 
   Future<bool?> _readHamadaConfig() async {
     if (!await _checkRootAccess()) return null;
-    print("Reading HamadaAI config from $_configFilePath");
-    final result = await _runRootCommandAndWait('cat $_configFilePath');
-    if (result.exitCode == 0) {
-      try {
-        final content = result.stdout.toString();
-        final lines = content.split('\n');
-        for (var line in lines) {
-          final trimmedLine = line.trim();
-          if (trimmedLine.toLowerCase().startsWith('hamadaai=')) {
-            final value = trimmedLine.split('=')[1].trim().toLowerCase();
-            print("Found config value: $value");
-            return value == 'true';
-          }
-        }
-        print("HamadaAI setting not found in config file.");
-        return null; // Setting not found
-      } catch (e) {
-        print("Error parsing config file: $e");
-        return null; // Error parsing
-      }
-    } else {
-      print(
-          "Error reading config file: Exit code ${result.exitCode}, Stderr: ${result.stderr}");
-      return null; // Error reading file
-    }
+    print("Checking HamadaAI process status using ps command");
+    final result = await _runRootCommandAndWait('ps -A | grep HamadaAI');
+
+    // If grep finds the process, exit code is 0
+    // If grep doesn't find the process, exit code is 1
+    bool isRunning = result.exitCode == 0;
+    print("HamadaAI process running: $isRunning");
+    return isRunning;
   }
 
   Future<bool> _writeHamadaConfig(bool enabled) async {
