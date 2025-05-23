@@ -25,6 +25,7 @@ int main(void) {
 
     bool prev_screen_on = true; // initial status (assumed on)
     ExecType last_executed = EXEC_NONE;
+    int delay_seconds = 5; // Default delay
 
     while (1) {
         // Build game package list from GAME_LIST.
@@ -48,49 +49,46 @@ int main(void) {
             fclose(file);
         }
 
-        // Check screen status by executing "dumpsys window".
+        // Combined check: screen status and app focus in one command
         bool current_screen_on = true;
-        FILE *pipe_fp = popen("dumpsys window", "r");
+        char matched_package[BUFFER_SIZE] = "";
+        
+        FILE *pipe_fp = popen("dumpsys window | grep -E 'mScreen|mCurrentFocus|mFocusedApp'", "r");
         if (pipe_fp) {
             char buffer[BUFFER_SIZE];
             while (fgets(buffer, sizeof(buffer), pipe_fp)) {
-                if (strstr(buffer, "mScreenOn") != NULL) {
-                    if (strstr(buffer, "false") != NULL) {
-                        current_screen_on = false;
-                        break;
+                // Check screen status
+                if (strstr(buffer, "mScreen") != NULL && strstr(buffer, "false") != NULL) {
+                    current_screen_on = false;
+                }
+                
+                // Check for game packages only if we haven't found screen is off
+                if (current_screen_on) {
+                    for (int i = 0; i < num_patterns; i++) {
+                        if (strstr(buffer, patterns[i]) != NULL) {
+                            strncpy(matched_package, patterns[i], sizeof(matched_package) - 1);
+                            matched_package[sizeof(matched_package) - 1] = '\0';
+                        }
                     }
                 }
             }
             pclose(pipe_fp);
         }
 
-        // Print a message if the screen status has changed.
+        // Handle screen status changes and set delay
         if (current_screen_on != prev_screen_on) {
-            printf("Screen status changed\n");
+            if (current_screen_on) {
+                printf("Screen turned on - setting delay to 5 seconds\n");
+                delay_seconds = 5;
+            } else {
+                printf("Screen turned off - setting delay to 10 seconds for power conservation\n");
+                delay_seconds = 10;
+            }
             prev_screen_on = current_screen_on;
         }
 
-        // Proceed with app detection only if the screen is on.
+        // Process app detection only if screen is on
         if (current_screen_on) {
-            // Execute "dumpsys window | grep -E 'mCurrentFocus|mFocusedApp'" and check for any matching game package.
-            pipe_fp = popen("dumpsys window | grep -E 'mCurrentFocus|mFocusedApp'", "r");
-            char matched_package[BUFFER_SIZE] = "";
-            if (pipe_fp) {
-                char line[BUFFER_SIZE];
-                while (fgets(line, sizeof(line), pipe_fp)) {
-                    // Check each game package pattern against the line.
-                    for (int i = 0; i < num_patterns; i++) {
-                        if (strstr(line, patterns[i]) != NULL) {
-                            // Save the matched pattern (simulate grep -o and tail -1 by keeping the last match).
-                            strncpy(matched_package, patterns[i], sizeof(matched_package) - 1);
-                            matched_package[sizeof(matched_package) - 1] = '\0';
-                        }
-                    }
-                }
-                pclose(pipe_fp);
-            }
-
-            // Execute the corresponding script if the detection state changed.
             if (strlen(matched_package) > 0) {
                 // A game package was detected.
                 if (last_executed != EXEC_GAME) {
@@ -112,7 +110,7 @@ int main(void) {
             }
         }
         
-        sleep(5); // Updated sleep duration to 5 seconds
+        sleep(delay_seconds); // Dynamic delay based on screen status
     }
 
     return 0;
