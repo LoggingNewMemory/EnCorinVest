@@ -2,186 +2,118 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <signal.h>
-#include <time.h>
 #include <stdbool.h>
 
-#define GAME_LIST_PATH "/data/adb/modules/EnCorinVest/game.txt"
+#define GAME_LIST "/data/adb/modules/EnCorinVest/game.txt"
 #define PERFORMANCE_SCRIPT "/data/adb/modules/EnCorinVest/Scripts/performance.sh"
 #define BALANCED_SCRIPT "/data/adb/modules/EnCorinVest/Scripts/balanced.sh"
-#define MAX_PACKAGE_NAME 256
-#define MAX_LINE_LENGTH 1024
-#define DEFAULT_DELAY 5
-#define SCREEN_OFF_DELAY 10
 
-// Global variables
-volatile sig_atomic_t keep_running = 1;
-bool is_in_game = false;
-bool previous_game_state = false;
+#define MAX_PATTERNS 256
+#define MAX_PATTERN_LENGTH 256
+#define BUFFER_SIZE 1024
 
-// Signal handler for clean termination
-void handle_signal(int sig) {
-    printf("Received signal %d, shutting down...\n", sig);
-    keep_running = 0;
-}
+typedef enum { EXEC_NONE, EXEC_GAME, EXEC_NORMAL } ExecType;
 
-// Function to check if a package name is a game
-bool is_game(const char *package_name) {
-    FILE *game_list = fopen(GAME_LIST_PATH, "r");
-    if (game_list == NULL) {
-        perror("Failed to open game list");
-        return false;
+int main(void) {
+    // Check if game.txt exists
+    FILE *file = fopen(GAME_LIST, "r");
+    if (!file) {
+        fprintf(stderr, "Error: %s not found\n", GAME_LIST);
+        return 1;
     }
+    fclose(file);
 
-    char line[MAX_LINE_LENGTH];
-    bool result = false;
+    bool prev_screen_on = true; // initial status (assumed on)
+    ExecType last_executed = EXEC_NONE;
 
-    while (fgets(line, sizeof(line), game_list)) {
-        // Remove newline character if present
-        size_t len = strlen(line);
-        if (len > 0 && line[len - 1] == '\n') {
-            line[len - 1] = '\0';
-        }
-
-        if (strstr(package_name, line) != NULL) {
-            result = true;
-            break;
-        }
-    }
-
-    fclose(game_list);
-    return result;
-}
-
-// Function to get current focused package name
-char* get_current_package() {
-    static char package_name[MAX_PACKAGE_NAME];
-    FILE *fp;
-    char buffer[MAX_LINE_LENGTH];
-
-    package_name[0] = '\0'; // Initialize empty string
-
-    fp = popen("dumpsys window | grep -E 'mCurrentFocus|mFocusedApp'", "r");
-    if (fp == NULL) {
-        perror("Failed to run command");
-        return package_name;
-    }
-
-    while (fgets(buffer, sizeof(buffer), fp) != NULL) {
-        char *substr = strstr(buffer, "com.");
-        if (substr != NULL) {
-            char *end = strpbrk(substr, " \t\n/}");
-            if (end != NULL) {
-                int length = end - substr;
-                if (length < MAX_PACKAGE_NAME) {
-                    strncpy(package_name, substr, length);
-                    package_name[length] = '\0';
-                    break;
-                }
+    while (1) {
+        // Build game package list from GAME_LIST.
+        char patterns[MAX_PATTERNS][MAX_PATTERN_LENGTH];
+        int num_patterns = 0;
+        file = fopen(GAME_LIST, "r");
+        if (file) {
+            char line[BUFFER_SIZE];
+            while (fgets(line, sizeof(line), file) && num_patterns < MAX_PATTERNS) {
+                // Remove newline character.
+                line[strcspn(line, "\n")] = '\0';
+                // Skip empty lines.
+                if (line[0] == '\0') continue;
+                // Skip lines containing spaces.
+                if (strchr(line, ' ') != NULL) continue;
+                // Save the pattern.
+                strncpy(patterns[num_patterns], line, MAX_PATTERN_LENGTH - 1);
+                patterns[num_patterns][MAX_PATTERN_LENGTH - 1] = '\0';
+                num_patterns++;
             }
+            fclose(file);
         }
-    }
 
-    pclose(fp);
-    return package_name;
-}
-
-// Function to check if screen is on
-bool is_screen_on() {
-    FILE *fp;
-    char buffer[MAX_LINE_LENGTH];
-    bool screen_on = true;
-
-    fp = popen("dumpsys window | grep mScreen", "r");
-    if (fp == NULL) {
-        perror("Failed to run command");
-        return true; // Assume screen is on by default
-    }
-
-    while (fgets(buffer, sizeof(buffer), fp) != NULL) {
-        if (strstr(buffer, "mScreenOn=false") != NULL) {
-            screen_on = false;
-            break;
-        }
-    }
-
-    pclose(fp);
-    return screen_on;
-}
-
-// Function to execute shell script
-void execute_script(const char *script_path) {
-    printf("Executing: %s\n", script_path);
-    
-    char command[MAX_LINE_LENGTH];
-    snprintf(command, sizeof(command), "sh %s", script_path);
-    
-    int result = system(command);
-    if (result != 0) {
-        fprintf(stderr, "Failed to execute script: %s (exit code: %d)\n", script_path, result);
-    }
-}
-
-int main() {
-    // Set up signal handlers for clean termination
-    signal(SIGINT, handle_signal);
-    signal(SIGTERM, handle_signal);
-    
-    printf("HamadaAI Next Gen service started\n");
-    
-    time_t last_check_time = 0;
-    int current_delay = DEFAULT_DELAY;
-    
-    while (keep_running) {
-        time_t current_time = time(NULL);
-        
-        // Only perform checks at the specified delay interval
-        if (difftime(current_time, last_check_time) >= current_delay) {
-            last_check_time = current_time;
-            
-            // Check screen state
-            bool screen_on = is_screen_on();
-            
-            if (screen_on) {
-                // If screen was previously off and now on, reset delay
-                if (current_delay != DEFAULT_DELAY) {
-                    printf("Screen is now ON. Setting delay to %d seconds.\n", DEFAULT_DELAY);
-                    current_delay = DEFAULT_DELAY;
-                }
-                
-                // Get current package and check if it's a game
-                char *package_name = get_current_package();
-                if (strlen(package_name) > 0) {
-                    printf("Current focused app: %s\n", package_name);
-                    is_in_game = is_game(package_name);
-                    
-                    // Execute the appropriate script when state changes
-                    if (is_in_game != previous_game_state) {
-                        if (is_in_game) {
-                            printf("Game detected, applying performance profile\n");
-                            execute_script(PERFORMANCE_SCRIPT);
-                        } else {
-                            printf("Not in game, applying balanced profile\n");
-                            execute_script(BALANCED_SCRIPT);
-                        }
-                        previous_game_state = is_in_game;
+        // Check screen status by executing "dumpsys window".
+        bool current_screen_on = true;
+        FILE *pipe_fp = popen("dumpsys window", "r");
+        if (pipe_fp) {
+            char buffer[BUFFER_SIZE];
+            while (fgets(buffer, sizeof(buffer), pipe_fp)) {
+                if (strstr(buffer, "mScreenOn") != NULL) {
+                    if (strstr(buffer, "false") != NULL) {
+                        current_screen_on = false;
+                        break;
                     }
                 }
+            }
+            pclose(pipe_fp);
+        }
+
+        // Print a message if the screen status has changed.
+        if (current_screen_on != prev_screen_on) {
+            printf("Screen status changed\n");
+            prev_screen_on = current_screen_on;
+        }
+
+        // Proceed with app detection only if the screen is on.
+        if (current_screen_on) {
+            // Execute "dumpsys window | grep -E 'mCurrentFocus|mFocusedApp'" and check for any matching game package.
+            pipe_fp = popen("dumpsys window | grep -E 'mCurrentFocus|mFocusedApp'", "r");
+            char matched_package[BUFFER_SIZE] = "";
+            if (pipe_fp) {
+                char line[BUFFER_SIZE];
+                while (fgets(line, sizeof(line), pipe_fp)) {
+                    // Check each game package pattern against the line.
+                    for (int i = 0; i < num_patterns; i++) {
+                        if (strstr(line, patterns[i]) != NULL) {
+                            // Save the matched pattern (simulate grep -o and tail -1 by keeping the last match).
+                            strncpy(matched_package, patterns[i], sizeof(matched_package) - 1);
+                            matched_package[sizeof(matched_package) - 1] = '\0';
+                        }
+                    }
+                }
+                pclose(pipe_fp);
+            }
+
+            // Execute the corresponding script if the detection state changed.
+            if (strlen(matched_package) > 0) {
+                // A game package was detected.
+                if (last_executed != EXEC_GAME) {
+                    printf("Game package detected: %s\n", matched_package);
+                    char command[BUFFER_SIZE];
+                    snprintf(command, sizeof(command), "sh %s", PERFORMANCE_SCRIPT);
+                    system(command);
+                    last_executed = EXEC_GAME;
+                }
             } else {
-                // Screen is off, increase delay to save battery
-                if (current_delay != SCREEN_OFF_DELAY) {
-                    printf("Screen is OFF. Setting delay to %d seconds to save battery.\n", SCREEN_OFF_DELAY);
-                    current_delay = SCREEN_OFF_DELAY;
+                // No game package detected.
+                if (last_executed != EXEC_NORMAL) {
+                    printf("Non-game package detected\n");
+                    char command[BUFFER_SIZE];
+                    snprintf(command, sizeof(command), "sh %s", BALANCED_SCRIPT);
+                    system(command);
+                    last_executed = EXEC_NORMAL;
                 }
             }
         }
         
-        // Small sleep to prevent CPU hogging
-        usleep(100000); // 100ms
+        sleep(5); // Updated sleep duration to 5 seconds
     }
-    
-    printf("HamadaAI Next Gen service stopped\n");
+
     return 0;
 }
-
-// Placeholder
