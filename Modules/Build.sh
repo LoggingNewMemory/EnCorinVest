@@ -127,7 +127,7 @@ sync_files() {
 
             # For Lite variants, remove resetprop -n lines from service.sh
             if [[ "$TARGET_DIR" == Lite* ]]; then
-                grep -v "resetprop -n" "$TARGET_DIR/service.sh" > "$TARGET_DIR/service.sh.tmp"
+                grep -v "setprop" "$TARGET_DIR/service.sh" > "$TARGET_DIR/service.sh.tmp"
                 mv "$TARGET_DIR/service.sh.tmp" "$TARGET_DIR/service.sh"
             fi
         else
