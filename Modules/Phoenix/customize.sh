@@ -1,11 +1,9 @@
 LATESTARTSERVICE=true
 
-ui_print "🗡--------------------------------🗡"
-ui_print "             EnCorinVest            " 
-ui_print "🗡--------------------------------🗡"
-ui_print "         By: Kanagawa Yamada        "
 ui_print "------------------------------------"
-ui_print "      READ THE TELEGRAM MESSAGE     "
+ui_print "             EnCorinVest            " 
+ui_print "------------------------------------"
+ui_print "         By: Kanagawa Yamada        "
 ui_print "------------------------------------"
 ui_print " "
 sleep 1.5
@@ -33,9 +31,9 @@ ui_print "RAM : $(free | grep Mem |  awk '{print $2}') "
 ui_print " "
 sleep 1.5
 
-ui_print "-----------------🗡-----------------"
+ui_print "------------------------------------"
 ui_print "            MODULE INFO             "
-ui_print "-----------------🗡-----------------"
+ui_print "------------------------------------"
 ui_print "Name : EnCorinVest"
 ui_print "Version : 23.0"
 ui_print "Variant: Phoenix"
@@ -47,9 +45,16 @@ ui_print "       INSTALLING EnCorinVest       "
 ui_print " "
 sleep 1.5
 
-unzip -o "$ZIPFILE" 'Scripts/*' -d $MODPATH >&2
-cp -r "$MODPATH"/logo.png /data/local/tmp >/dev/null 2>&1
-cp -r "$MODPATH"/Anya.png /data/local/tmp >/dev/null 2>&1
+# Check if game.txt exists, skip copy operations if it does
+if [ -f "/data/adb/modules/EnCorinVest/game.txt" ]; then
+    ui_print "- game.txt found, skipping file copy operations"
+    ui_print " "
+else
+    ui_print "- game.txt not found, proceeding with file copy"
+    unzip -o "$ZIPFILE" 'Scripts/*' -d $MODPATH >&2
+    cp -r "$MODPATH"/logo.png /data/local/tmp >/dev/null 2>&1
+    cp -r "$MODPATH"/Anya.png /data/local/tmp >/dev/null 2>&1
+fi
 
 set_perm_recursive $MODPATH 0 0 0755 0755
 set_perm_recursive $MODPATH/Scripts 0 0 0777 0755

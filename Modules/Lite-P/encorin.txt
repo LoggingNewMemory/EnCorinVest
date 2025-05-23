@@ -2,4 +2,3 @@
 language=EN
 current_mode=None
 HamadaAI=False
-HamadaAIonStart=False
