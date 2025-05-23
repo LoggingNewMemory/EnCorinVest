@@ -322,8 +322,6 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     if (!await _checkRootAccess() || !mounted) return;
 
     setState(() => _isServiceFileUpdating = true);
-    // --- REMOVED Snackbar ---
-    // _showSnackbar('writing_service_file');
     print('Writing service file...');
 
     try {
@@ -334,28 +332,13 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
       String content = readResult.stdout.toString();
       List<String> lines = content.replaceAll('\r\n', '\n').split('\n');
 
-      if (lines.isNotEmpty && lines.last.isEmpty) {
-        lines.removeLast();
-      }
+      // Remove any existing "HamadaAI" entry
+      lines.removeWhere((line) => line.trim() == _hamadaStartCommand);
 
-      int markerIndex =
-          lines.indexWhere((line) => line.contains(_hamadaMarker));
-      if (markerIndex == -1) {
-        throw Exception('Marker "$_hamadaMarker" not found.');
+      if (enable) {
+        // Add "HamadaAI" at the end of the file
+        lines.add(_hamadaStartCommand);
       }
-
-      int commandLineIndex = -1;
-      for (int i = markerIndex + 1; i < lines.length; i++) {
-        final trimmedLine = lines[i].trim();
-        if (trimmedLine.isNotEmpty && !trimmedLine.startsWith('#')) {
-          if (trimmedLine == _hamadaProcessName ||
-              trimmedLine == _hamadaStartCommand) commandLineIndex = i;
-          break;
-        }
-      }
-      if (commandLineIndex != -1) lines.removeAt(commandLineIndex);
-
-      if (enable) lines.insert(markerIndex + 1, _hamadaStartCommand);
 
       String newContent = lines.join('\n') + '\n';
       String base64Content = base64Encode(utf8.encode(newContent));
@@ -373,13 +356,9 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
       }
 
       if (mounted) setState(() => _hamadaStartOnBoot = enable);
-      // --- REMOVED Snackbar ---
-      // _showSnackbar('service_file_updated');
       print("Service file write successful.");
     } catch (e) {
       print('Error updating service file: $e');
-      // --- REMOVED Snackbar ---
-      // if (mounted) _showSnackbar('service_file_update_failed', isError: true);
       if (mounted)
         setState(() => _hamadaStartOnBoot = !enable); // Revert visual state
     } finally {

@@ -22,13 +22,98 @@ if [ -n "$mali1_dir" ]; then
 fi
 
 tweak 0 /sys/module/kernel/parameters/panic
+tweak 0 /proc/sys/kernel/panic_on_oops
 tweak 0 /sys/module/kernel/parameters/panic_on_warn
 tweak 0 /sys/module/kernel/parameters/pause_on_oops
 tweak 0 /proc/sys/vm/panic_on_oom
-tweak 0 /proc/sys/kernel/softlockup_panic
-tweak 0 /proc/sys/kernel/panic_on_warn
-tweak 0 /proc/sys/kernel/panic_on_oops
-tweak 0 /proc/sys/kernel/panic
+
+detect_soc() {
+    # Check multiple sources for SOC information
+    local chipset=""
+    
+    # Check /proc/cpuinfo
+    if [ -f "/proc/cpuinfo" ]; then
+        chipset=$(grep -E "Hardware|Processor" /proc/cpuinfo | uniq | cut -d ':' -f 2 | sed 's/^[ \t]*//')
+    fi
+    
+    # If empty, check Android properties
+    if [ -z "$chipset" ]; then
+        if command -v getprop >/dev/null 2>&1; then
+            chipset="$(getprop ro.board.platform) $(getprop ro.hardware)"
+        fi
+    fi
+    
+    # Additional checks for Exynos
+    if [ -z "$chipset" ] || [ "$chipset" = " " ]; then
+        # Check Samsung specific properties
+        if command -v getprop >/dev/null 2>&1; then
+            local samsung_soc=$(getprop ro.hardware.chipname)
+            if [[ "$samsung_soc" == *"exynos"* ]] || [[ "$samsung_soc" == *"EXYNOS"* ]]; then
+                chipset="$samsung_soc"
+            fi
+        fi
+        
+        # Check kernel version for Exynos information
+        if [ -z "$chipset" ]; then
+            local kernel_version=$(cat /proc/version 2>/dev/null)
+            if [[ "$kernel_version" == *"exynos"* ]] || [[ "$kernel_version" == *"EXYNOS"* ]]; then
+                chipset="exynos"
+            fi
+        fi
+    fi
+    
+    echo "$chipset"
+}
+
+# Get the chipset information
+chipset=$(detect_soc)
+
+# Convert to lowercase for easier matching
+chipset_lower=$(echo "$chipset" | tr '[:upper:]' '[:lower:]')
+
+# Identify the chipset and execute the corresponding function
+case "$chipset_lower" in
+    *mt*|*mediatek*) 
+        echo "- Implementing render for Mediatek"
+        SOC_TYPE="mediatek"
+        ;;
+    *sm*|*qcom*|*qualcomm*|*snapdragon*) 
+        echo "- Implementing render for Snapdragon"
+        SOC_TYPE="qualcomm"
+        ;;
+    *exynos*|*universal*|*samsung*) 
+        echo "- Implementing render for Exynos"
+        SOC_TYPE="exynos"
+        ;;
+    *unisoc*|*ums*|*spreadtrum*) 
+        echo "- Implementing render for Unisoc"
+        SOC_TYPE="unisoc"
+        ;;
+    *) 
+        echo "- Unknown chipset: $chipset"
+        echo "- No tweaks applied."
+        SOC_TYPE="unknown"
+        ;;
+esac
+
+sleep 3
+
+case "$SOC_TYPE" in
+    "qualcomm")
+        ;;
+
+    "mediatek")
+        ;;
+
+    "exynos")
+        ;;
+
+    "unisoc")
+        ;;
+
+    *)
+        ;;
+esac
 
 # EnCorinVest prop
 
@@ -74,16 +159,7 @@ tweak 0 /proc/sys/kernel/panic
 # Zeta 120 Hz
 
 
-# ANGLE Driver Enable
-
-# ANGLE For A15
-
-# Disable Low Battery FPS Drop
-
-
 sh /data/adb/modules/EnCorinVest/AnyaMelfissa/AnyaMelfissa.sh
 sh /data/adb/modules/EnCorinVest/KoboKanaeru/KoboKanaeru.sh
-
-# Start HamadaAI (Default is Disabled)
 
 su -lp 2000 -c "cmd notification post -S bigtext -t 'EnCorinVest' -i file:///data/local/tmp/logo.png -I file:///data/local/tmp/logo.png TagEncorin 'EnCorinVest - オンライン'"
