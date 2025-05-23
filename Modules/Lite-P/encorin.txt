@@ -1,4 +1,3 @@
 [EnCorinVest config]
 language=EN
 current_mode=None
-HamadaAI=False

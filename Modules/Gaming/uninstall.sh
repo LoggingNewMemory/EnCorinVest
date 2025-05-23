@@ -18,4 +18,7 @@ fi
 
 rm -rf /data/local/tmp/logo.png
 rm -rf /data/local/tmp/Anya.png
-pm uninstall com.kanagawa.yamada.encorinvest
+pm uninstall --user 0 com.kanagawa.yamada.encorinvest
+rm -rf /data/EnCorinVest
+
+# Managed to read this? Thanks for using EnCorinVest

@@ -15,7 +15,7 @@ class UtilitiesPage extends StatefulWidget {
 class _UtilitiesPageState extends State<UtilitiesPage> {
   // --- File Paths & Commands ---
   final String _serviceFilePath = '/data/adb/modules/EnCorinVest/service.sh';
-  final String _gameTxtPath = '/data/adb/modules/EnCorinVest/game.txt';
+  final String _gameTxtPath = '/data/EnCorinVest/game.txt';
   // --- Path to the config file ---
   final String _configFilePath = '/data/adb/modules/EnCorinVest/encorin.txt';
   final String _hamadaMarker = '# Start HamadaAI (Default is Disabled)';

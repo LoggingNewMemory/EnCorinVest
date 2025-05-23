@@ -45,13 +45,17 @@ ui_print "       INSTALLING EnCorinVest       "
 ui_print " "
 sleep 1.5
 
-# Check if game.txt exists, skip copy operations if it does
-if [ -f "/data/adb/modules/EnCorinVest/game.txt" ]; then
+# Check if game.txt exists in the new location, skip copy operations if it does
+if [ -f "/data/EnCorinVest/game.txt" ]; then
     ui_print "- game.txt found, skipping file copy operations"
     ui_print " "
 else
     ui_print "- game.txt not found, proceeding with file copy"
+    # Create the target directory if it doesn't exist
+    mkdir -p /data/EnCorinVest
     unzip -o "$ZIPFILE" 'Scripts/*' -d $MODPATH >&2
+    # Copy game.txt to the new location
+    cp -r "$MODPATH"/game.txt /data/EnCorinVest/ >/dev/null 2>&1
     cp -r "$MODPATH"/logo.png /data/local/tmp >/dev/null 2>&1
     cp -r "$MODPATH"/Anya.png /data/local/tmp >/dev/null 2>&1
 fi
@@ -114,13 +118,9 @@ if [ -f "$SOURCE_BIN_EXTRACTED_PATH" ]; then
     set_perm $TARGET_BIN_PATH 0 0 0755 0755
   else
     ui_print "! ERROR: Failed to move binary to $TARGET_BIN_PATH"
-    # Optional: abort installation if binary is crucial
-    # abort "! Binary installation failed."
   fi
 else
   ui_print "! ERROR: Failed to extract binary from $SOURCE_BIN_ZIP_PATH"
-  # Optional: abort installation
-  # abort "! Binary extraction failed."
 fi
 
 # Clean up temporary extraction directory

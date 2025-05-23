@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <stdbool.h>
 
-#define GAME_LIST "/data/adb/modules/EnCorinVest/game.txt"
+#define GAME_LIST "/data/EnCorinVest/game.txt"
 #define PERFORMANCE_SCRIPT "/data/adb/modules/EnCorinVest/Scripts/performance.sh"
 #define BALANCED_SCRIPT "/data/adb/modules/EnCorinVest/Scripts/balanced.sh"
 
