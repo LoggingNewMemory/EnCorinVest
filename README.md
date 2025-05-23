@@ -1,4 +1,4 @@
-![EnCorinVest Banner](https://github.com/user-attachments/assets/5e717d88-f144-46da-8a49-bca424c914cf)
+![Banner](https://github.com/user-attachments/assets/45d660bf-c534-49d8-bbed-77b3692236e7)
 
 Performance Module, Collaboration between CorinXMTKVest and Encore Tweaks
 
