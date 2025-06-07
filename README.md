@@ -28,4 +28,5 @@ How to use?
 
 Support me? <br />
 [HERE (Indonesia / Philippines)](https://saweria.co/kanagawayamada) <br />
+[HERE (QRIS)](https://t.me/KLAGen2/86) <br />
 [HERE (Global)](https://sociabuzz.com/kanagawa_yamada/tribe)
