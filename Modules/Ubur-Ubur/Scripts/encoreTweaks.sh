@@ -1,6 +1,9 @@
 MODULE_PATH="/data/adb/modules/EnCorinVest"
 source "$MODULE_PATH/Scripts/encorinFunctions.sh"
 
+# Disable encore lite mode
+LITE_MODE=0
+
 # All Encore Performance Script
 encore_mediatek_perf() {
 	# PPM policies

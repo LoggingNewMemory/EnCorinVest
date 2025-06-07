@@ -1,3 +1,6 @@
+# Disable encore lite mode
+LITE_MODE=0
+
 #######################
 # EnCorinVest Functions
 #######################

@@ -1,3 +1,6 @@
+# Disable encore lite mode
+LITE_MODE=0
+
 #######################
 # EnCorinVest Functions
 #######################
@@ -329,20 +332,11 @@ encore_perfprofile() {
 	for path in /sys/class/devfreq/*.ufshc \
 		/sys/class/devfreq/mmc*; do
 
-		[ $LITE_MODE -eq 1 ] &&
 			devfreq_mid_perf "$path" ||
 			devfreq_max_perf "$path"
 	done &
 
-	# Set CPU governor to performance.
-	# performance governor in this case is only used for "flex"
-	# since the frequencies already maxed out (ifykyk).
-	# If lite mode enabled, use the default governor instead.
-	# device mitigation also will prevent performance gov to be
-	# applied (some device hates performance governor).
-	[ $LITE_MODE -eq 0 ] && [ $DEVICE_MITIGATION -eq 0 ] &&
-		change_cpu_gov performance ||
-		change_cpu_gov "$DEFAULT_CPU_GOV"
+		change_cpu_gov performance
 
 	# Force CPU to highest possible frequency.
 	[ -d /proc/ppm ] && cpufreq_ppm_max_perf || cpufreq_max_perf
