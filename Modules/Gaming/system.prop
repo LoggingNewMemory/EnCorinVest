@@ -5,3 +5,73 @@ PERF_RES_NET_MD_WEAK_SIG_OPT 1
 PERF_RES_NET_NETD_BOOST_UID 1
 PERF_RES_NET_MD_HSR_MODE 1
 PERF_RES_THERMAL_POLICY -1
+
+# Bastion prop
+# Battery Modifications
+persist.sys.shutdown.mode=hibernate
+persist.radio.add_power_save=1
+wifi.supplicant_scan_interval=300
+ro.ril.disable.power.collapse=1
+ro.config.hw_fast_dormancy=1
+ro.semc.enable.fast_dormancy=true
+ro.config.hw_quickpoweron=true
+ro.mot.eri.losalert.delay=1000
+ro.config.hw_power_saving=true
+pm.sleep_mode=1
+ro.ril.sensor.sleep.control=1
+power_supply.wakeup=enable
+
+# Additional Battery Optimizations
+ro.ril.power.collapse=1
+power.saving.enabled=1
+battery.saver.low_level=30
+power.saving.enable=1
+persist.radio.apm_sim_not_pwdn=1
+ro.ril.enable.amr.wideband=0
+power.saving.low_screen_brightness=1
+ro.config.hw_smart_battery=1
+ro.config.hw_power_profile=low
+
+# Dalvik and Kernel Modifications
+persist.android.strictmode=0
+ro.kernel.android.checkjni=0
+ro.kernel.checkjni=0
+ro.config.nocheckin=1
+ro.compcache.default=0
+dalvik.vm.execution-mode=int:jit
+dalvik.vm.verify-bytecode=true
+dalvik.vm.jmiopts=forcecopy
+debug.kill_allocating_task=0
+ro.ext4fs=1
+dalvik.vm.heaputilization=0.25
+dalvik.vm.heaptargetutilization=0.75
+
+# Disable USB Debugging Popup
+persist.adb.notify=0
+
+# Allow to free more RAM
+persist.sys.purgeable_assets=1
+ro.config.low_ram=enable
+
+# Smoother video playback
+video.accelerate.hw=1
+media.stagefright.enable-player=true
+media.stagefright.enable-meta=true
+media.stagefright.enable-scan=false
+media.stagefright.enable-http=true
+
+# UI Tweaks
+persist.sys.ui.hw=1
+view.scroll_friction=10
+debug.composition.type=gpu
+debug.performance.tuning=1
+
+# Miscellaneous
+persist.sys.gmaps_hack=1
+debug.sf.ddms=0
+ro.warmboot.capability=1
+logcat.live=disable
+
+# CPU Core Control
+ro.vendor.qti.core_ctl_min_cpu=4
+ro.vendor.qti.core_ctl_max_cpu=4

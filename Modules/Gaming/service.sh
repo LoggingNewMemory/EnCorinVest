@@ -27,22 +27,6 @@ tweak 0 /sys/module/kernel/parameters/panic_on_warn
 tweak 0 /sys/module/kernel/parameters/pause_on_oops
 tweak 0 /proc/sys/vm/panic_on_oom
 
-# Test 
-# Sandevistan Boot
-
-change_cpu_gov() {
-	chmod 644 /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
-	echo "$1" | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor >/dev/null
-	chmod 444 /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
-}
-
-change_cpu_gov performance
-
-sleep 20
-
-change_cpu_gov schedutil
-change_cpu_gov schedhorizon
-
 detect_soc() {
     # Check multiple sources for SOC information
     local chipset=""
