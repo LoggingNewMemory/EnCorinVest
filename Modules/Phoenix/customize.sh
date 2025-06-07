@@ -35,7 +35,7 @@ ui_print "------------------------------------"
 ui_print "            MODULE INFO             "
 ui_print "------------------------------------"
 ui_print "Name : EnCorinVest"
-ui_print "Version : 23.0"
+ui_print "Version : 24.0"
 ui_print "Variant: Phoenix"
 ui_print "Support Root : Magisk / KernelSU / APatch"
 ui_print " "
@@ -65,6 +65,7 @@ set_perm_recursive $MODPATH/Scripts 0 0 0777 0755
 
 sleep 1.5
 
+ui_print " "
 ui_print "     INSTALLING EnCorinVest APK       "
 ui_print " "
 
@@ -127,13 +128,12 @@ fi
 rm -rf $TEMP_EXTRACT_DIR
 
 ui_print " "
-ui_print "    There's A Wallpaper Souvenir In The Github    "
-ui_print "    Go Check it Out!                              "
+ui_print "There's A Wallpaper Souvenir In The Github    "
+ui_print "Go Check it Out!                              "
 ui_print " "
 
 sleep 2
 
-ui_print " "
 case "$((RANDOM % 14 + 1))" in
 1) ui_print "- Wooly's Fairy Tale [Rem01 Gaming]" ;;
 2) ui_print "- Sheep-counting Lullaby [Rem01 Gaming]" ;;

@@ -2,7 +2,7 @@
 
 # Define the source and target directories
 SOURCE_DIR="Gaming"
-TARGET_DIRS=("Core" "Phoenix" "Ubur-Ubur" "Gaming" "Lite" "Lite-P" "Lite-U" "Lite-C")
+TARGET_DIRS=("Core" "Phoenix" "Ubur-Ubur" "Gaming")
 BUILD_DIR="Build"
 
 # Create the Build directory if it doesn't exist
@@ -124,12 +124,6 @@ sync_files() {
         # Sync service.sh
         if [ -f "$SOURCE_DIR/service.sh" ]; then
             cp -f "$SOURCE_DIR/service.sh" "$TARGET_DIR/service.sh"
-
-            # For Lite variants, remove resetprop -n lines from service.sh
-            if [[ "$TARGET_DIR" == Lite* ]]; then
-                grep -v "setprop" "$TARGET_DIR/service.sh" > "$TARGET_DIR/service.sh.tmp"
-                mv "$TARGET_DIR/service.sh.tmp" "$TARGET_DIR/service.sh"
-            fi
         else
             echo "Error: service.sh not found in $SOURCE_DIR!"
             exit 1
@@ -157,12 +151,6 @@ sync_files() {
 
         # Copy EnCorinVest.apk
         cp -f "$SOURCE_DIR/EnCorinVest.apk" "$TARGET_DIR/EnCorinVest.apk"
-
-        # Add special files for Lite-P variant
-        if [[ "$TARGET_DIR" == "Lite-P" ]]; then
-            cp -f "$SOURCE_DIR/encorin.txt" "$TARGET_DIR/encorin.txt"
-            cp -f "$SOURCE_DIR/Anya.png" "$TARGET_DIR/Anya.png"
-        fi
 
         # Create zip file without parent folder
         ZIP_NAME="EnCorinVest-$(basename "$TARGET_DIR")-$VERSION-$BUILD_TYPE.zip"

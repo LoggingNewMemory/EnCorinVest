@@ -1,4 +1,6 @@
+#######################
 # EnCorinVest Functions
+#######################
 
 tweak() {
     if [ -e "$2" ]; then
@@ -25,12 +27,33 @@ notification() {
     
     su -lp 2000 -c "cmd notification post -S bigtext -t '$TITLE' -i file://$LOGO -I file://$LOGO TagEncorin '$MESSAGE'"
 }
+
+################################
 # From Encore Profiler + Utility
+################################
+
+# Encore Utility
+change_cpu_gov() {
+	chmod 644 /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
+	echo "$1" | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor >/dev/null
+	chmod 444 /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
+}
+
+# Encore Profiler 
+
+apply() {
+	[ ! -f "$2" ] && return 1
+	chmod 644 "$2" >/dev/null 2>&1
+	echo "$1" >"$2" 2>/dev/null
+	chmod 444 "$2" >/dev/null 2>&1
+}
+
 write() {
 	[ ! -f "$2" ] && return 1
 	chmod 644 "$2" >/dev/null 2>&1
 	echo "$1" >"$2" 2>/dev/null
 }
+
 which_maxfreq() {
 	tr ' ' '\n' <"$1" | sort -nr | head -n 1
 }
@@ -39,11 +62,96 @@ which_minfreq() {
 	tr ' ' '\n' <"$1" | grep -v '^[[:space:]]*$' | sort -n | head -n 1
 }
 
+which_midfreq() {
+	total_opp=$(wc -w <"$1")
+	mid_opp=$(((total_opp + 1) / 2))
+	tr ' ' '\n' <"$1" | grep -v '^[[:space:]]*$' | sort -nr | head -n $mid_opp | tail -n 1
+}
+
+# MediaTek gpufreq
+# Returns OPP index of the frequency
+
+mtk_gpufreq_minfreq_index() {
+	awk -F'[][]' '{print $2}' "$1" | tail -n 1
+}
+
+mtk_gpufreq_midfreq_index() {
+	total_opp=$(wc -l <"$1")
+	mid_opp=$(((total_opp + 1) / 2))
+	awk -F'[][]' '{print $2}' "$1" | head -n $mid_opp | tail -n 1
+}
+
+###################################
+# Frequency settings
+###################################
+
+cpufreq_ppm_max_perf() {
+	cluster=-1
+	for path in /sys/devices/system/cpu/cpufreq/policy*; do
+		((cluster++))
+		cpu_maxfreq=$(<"$path/cpuinfo_max_freq")
+		apply "$cluster $cpu_maxfreq" /proc/ppm/policy/hard_userlimit_max_cpu_freq
+
+		[ $LITE_MODE -eq 1 ] && {
+			cpu_midfreq=$(which_midfreq "$path/scaling_available_frequencies")
+			apply "$cluster $cpu_midfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
+			continue
+		}
+
+		apply "$cluster $cpu_maxfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
+	done
+}
+
+cpufreq_max_perf() {
+	for path in /sys/devices/system/cpu/*/cpufreq; do
+		cpu_maxfreq=$(<"$path/cpuinfo_max_freq")
+		apply "$cpu_maxfreq" "$path/scaling_max_freq"
+
+		[ $LITE_MODE -eq 1 ] && {
+			cpu_midfreq=$(which_midfreq "$path/scaling_available_frequencies")
+			apply "$cpu_midfreq" "$path/scaling_min_freq"
+			continue
+		}
+
+		apply "$cpu_maxfreq" "$path/scaling_min_freq"
+	done
+	chmod -f 444 /sys/devices/system/cpu/cpufreq/policy*/scaling_*_freq
+}
+
+cpufreq_ppm_unlock() {
+	cluster=0
+	for path in /sys/devices/system/cpu/cpufreq/policy*; do
+		cpu_maxfreq=$(<"$path/cpuinfo_max_freq")
+		cpu_minfreq=$(<"$path/cpuinfo_min_freq")
+		write "$cluster $cpu_maxfreq" /proc/ppm/policy/hard_userlimit_max_cpu_freq
+		write "$cluster $cpu_minfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
+		((cluster++))
+	done
+}
+
+cpufreq_unlock() {
+	for path in /sys/devices/system/cpu/*/cpufreq; do
+		cpu_maxfreq=$(<"$path/cpuinfo_max_freq")
+		cpu_minfreq=$(<"$path/cpuinfo_min_freq")
+		write "$cpu_maxfreq" "$path/scaling_max_freq"
+		write "$cpu_minfreq" "$path/scaling_min_freq"
+	done
+	chmod -f 644 /sys/devices/system/cpu/cpufreq/policy*/scaling_*_freq
+}
+
 devfreq_max_perf() {
 	[ ! -f "$1/available_frequencies" ] && return 1
-	freq=$(which_maxfreq "$1/available_frequencies")
-	tweak "$freq" "$1/max_freq"
-	tweak "$freq" "$1/min_freq"
+	max_freq=$(which_maxfreq "$1/available_frequencies")
+	apply "$max_freq" "$1/max_freq"
+	apply "$max_freq" "$1/min_freq"
+}
+
+devfreq_mid_perf() {
+	[ ! -f "$1/available_frequencies" ] && return 1
+	max_freq=$(which_maxfreq "$1/available_frequencies")
+	mid_freq=$(which_midfreq "$1/available_frequencies")
+	apply "$max_freq" "$1/max_freq"
+	apply "$mid_freq" "$1/min_freq"
 }
 
 devfreq_unlock() {
@@ -57,181 +165,195 @@ devfreq_unlock() {
 devfreq_min_perf() {
 	[ ! -f "$1/available_frequencies" ] && return 1
 	freq=$(which_minfreq "$1/available_frequencies")
-	tweak "$freq" "$1/min_freq"
-	tweak "$freq" "$1/max_freq"
+	apply "$freq" "$1/min_freq"
+	apply "$freq" "$1/max_freq"
 }
 
-change_cpu_gov() {
-	chmod 644 /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
-	echo "$1" | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor >/dev/null
-	chmod 444 /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
+qcom_cpudcvs_max_perf() {
+	[ ! -f "$1/available_frequencies" ] && return 1
+	freq=$(which_maxfreq "$1/available_frequencies")
+	apply "$freq" "$1/hw_max_freq"
+	apply "$freq" "$1/hw_min_freq"
 }
 
-change_cpu_gov() {
-	chmod 644 /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
-	echo "$1" | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
-	chmod 444 /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
+qcom_cpudcvs_mid_perf() {
+	[ ! -f "$1/available_frequencies" ] && return 1
+	max_freq=$(which_maxfreq "$1/available_frequencies")
+	mid_freq=$(which_midfreq "$1/available_frequencies")
+	apply "$max_freq" "$1/hw_max_freq"
+	apply "$mid_freq" "$1/hw_min_freq"
 }
+
+qcom_cpudcvs_unlock() {
+	[ ! -f "$1/available_frequencies" ] && return 1
+	max_freq=$(which_maxfreq "$1/available_frequencies")
+	min_freq=$(which_minfreq "$1/available_frequencies")
+	write "$max_freq" "$1/hw_max_freq"
+	write "$min_freq" "$1/hw_min_freq"
+}
+
+qcom_cpudcvs_min_perf() {
+	[ ! -f "$1/available_frequencies" ] && return 1
+	freq=$(which_minfreq "$1/available_frequencies")
+	apply "$freq" "$1/hw_min_freq"
+	apply "$freq" "$1/hw_max_freq"
+}
+
+###############################
+# Encore common scripts
+###############################
 
 encore_perfcommon() {
-	for dir in /sys/block/mmcblk0 /sys/block/mmcblk1 /sys/block/sd*; do
+	# I/O Tweaks
+	for dir in /sys/block/*; do
 		# Disable I/O statistics accounting
-		tweak 0 "$dir/queue/iostats"
-
-		# Reduce the maximum number of I/O requests in exchange for latency
-		tweak 64 "$dir/queue/nr_requests"
+		apply 0 "$dir/queue/iostats"
 
 		# Don't use I/O as random spice
-		tweak 0 "$dir/queue/add_random"
+		apply 0 "$dir/queue/add_random"
 	done &
 
 	# Networking tweaks
-	if grep -q bbr2 /proc/sys/net/ipv4/tcp_available_congestion_control; then
-		tweak "bbr2" /proc/sys/net/ipv4/tcp_congestion_control
-	else
-		tweak "cubic" /proc/sys/net/ipv4/tcp_congestion_control
-	fi
+	for algo in bbr3 bbr2 bbrplus bbr westwood cubic; do
+		if grep -q "$algo" /proc/sys/net/ipv4/tcp_available_congestion_control; then
+			apply "$algo" /proc/sys/net/ipv4/tcp_congestion_control
+			break
+		fi
+	done
 
-	tweak 1 /proc/sys/net/ipv4/tcp_low_latency
-	tweak 1 /proc/sys/net/ipv4/tcp_ecn
-	tweak 3 /proc/sys/net/ipv4/tcp_fastopen
-	tweak 1 /proc/sys/net/ipv4/tcp_sack
-	tweak 0 /proc/sys/net/ipv4/tcp_timestamps
+	apply 1 /proc/sys/net/ipv4/tcp_low_latency
+	apply 1 /proc/sys/net/ipv4/tcp_ecn
+	apply 3 /proc/sys/net/ipv4/tcp_fastopen
+	apply 1 /proc/sys/net/ipv4/tcp_sack
+	apply 0 /proc/sys/net/ipv4/tcp_timestamps
 
-	# Stop tracing and debugging
-	tweak 0 /sys/kernel/ccci/debug
-	tweak 0 /sys/kernel/tracing/tracing_on
-	tweak 0 /proc/sys/kernel/perf_event_paranoid
-	tweak 0 /proc/sys/kernel/debug_locks
-	tweak 0 /proc/sys/kernel/perf_cpu_time_max_percent
-	tweak off /proc/sys/kernel/printk_devkmsg
-	stop logd
-	stop traced
-	stop statsd
+	# Limit max perf event processing time to this much CPU usage
+	apply 3 /proc/sys/kernel/perf_cpu_time_max_percent
 
 	# Disable schedstats
-	tweak 0 /proc/sys/kernel/sched_schedstats
+	apply 0 /proc/sys/kernel/sched_schedstats
 
 	# Disable Oppo/Realme cpustats
-	tweak 0 /proc/sys/kernel/task_cpustats_enable
+	apply 0 /proc/sys/kernel/task_cpustats_enable
 
 	# Disable Sched auto group
-	tweak 0 /proc/sys/kernel/sched_autogroup_enabled
+	apply 0 /proc/sys/kernel/sched_autogroup_enabled
 
 	# Enable CRF
-	tweak 1 /proc/sys/kernel/sched_child_runs_first
+	apply 1 /proc/sys/kernel/sched_child_runs_first
 
 	# Improve real time latencies by reducing the scheduler migration time
-	tweak 32 /proc/sys/kernel/sched_nr_migrate
+	apply 32 /proc/sys/kernel/sched_nr_migrate
 
 	# Tweaking scheduler to reduce latency
-	tweak 50000 /proc/sys/kernel/sched_migration_cost_ns
-	tweak 1000000 /proc/sys/kernel/sched_min_granularity_ns
-	tweak 1500000 /proc/sys/kernel/sched_wakeup_granularity_ns
+	apply 50000 /proc/sys/kernel/sched_migration_cost_ns
+	apply 1000000 /proc/sys/kernel/sched_min_granularity_ns
+	apply 1500000 /proc/sys/kernel/sched_wakeup_granularity_ns
 
 	# Disable read-ahead for swap devices
-	tweak 0 /proc/sys/vm/page-cluster
+	apply 0 /proc/sys/vm/page-cluster
 
 	# Update /proc/stat less often to reduce jitter
-	tweak 120 /proc/sys/vm/stat_interval
+	apply 15 /proc/sys/vm/stat_interval
 
 	# Disable compaction_proactiveness
-	tweak 0 /proc/sys/vm/compaction_proactiveness
+	apply 0 /proc/sys/vm/compaction_proactiveness
 
 	# Disable SPI CRC
-	tweak 0 /sys/module/mmc_core/parameters/use_spi_crc
+	apply 0 /sys/module/mmc_core/parameters/use_spi_crc
 
 	# Disable OnePlus opchain
-	tweak 0 /sys/module/opchain/parameters/chain_on
+	apply 0 /sys/module/opchain/parameters/chain_on
 
 	# Disable Oplus bloats
-	tweak 0 /sys/module/cpufreq_bouncing/parameters/enable
-	tweak 0 /proc/task_info/task_sched_info/task_sched_info_enable
-	tweak 0 /proc/oplus_scheduler/sched_assist/sched_assist_enabled
+	apply 0 /sys/module/cpufreq_bouncing/parameters/enable
+	apply 0 /proc/task_info/task_sched_info/task_sched_info_enable
+	apply 0 /proc/oplus_scheduler/sched_assist/sched_assist_enabled
 
 	# Report max CPU capabilities to these libraries
-	tweak "libunity.so, libil2cpp.so, libmain.so, libUE4.so, libgodot_android.so, libgdx.so, libgdx-box2d.so, libminecraftpe.so, libLive2DCubismCore.so, libyuzu-android.so, libryujinx.so, libcitra-android.so, libhdr_pro_engine.so, libandroidx.graphics.path.so, libeffect.so" /proc/sys/kernel/sched_lib_name
-	tweak 255 /proc/sys/kernel/sched_lib_mask_force
+	apply "libunity.so, libil2cpp.so, libmain.so, libUE4.so, libgodot_android.so, libgdx.so, libgdx-box2d.so, libminecraftpe.so, libLive2DCubismCore.so, libyuzu-android.so, libryujinx.so, libcitra-android.so, libhdr_pro_engine.so, libandroidx.graphics.path.so, libeffect.so" /proc/sys/kernel/sched_lib_name
+	apply 255 /proc/sys/kernel/sched_lib_mask_force
 
 	# Set thermal governor to step_wise
 	for dir in /sys/class/thermal/thermal_zone*; do
-		tweak "step_wise" "$dir/policy"
+		apply "step_wise" "$dir/policy"
 	done
 }
 
 encore_perfprofile() {
-    [ -f /sys/module/battery_saver/parameters/enabled ] && {
+	# Disable battery saver module
+	[ -f /sys/module/battery_saver/parameters/enabled ] && {
 		if grep -qo '[0-9]\+' /sys/module/battery_saver/parameters/enabled; then
-			tweak 0 /sys/module/battery_saver/parameters/enabled
+			apply 0 /sys/module/battery_saver/parameters/enabled
 		else
-			tweak N /sys/module/battery_saver/parameters/enabled
+			apply N /sys/module/battery_saver/parameters/enabled
 		fi
 	}
 
+	# Disable Oplus CPU limit
+	apply 1 /proc/game_opt/disable_cpufreq_limit
+
 	# Disable split lock mitigation
-	tweak 0 /proc/sys/kernel/split_lock_mitigate
+	apply 0 /proc/sys/kernel/split_lock_mitigate
 
 	if [ -f "/sys/kernel/debug/sched_features" ]; then
 		# Consider scheduling tasks that are eager to run
-		tweak NEXT_BUDDY /sys/kernel/debug/sched_features
+		apply NEXT_BUDDY /sys/kernel/debug/sched_features
 
 		# Some sources report large latency spikes during large migrations
-		tweak NO_TTWU_QUEUE /sys/kernel/debug/sched_features
+		apply NO_TTWU_QUEUE /sys/kernel/debug/sched_features
 	fi
 
 	if [ -d "/dev/stune/" ]; then
 		# Prefer to schedule top-app tasks on idle CPUs
-		tweak 1 /dev/stune/top-app/schedtune.prefer_idle
+		apply 1 /dev/stune/top-app/schedtune.prefer_idle
 
 		# Mark top-app as boosted, find high-performing CPUs
-		tweak 1 /dev/stune/top-app/schedtune.boost
+		apply 1 /dev/stune/top-app/schedtune.boost
 	fi
 
 	# Oppo/Oplus/Realme Touchpanel
 	tp_path="/proc/touchpanel"
 	if [ -d "$tp_path" ]; then
-		tweak 1 $tp_path/game_switch_enable
-		tweak 0 $tp_path/oplus_tp_limit_enable
-		tweak 0 $tp_path/oppo_tp_limit_enable
-		tweak 1 $tp_path/oplus_tp_direction
-		tweak 1 $tp_path/oppo_tp_direction
+		apply 1 $tp_path/game_switch_enable
+		apply 0 $tp_path/oplus_tp_limit_enable
+		apply 0 $tp_path/oppo_tp_limit_enable
+		apply 1 $tp_path/oplus_tp_direction
+		apply 1 $tp_path/oppo_tp_direction
 	fi
 
 	# Memory tweak
-	tweak 80 /proc/sys/vm/vfs_cache_pressure
+	apply 80 /proc/sys/vm/vfs_cache_pressure
 
 	# eMMC and UFS frequency
-	for path in /sys/class/devfreq/*.ufshc; do
-		devfreq_max_perf "$path"
+	for path in /sys/class/devfreq/*.ufshc \
+		/sys/class/devfreq/mmc*; do
+
+		[ $LITE_MODE -eq 1 ] &&
+			devfreq_mid_perf "$path" ||
+			devfreq_max_perf "$path"
 	done &
-	for path in /sys/class/devfreq/mmc*; do
-		devfreq_max_perf "$path"
-	done &
 
-	# Force CPU to highest possible OPP
-	change_cpu_gov performance
+	# Set CPU governor to performance.
+	# performance governor in this case is only used for "flex"
+	# since the frequencies already maxed out (ifykyk).
+	# If lite mode enabled, use the default governor instead.
+	# device mitigation also will prevent performance gov to be
+	# applied (some device hates performance governor).
+	[ $LITE_MODE -eq 0 ] && [ $DEVICE_MITIGATION -eq 0 ] &&
+		change_cpu_gov performance ||
+		change_cpu_gov "$DEFAULT_CPU_GOV"
 
-	if [ -d /proc/ppm ]; then
-		cluster=0
-		for path in /sys/devices/system/cpu/cpufreq/policy*; do
-			cpu_maxfreq=$(<"$path/cpuinfo_max_freq")
-			tweak "$cluster $cpu_maxfreq" /proc/ppm/policy/hard_userlimit_max_cpu_freq
-			tweak "$cluster $cpu_maxfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
-			((cluster++))
-		done
-	fi
-
-	for path in /sys/devices/system/cpu/*/cpufreq; do
-		cpu_maxfreq=$(<"$path/cpuinfo_max_freq")
-		tweak "$cpu_maxfreq" "$path/scaling_max_freq"
-		tweak "$cpu_maxfreq" "$path/scaling_min_freq"
-	done
-	chmod -f 444 /sys/devices/system/cpu/cpufreq/policy*/scaling_*_freq
+	# Force CPU to highest possible frequency.
+	[ -d /proc/ppm ] && cpufreq_ppm_max_perf || cpufreq_max_perf
 
 	# I/O Tweaks
 	for dir in /sys/block/mmcblk0 /sys/block/mmcblk1 /sys/block/sd*; do
 		# Reduce heuristic read-ahead in exchange for I/O latency
-		tweak 32 "$dir/queue/read_ahead_kb"
+		apply 32 "$dir/queue/read_ahead_kb"
+
+		# Reduce the maximum number of I/O requests in exchange for latency
+		apply 32 "$dir/queue/nr_requests"
 	done &
 
 	echo 3 >/proc/sys/vm/drop_caches
@@ -240,81 +362,75 @@ encore_perfprofile() {
 # Encore Normal SCript 
 
 encore_balanced_common() {
-	# We don't use it here
-	# [ "$(</data/encore/dnd_gameplay)" -eq 1 ] && set_dnd 0
-
-	# Disable battery saver module
 	[ -f /sys/module/battery_saver/parameters/enabled ] && {
 		if grep -qo '[0-9]\+' /sys/module/battery_saver/parameters/enabled; then
-			tweak 0 /sys/module/battery_saver/parameters/enabled
+			apply 0 /sys/module/battery_saver/parameters/enabled
 		else
-			tweak N /sys/module/battery_saver/parameters/enabled
+			apply N /sys/module/battery_saver/parameters/enabled
 		fi
 	}
 
+	# Enable Oplus CPU limit
+	apply 0 /proc/game_opt/disable_cpufreq_limit
+
 	# Enable split lock mitigation
-	tweak 1 /proc/sys/kernel/split_lock_mitigate
+	apply 1 /proc/sys/kernel/split_lock_mitigate
 
 	if [ -f "/sys/kernel/debug/sched_features" ]; then
 		# Consider scheduling tasks that are eager to run
-		tweak NEXT_BUDDY /sys/kernel/debug/sched_features
+		apply NEXT_BUDDY /sys/kernel/debug/sched_features
 
 		# Schedule tasks on their origin CPU if possible
-		tweak TTWU_QUEUE /sys/kernel/debug/sched_features
+		apply TTWU_QUEUE /sys/kernel/debug/sched_features
 	fi
 
 	if [ -d "/dev/stune/" ]; then
 		# We are not concerned with prioritizing latency
-		tweak 0 /dev/stune/top-app/schedtune.prefer_idle
+		apply 0 /dev/stune/top-app/schedtune.prefer_idle
 
 		# Mark top-app as boosted, find high-performing CPUs
-		tweak 1 /dev/stune/top-app/schedtune.boost
+		apply 1 /dev/stune/top-app/schedtune.boost
 	fi
 
 	# Oppo/Oplus/Realme Touchpanel
 	tp_path="/proc/touchpanel"
 	if [ -d "$tp_path" ]; then
-		tweak 0 $tp_path/game_switch_enable
-		tweak 1 $tp_path/oplus_tp_limit_enable
-		tweak 1 $tp_path/oppo_tp_limit_enable
-		tweak 0 $tp_path/oplus_tp_direction
-		tweak 0 $tp_path/oppo_tp_direction
+		apply 0 $tp_path/game_switch_enable
+		apply 1 $tp_path/oplus_tp_limit_enable
+		apply 1 $tp_path/oppo_tp_limit_enable
+		apply 0 $tp_path/oplus_tp_direction
+		apply 0 $tp_path/oppo_tp_direction
 	fi
 
 	# Memory Tweaks
-	tweak 120 /proc/sys/vm/vfs_cache_pressure
+	apply 120 /proc/sys/vm/vfs_cache_pressure
 
 	# eMMC and UFS frequency
-	for path in /sys/class/devfreq/*.ufshc; do
-		devfreq_unlock "$path"
-	done &
-	for path in /sys/class/devfreq/mmc*; do
+	for path in /sys/class/devfreq/*.ufshc \
+		/sys/class/devfreq/mmc*; do
 		devfreq_unlock "$path"
 	done &
 
-	if [ -d /proc/ppm ]; then
-		integer cluster=0
-		for path in /sys/devices/system/cpu/cpufreq/policy*; do
-			cpu_maxfreq=$(<"$path/cpuinfo_max_freq")
-			cpu_minfreq=$(<"$path/cpuinfo_min_freq")
-			write "$cluster $cpu_maxfreq" /proc/ppm/policy/hard_userlimit_max_cpu_freq
-			write "$cluster $cpu_minfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
-			((cluster++))
-		done
-	fi
-
-	for path in /sys/devices/system/cpu/*/cpufreq; do
-		cpu_maxfreq=$(<"$path/cpuinfo_max_freq")
-		cpu_minfreq=$(<"$path/cpuinfo_min_freq")
-		write "$cpu_maxfreq" "$path/scaling_max_freq"
-		write "$cpu_minfreq" "$path/scaling_min_freq"
+	# Yamada Specific 
+	# Restore min CPU frequency
+	# Switch to schedutil / schedhorizon
+	for path in /sys/devices/system/cpu/cpufreq/policy*; do
+    if grep -q 'schedhorizon' "$path/scaling_available_governors"; then
+        tweak schedhorizon "$path/scaling_governor"
+    else
+        tweak schedutil "$path/scaling_governor"
+    	fi
 	done
-	chmod -f 644 /sys/devices/system/cpu/cpufreq/policy*/scaling_*_freq
+
+	[ -d /proc/ppm ] && cpufreq_ppm_unlock || cpufreq_unlock
 
 	# I/O Tweaks
 	for dir in /sys/block/mmcblk0 /sys/block/mmcblk1 /sys/block/sd*; do
 		# Reduce heuristic read-ahead in exchange for I/O latency
-		tweak 128 "$dir/queue/read_ahead_kb"
+		apply 128 "$dir/queue/read_ahead_kb"
+
+		# Reduce the maximum number of I/O requests in exchange for latency
+		apply 64 "$dir/queue/nr_requests"
 	done &
 }
 
