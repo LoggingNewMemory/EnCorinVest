@@ -16,10 +16,6 @@ Variants:
 - Phoenix (Include Disable Thermal)
 - Ubur-Ubur (Include Fast Charge)
 - Core (Only EnCorinVest)
-- Lite (Core, but without additional tweaks) (Use this if you face bootloop)
-- Lite-P (Lite + Disable Thermal)
-- Lite-U (Lite + Fast Charge)
-- Lite-C (Lite + Disable Thermal & Fast Charge)
 
 How to use? 
 - Install Module
