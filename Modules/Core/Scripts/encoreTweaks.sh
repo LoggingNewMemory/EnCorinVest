@@ -4,6 +4,9 @@ source "$MODULE_PATH/Scripts/encorinFunctions.sh"
 # Disable encore lite mode
 LITE_MODE=0
 
+# Set mitigation
+DEVICE_MITIGATION=0
+
 # All Encore Performance Script
 encore_mediatek_perf() {
 	# PPM policies
@@ -129,6 +132,15 @@ encore_exynos_perf() {
 
 	mali_sysfs=$(find /sys/devices/platform/ -iname "*.mali" -print -quit 2>/dev/null)
 	apply always_on "$mali_sysfs/power_policy"
+
+	# DRAM and Buses Frequency
+	[ $DEVICE_MITIGATION -eq 0 ] && {
+		for path in /sys/class/devfreq/*devfreq_mif*; do
+			[ $LITE_MODE -eq 1 ] &&
+				devfreq_mid_perf "$path" ||
+				devfreq_max_perf "$path"
+		done &
+	}
 }
 
 encore_unisoc_perf() {
@@ -244,6 +256,13 @@ encore_exynos_normal() {
 
 	mali_sysfs=$(find /sys/devices/platform/ -iname "*.mali" -print -quit 2>/dev/null)
 	apply coarse_demand "$mali_sysfs/power_policy"
+
+	# DRAM frequency
+	[ $DEVICE_MITIGATION -eq 0 ] && {
+		for path in /sys/class/devfreq/*devfreq_mif*; do
+			devfreq_unlock "$path"
+		done &
+	}
 }
 
 encore_unisoc_normal() {

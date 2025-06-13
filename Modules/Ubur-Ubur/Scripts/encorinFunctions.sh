@@ -1,5 +1,7 @@
 # Disable encore lite mode
 LITE_MODE=0
+# Set mitigation
+DEVICE_MITIGATION=0
 
 #######################
 # EnCorinVest Functions
@@ -23,6 +25,18 @@ done
 echo 3 > /proc/sys/vm/drop_caches
 am kill-all
 }
+
+# Replace encore Governor logic
+
+FIRST_POLICY="/sys/devices/system/cpu/cpufreq/policy0"
+if [ -f "$FIRST_POLICY/scaling_available_governors" ]; then
+	if grep -q 'schedhorizon' "$FIRST_POLICY/scaling_available_governors"; then
+		DEFAULT_CPU_GOV="schedhorizon"
+	else
+		DEFAULT_CPU_GOV="schedutil"
+	fi
+else
+
 notification() {
     local TITLE="EnCorinVest"
     local MESSAGE="$1"
@@ -55,6 +69,13 @@ write() {
 	[ ! -f "$2" ] && return 1
 	chmod 644 "$2" >/dev/null 2>&1
 	echo "$1" >"$2" 2>/dev/null
+}
+
+change_cpu_gov() {
+	chmod 644 /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
+	echo "$1" | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor >/dev/null
+	chmod 444 /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
+	chmod 444 /sys/devices/system/cpu/cpufreq/policy*/scaling_governor
 }
 
 which_maxfreq() {
@@ -293,9 +314,6 @@ encore_perfprofile() {
 		fi
 	}
 
-	# Disable Oplus CPU limit
-	apply 1 /proc/game_opt/disable_cpufreq_limit
-
 	# Disable split lock mitigation
 	apply 0 /proc/sys/kernel/split_lock_mitigate
 
@@ -332,11 +350,20 @@ encore_perfprofile() {
 	for path in /sys/class/devfreq/*.ufshc \
 		/sys/class/devfreq/mmc*; do
 
+		[ $LITE_MODE -eq 1 ] &&
 			devfreq_mid_perf "$path" ||
 			devfreq_max_perf "$path"
 	done &
 
-		change_cpu_gov performance
+	# Set CPU governor to performance.
+	# performance governor in this case is only used for "flex"
+	# since the frequencies already maxed out (ifykyk).
+	# If lite mode enabled, use the default governor instead.
+	# device mitigation also will prevent performance gov to be
+	# applied (some device hates performance governor).
+	[ $LITE_MODE -eq 0 ] && [ $DEVICE_MITIGATION -eq 0 ] &&
+		change_cpu_gov performance ||
+		change_cpu_gov "$DEFAULT_CPU_GOV"
 
 	# Force CPU to highest possible frequency.
 	[ -d /proc/ppm ] && cpufreq_ppm_max_perf || cpufreq_max_perf
@@ -356,6 +383,7 @@ encore_perfprofile() {
 # Encore Normal SCript 
 
 encore_balanced_common() {
+	# Disable battery saver module
 	[ -f /sys/module/battery_saver/parameters/enabled ] && {
 		if grep -qo '[0-9]\+' /sys/module/battery_saver/parameters/enabled; then
 			apply 0 /sys/module/battery_saver/parameters/enabled
@@ -363,9 +391,6 @@ encore_balanced_common() {
 			apply N /sys/module/battery_saver/parameters/enabled
 		fi
 	}
-
-	# Enable Oplus CPU limit
-	apply 0 /proc/game_opt/disable_cpufreq_limit
 
 	# Enable split lock mitigation
 	apply 1 /proc/sys/kernel/split_lock_mitigate
@@ -405,17 +430,8 @@ encore_balanced_common() {
 		devfreq_unlock "$path"
 	done &
 
-	# Yamada Specific 
 	# Restore min CPU frequency
-	# Switch to schedutil / schedhorizon
-	for path in /sys/devices/system/cpu/cpufreq/policy*; do
-    if grep -q 'schedhorizon' "$path/scaling_available_governors"; then
-        tweak schedhorizon "$path/scaling_governor"
-    else
-        tweak schedutil "$path/scaling_governor"
-    	fi
-	done
-
+	change_cpu_gov "$DEFAULT_CPU_GOV"
 	[ -d /proc/ppm ] && cpufreq_ppm_unlock || cpufreq_unlock
 
 	# I/O Tweaks

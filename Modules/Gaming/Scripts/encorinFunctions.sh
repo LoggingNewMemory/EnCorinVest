@@ -36,6 +36,7 @@ if [ -f "$FIRST_POLICY/scaling_available_governors" ]; then
 		DEFAULT_CPU_GOV="schedutil"
 	fi
 else
+fi
 
 notification() {
     local TITLE="EnCorinVest"
