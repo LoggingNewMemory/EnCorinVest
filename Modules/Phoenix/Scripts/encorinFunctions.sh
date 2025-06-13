@@ -28,14 +28,53 @@ am kill-all
 
 # Replace encore Governor logic
 
-FIRST_POLICY="/sys/devices/system/cpu/cpufreq/policy0"
 if [ -f "$FIRST_POLICY/scaling_available_governors" ]; then
-	if grep -q 'schedhorizon' "$FIRST_POLICY/scaling_available_governors"; then
-		DEFAULT_CPU_GOV="schedhorizon"
-	else
-		DEFAULT_CPU_GOV="schedutil"
-	fi
+    if grep -q 'schedhorizon' "$FIRST_POLICY/scaling_available_governors"; then
+        DEFAULT_CPU_GOV="schedhorizon"
+    else
+        DEFAULT_CPU_GOV="schedutil"
+    fi
 else
+    # Fallback if no policies found
+    DEFAULT_CPU_GOV="schedutil"
+fi
+
+#################################
+# CPU Minumum
+#################################
+
+cpufreq_ppm_min_perf() {
+	cluster=-1
+	for path in /sys/devices/system/cpu/cpufreq/policy*; do
+		((cluster++))
+		cpu_minfreq=$(<"$path/cpuinfo_min_freq")
+		apply "$cluster $cpu_minfreq" /proc/ppm/policy/hard_userlimit_max_cpu_freq
+
+		[ $LITE_MODE -eq 1 ] && {
+			cpu_midfreq=$(which_midfreq "$path/scaling_available_frequencies")
+			apply "$cluster $cpu_midfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
+			continue
+		}
+
+		apply "$cluster $cpu_minfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
+	done
+}
+
+cpufreq_min_perf() {
+	for path in /sys/devices/system/cpu/*/cpufreq; do
+		cpu_minfreq=$(<"$path/cpuinfo_min_freq")
+		apply "$cpu_minfreq" "$path/scaling_max_freq"
+
+		[ $LITE_MODE -eq 1 ] && {
+			cpu_midfreq=$(which_midfreq "$path/scaling_available_frequencies")
+			apply "$cpu_midfreq" "$path/scaling_min_freq"
+			continue
+		}
+
+		apply "$cpu_minfreq" "$path/scaling_min_freq"
+	done
+	chmod -f 444 /sys/devices/system/cpu/cpufreq/policy*/scaling_*_freq
+}
 
 notification() {
     local TITLE="EnCorinVest"
@@ -502,30 +541,8 @@ for path in /sys/class/devfreq/mmc*; do
 	tweak simple_ondemand $path/governor
 done &
 
-# Restore min CPU frequency
-for path in /sys/devices/system/cpu/cpufreq/policy*; do
-	tweak "$default_cpu_gov" "$path/scaling_governor"
-done &
-tweak 1 /sys/devices/system/cpu/cpu1/online
-
-if [ -d /proc/ppm ]; then
-	cluster=0
-	for path in /sys/devices/system/cpu/cpufreq/policy*; do
-		cpu_maxfreq=$(cat $path/cpuinfo_max_freq)
-		cpu_minfreq=$(cat $path/cpuinfo_min_freq)
-		tweak "$cluster $cpu_minfreq" /proc/ppm/policy/hard_userlimit_max_cpu_freq
-		tweak "$cluster $cpu_minfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
-		((cluster++))
-	done
-	fi
-
-for path in /sys/devices/system/cpu/*/cpufreq; do
-		cpu_maxfreq=$(cat $path/cpuinfo_max_freq)
-		cpu_minfreq=$(cat $path/cpuinfo_min_freq)
-		tweak "$cpu_minfreq" $path/scaling_max_freq
-		tweak "$cpu_minfreq" $path/scaling_min_freq
-	done
-chmod 644 /sys/devices/virtual/thermal/thermal_message/cpu_limits
+# Set min CPU frequency
+[ -d /proc/ppm ] && cpufreq_ppm_min_perf || cpufreq_min_perf
 
 # I/O Tweaks
 for dir in /sys/block/mmcblk0 /sys/block/mmcblk1 /sys/block/sd*; do
