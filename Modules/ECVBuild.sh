@@ -152,6 +152,41 @@ select_telegram_groups() {
     done
 }
 
+# Function to prompt for changelog
+prompt_changelog() {
+    echo ""
+    read -p "Give changelog? (Y/N): " ADD_CHANGELOG
+    ADD_CHANGELOG=${ADD_CHANGELOG,,}  # Convert to lowercase
+
+    if [[ "$ADD_CHANGELOG" == "y" || "$ADD_CHANGELOG" == "yes" ]]; then
+        echo ""
+        echo "Enter changelog (press Ctrl+D or type 'END' on a new line when finished):"
+        echo "---"
+
+        CHANGELOG=""
+        while IFS= read -r line; do
+            if [[ "$line" == "END" ]]; then
+                break
+            fi
+            if [ -n "$CHANGELOG" ]; then
+                CHANGELOG+=$'\n'
+            fi
+            CHANGELOG+="$line"
+        done
+
+        if [ -n "$CHANGELOG" ]; then
+            echo "---"
+            echo "Changelog captured successfully!"
+            return 0
+        else
+            echo "No changelog entered."
+            return 1
+        fi
+    else
+        return 1
+    fi
+}
+
 # Function to prompt for Telegram posting
 prompt_telegram_post() {
     echo ""
@@ -171,6 +206,12 @@ upload_to_telegram() {
     local build_type="$2"
     
     if prompt_telegram_post; then
+        # Prompt for changelog
+        HAS_CHANGELOG=false
+        if prompt_changelog; then
+            HAS_CHANGELOG=true
+        fi
+        
         if select_telegram_groups; then
             echo ""
             echo "Uploading to selected Telegram groups..."
@@ -180,8 +221,18 @@ upload_to_telegram() {
             SUMMARY_MESSAGE+="📦 *Project:* EnCorinVest%0A"
             SUMMARY_MESSAGE+="🏷️ *Version:* $version%0A"
             SUMMARY_MESSAGE+="🔧 *Build Type:* $build_type%0A"
-            SUMMARY_MESSAGE+="📄 *Variants:* ${#TARGET_DIRS[@]} variants built%0A%0A"
-            SUMMARY_MESSAGE+="Files uploading below... ⬇️"
+            SUMMARY_MESSAGE+="📄 *Variants:* ${#TARGET_DIRS[@]} variants built%0A"
+            
+            # Add changelog if provided
+            if [ "$HAS_CHANGELOG" = true ] && [ -n "$CHANGELOG" ]; then
+                # URL encode the changelog for Telegram
+                ENCODED_CHANGELOG=$(echo "$CHANGELOG" | sed 's/%/%25/g; s/ /%20/g; s/!/%21/g; s/"/%22/g; s/#/%23/g; s/\$/%24/g; s/&/%26/g; s/'\''/%27/g; s/(/%28/g; s/)/%29/g; s/\*/%2A/g; s/+/%2B/g; s/,/%2C/g; s/-/%2D/g; s/\./%2E/g; s/\//%2F/g; s/:/%3A/g; s/;/%3B/g; s/</%3C/g; s/=/%3D/g; s/>/%3E/g; s/?/%3F/g; s/@/%40/g; s/\[/%5B/g; s/\\/%5C/g; s/\]/%5D/g; s/\^/%5E/g; s/_/%5F/g; s/`/%60/g; s/{/%7B/g; s/|/%7C/g; s/}/%7D/g; s/~/%7E/g')
+                # Replace newlines with %0A for Telegram
+                ENCODED_CHANGELOG=$(echo "$ENCODED_CHANGELOG" | tr '\n' ' ' | sed 's/ /%0A/g')
+                SUMMARY_MESSAGE+=%0A%0A"📝 *Changelog:*%0A$ENCODED_CHANGELOG"
+            fi
+            
+            SUMMARY_MESSAGE+=%0A%0A"Files uploading below... ⬇️"
             
             # Loop through selected groups
             for i in "${!SELECTED_GROUPS[@]}"; do
