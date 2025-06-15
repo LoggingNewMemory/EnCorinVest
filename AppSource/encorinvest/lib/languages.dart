@@ -34,7 +34,6 @@ class LangEN {
     'credits_1': 'Rem01 Gaming',
     'credits_2': 'VelocityFox22',
     'credits_3': 'MiAzami',
-    'credits_4': 'Kazuyoo',
     'credits_5': 'RiProG',
     'credits_6': 'Lieudahbelajar',
     'credits_7': 'KanaDev_IS',
@@ -48,6 +47,8 @@ class LangEN {
     // --- Utilities Page ---
     'utilities_title': 'Utilities',
     'hamada_ai': 'HAMADA AI', // Keep existing for the card title if needed
+    'hamada_ai_description':
+        'Automatically Switch to Performance When Entering Game',
     'downscale_resolution': 'Downscale Resolution',
     'selected_resolution': 'Selected: {resolution}',
     'reset_resolution': 'Reset to Original',
@@ -68,6 +69,10 @@ class LangEN {
     'service_file_update_failed': 'Failed to update boot script.',
     'error_no_root': 'Root access required.', // Added for error messages
     'error_file_not_found': 'File not found.', // Added for file operations
+    'game_txt_hint': 'Enter game package names, one per line...',
+    'resolution_unavailable_message':
+        'Resolution control is not available on this device.',
+    'applying_changes': 'Applying changes...',
   };
 }
 
@@ -117,6 +122,7 @@ class LangID {
     // --- Utilities Page ---
     'utilities_title': 'Utilitas',
     'hamada_ai': 'HAMADA AI',
+    'hamada_ai_description': 'Otomatis Beralih ke Performa Saat Memasuki Game',
     'downscale_resolution': 'Turunkan Resolusi',
     'selected_resolution': 'Terpilih: {resolution}',
     'reset_resolution': 'Kembali ke Asli',
@@ -137,6 +143,10 @@ class LangID {
     'service_file_update_failed': 'Gagal memperbarui skrip boot.',
     'error_no_root': 'Membutuhkan akses root.',
     'error_file_not_found': 'File tidak ditemukan.',
+    'game_txt_hint': 'Masukkan nama paket game, satu per baris...',
+    'resolution_unavailable_message':
+        'Kontrol resolusi tidak tersedia di perangkat ini.',
+    'applying_changes': 'Menerapkan perubahan...',
   };
 }
 
@@ -182,6 +192,7 @@ class LangJP {
     // --- Utilities Page ---
     'utilities_title': 'ユーティリティ',
     'hamada_ai': 'HAMADA AI',
+    'hamada_ai_description': 'ゲーム開始時に自動でパフォーマンスモードに切り替え',
     'downscale_resolution': '解像度を下げる',
     'selected_resolution': '選択済み: {resolution}',
     'reset_resolution': 'オリジナルに戻す',
@@ -202,6 +213,9 @@ class LangJP {
     'service_file_update_failed': 'ブートスクリプトの更新に失敗しました。',
     'error_no_root': 'ルートアクセスが必要です。',
     'error_file_not_found': 'ファイルが見つかりません。',
+    'game_txt_hint': 'ゲームパッケージ名を1行に1つずつ入力...',
+    'resolution_unavailable_message': 'このデバイスでは解像度制御は利用できません。',
+    'applying_changes': '変更を適用中...',
   };
 }
 
@@ -250,6 +264,7 @@ class LangJV {
     // --- Utilities Page ---
     'utilities_title': 'Utilitas',
     'hamada_ai': 'HAMADA AI',
+    'hamada_ai_description': 'Otomatis Ganti menyang Performa pas Mlebu Game',
     'downscale_resolution': 'Mudhunake Resolusi',
     'selected_resolution': 'Dipilih: {resolution}',
     'reset_resolution': 'Bali menyang Asli',
@@ -270,6 +285,10 @@ class LangJV {
     'service_file_update_failed': 'Gagal nganyari skrip boot.',
     'error_no_root': 'Butuh akses root.',
     'error_file_not_found': 'File ora ditemokake.',
+    'game_txt_hint': 'Lebokna jeneng paket game, siji per baris...',
+    'resolution_unavailable_message':
+        'Kontrol resolusi ora kasedhiya ing piranti iki.',
+    'applying_changes': 'Nerapake owah-owahan...',
   };
 }
 
