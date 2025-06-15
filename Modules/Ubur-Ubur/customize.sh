@@ -35,7 +35,7 @@ ui_print "------------------------------------"
 ui_print "            MODULE INFO             "
 ui_print "------------------------------------"
 ui_print "Name : EnCorinVest"
-ui_print "Version : 25.0"
+ui_print "Version : 25.1"
 ui_print "Variant: Ubur-Ubur"
 ui_print "Support Root : Magisk / KernelSU / APatch"
 ui_print " "
@@ -69,12 +69,17 @@ ui_print " "
 ui_print "     INSTALLING EnCorinVest APK       "
 ui_print " "
 
+# Check if EnCorinVest is already installed
+if pm list packages | grep -q "com.kanagawa.yamada.encorinvest"; then
+    pm uninstall --user 0 com.kanagawa.yamada.encorinvest >/dev/null 2>&1
+fi
+
 cp "$MODPATH"/EnCorinVest.apk /data/local/tmp >/dev/null 2>&1
 pm install /data/local/tmp/EnCorinVest.apk >/dev/null 2>&1
 rm /data/local/tmp/EnCorinVest.apk >/dev/null 2>&1
 
 ui_print " "
-ui_print "    INSTALLING HAMADA AI NEXT GEN     "
+ui_print "         INSTALLING HAMADA AI         "
 ui_print " "
 
 # Define paths and target binary name
