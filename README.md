@@ -7,8 +7,6 @@ Support: Mediatek, Snapdragon, Exynos <br />
 
 DO NOT COMBINE WITH ANY PERFORMANCE MODULE
 
-Do not use fake device module (It will apply the wrong tweak)
-
 Feature List [HERE](https://github.com/LoggingNewMemory/EnCorinVest/blob/main/Feature.md)
 
 Variants:
