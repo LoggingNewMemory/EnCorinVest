@@ -25,7 +25,7 @@ int main(void) {
 
     bool prev_screen_on = true; // initial status (assumed on)
     ExecType last_executed = EXEC_NONE;
-    int delay_seconds = 5; // Default delay
+    int delay_seconds = 5;
 
     while (1) {
         // Build game package list from GAME_LIST.
@@ -49,30 +49,15 @@ int main(void) {
             fclose(file);
         }
 
-        // Combined check: screen status and app focus in one command
+        // Check screen status
         bool current_screen_on = true;
-        char matched_package[BUFFER_SIZE] = "";
-        
-        FILE *pipe_fp = popen("dumpsys window | grep -E 'mScreen|mCurrentFocus|mFocusedApp'", "r");
-        if (pipe_fp) {
-            char buffer[BUFFER_SIZE];
-            while (fgets(buffer, sizeof(buffer), pipe_fp)) {
-                // Check screen status
-                if (strstr(buffer, "mScreen") != NULL && strstr(buffer, "false") != NULL) {
-                    current_screen_on = false;
-                }
-                
-                // Check for game packages only if we haven't found screen is off
-                if (current_screen_on) {
-                    for (int i = 0; i < num_patterns; i++) {
-                        if (strstr(buffer, patterns[i]) != NULL) {
-                            strncpy(matched_package, patterns[i], sizeof(matched_package) - 1);
-                            matched_package[sizeof(matched_package) - 1] = '\0';
-                        }
-                    }
-                }
+        FILE *screen_pipe = popen("dumpsys window | grep \"mScreenOn\" | grep false", "r");
+        if (screen_pipe) {
+            char screen_buffer[BUFFER_SIZE];
+            if (fgets(screen_buffer, sizeof(screen_buffer), screen_pipe)) {
+                current_screen_on = false;
             }
-            pclose(pipe_fp);
+            pclose(screen_pipe);
         }
 
         // Handle screen status changes and set delay
@@ -80,37 +65,59 @@ int main(void) {
             if (current_screen_on) {
                 printf("Screen turned on - setting delay to 5 seconds\n");
                 delay_seconds = 5;
-            } else {
+            } else if (current_screen_on) {
                 printf("Screen turned off - setting delay to 10 seconds for power conservation\n");
                 delay_seconds = 10;
             }
             prev_screen_on = current_screen_on;
         }
 
-        // Process app detection only if screen is on
+        // Get focused app package using new method (only if screen is on)
+        char matched_package[BUFFER_SIZE] = "";
+        
         if (current_screen_on) {
-            if (strlen(matched_package) > 0) {
-                // A game package was detected.
-                if (last_executed != EXEC_GAME) {
-                    printf("Game package detected: %s\n", matched_package);
-                    char command[BUFFER_SIZE];
-                    snprintf(command, sizeof(command), "sh %s", PERFORMANCE_SCRIPT);
-                    system(command);
-                    last_executed = EXEC_GAME;
+            FILE *pipe_fp = popen("dumpsys window | grep 'mFocusedApp' | sed 's/.*ActivityRecord{[^ ]* [^ ]* \\([^ ]*\\/[^ ]*\\).*/\\1/'", "r");
+            if (pipe_fp) {
+                char buffer[BUFFER_SIZE];
+                if (fgets(buffer, sizeof(buffer), pipe_fp)) {
+                    // Remove newline character
+                    buffer[strcspn(buffer, "\n")] = '\0';
+                    
+                    // Check if any game package pattern matches the focused app
+                    for (int i = 0; i < num_patterns; i++) {
+                        if (strstr(buffer, patterns[i]) != NULL) {
+                            strncpy(matched_package, patterns[i], sizeof(matched_package) - 1);
+                            matched_package[sizeof(matched_package) - 1] = '\0';
+                            break;
+                        }
+                    }
                 }
-            } else {
-                // No game package detected.
-                if (last_executed != EXEC_NORMAL) {
-                    printf("Non-game package detected\n");
-                    char command[BUFFER_SIZE];
-                    snprintf(command, sizeof(command), "sh %s", BALANCED_SCRIPT);
-                    system(command);
-                    last_executed = EXEC_NORMAL;
-                }
+                pclose(pipe_fp);
+            }
+        }
+
+        // Process app detection (only if screen is on)
+        if (current_screen_on && strlen(matched_package) > 0) {
+            // A game package was detected.
+            if (last_executed != EXEC_GAME) {
+                printf("Game package detected: %s\n", matched_package);
+                char command[BUFFER_SIZE];
+                snprintf(command, sizeof(command), "sh %s", PERFORMANCE_SCRIPT);
+                system(command);
+                last_executed = EXEC_GAME;
+            }
+        } else {
+            // No game package detected.
+            if (last_executed != EXEC_NORMAL) {
+                printf("Non-game package detected\n");
+                char command[BUFFER_SIZE];
+                snprintf(command, sizeof(command), "sh %s", BALANCED_SCRIPT);
+                system(command);
+                last_executed = EXEC_NORMAL;
             }
         }
         
-        sleep(delay_seconds); // Dynamic delay based on screen status
+        sleep(delay_seconds);
     }
 
     return 0;
