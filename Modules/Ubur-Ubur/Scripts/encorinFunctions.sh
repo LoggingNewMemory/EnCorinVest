@@ -39,43 +39,6 @@ else
     DEFAULT_CPU_GOV="schedutil"
 fi
 
-#################################
-# CPU Minumum
-#################################
-
-cpufreq_ppm_min_perf() {
-	cluster=-1
-	for path in /sys/devices/system/cpu/cpufreq/policy*; do
-		((cluster++))
-		cpu_minfreq=$(<"$path/cpuinfo_min_freq")
-		apply "$cluster $cpu_minfreq" /proc/ppm/policy/hard_userlimit_max_cpu_freq
-
-		[ $LITE_MODE -eq 1 ] && {
-			cpu_midfreq=$(which_midfreq "$path/scaling_available_frequencies")
-			apply "$cluster $cpu_midfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
-			continue
-		}
-
-		apply "$cluster $cpu_minfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
-	done
-}
-
-cpufreq_min_perf() {
-	for path in /sys/devices/system/cpu/*/cpufreq; do
-		cpu_minfreq=$(<"$path/cpuinfo_min_freq")
-		apply "$cpu_minfreq" "$path/scaling_max_freq"
-
-		[ $LITE_MODE -eq 1 ] && {
-			cpu_midfreq=$(which_midfreq "$path/scaling_available_frequencies")
-			apply "$cpu_midfreq" "$path/scaling_min_freq"
-			continue
-		}
-
-		apply "$cpu_minfreq" "$path/scaling_min_freq"
-	done
-	chmod -f 444 /sys/devices/system/cpu/cpufreq/policy*/scaling_*_freq
-}
-
 notification() {
     local TITLE="EnCorinVest"
     local MESSAGE="$1"
@@ -260,6 +223,43 @@ qcom_cpudcvs_min_perf() {
 	freq=$(which_minfreq "$1/available_frequencies")
 	apply "$freq" "$1/hw_min_freq"
 	apply "$freq" "$1/hw_max_freq"
+}
+
+#################################
+# CPU Minumum (Modified from Encore max CPU)
+#################################
+
+cpufreq_ppm_min_perf() {
+	cluster=-1
+	for path in /sys/devices/system/cpu/cpufreq/policy*; do
+		((cluster++))
+		cpu_minfreq=$(<"$path/cpuinfo_min_freq")
+		apply "$cluster $cpu_minfreq" /proc/ppm/policy/hard_userlimit_max_cpu_freq
+
+		[ $LITE_MODE -eq 1 ] && {
+			cpu_midfreq=$(which_midfreq "$path/scaling_available_frequencies")
+			apply "$cluster $cpu_midfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
+			continue
+		}
+
+		apply "$cluster $cpu_minfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
+	done
+}
+
+cpufreq_min_perf() {
+	for path in /sys/devices/system/cpu/*/cpufreq; do
+		cpu_minfreq=$(<"$path/cpuinfo_min_freq")
+		apply "$cpu_minfreq" "$path/scaling_max_freq"
+
+		[ $LITE_MODE -eq 1 ] && {
+			cpu_midfreq=$(which_midfreq "$path/scaling_available_frequencies")
+			apply "$cpu_midfreq" "$path/scaling_min_freq"
+			continue
+		}
+
+		apply "$cpu_minfreq" "$path/scaling_min_freq"
+	done
+	chmod -f 444 /sys/devices/system/cpu/cpufreq/policy*/scaling_*_freq
 }
 
 ###############################
