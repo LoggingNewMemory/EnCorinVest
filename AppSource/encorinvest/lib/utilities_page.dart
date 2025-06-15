@@ -550,6 +550,14 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                           fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 8),
+                    Text(
+                      _localization.translate('hamada_ai_description'),
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     SwitchListTile(
                       title: Text(
                           _localization.translate('hamada_ai_toggle_title')),
@@ -567,13 +575,6 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                           : Icon(Icons.power_settings_new),
                       activeColor: colorScheme.primary,
                       contentPadding: EdgeInsets.zero,
-                    ),
-                    Text(
-                      _localization.translate('hamada_ai_description'),
-                      style: textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                        fontStyle: FontStyle.italic,
-                      ),
                     ),
                     const SizedBox(height: 12),
                     Divider(
