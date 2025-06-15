@@ -568,6 +568,14 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                       activeColor: colorScheme.primary,
                       contentPadding: EdgeInsets.zero,
                     ),
+                    Text(
+                      _localization.translate('hamada_ai_description'),
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     Divider(
                         height: 16,
                         color: colorScheme.outlineVariant.withOpacity(0.5)),
