@@ -6,6 +6,15 @@ PERF_RES_NET_NETD_BOOST_UID 1
 PERF_RES_NET_MD_HSR_MODE 1
 PERF_RES_THERMAL_POLICY -1
 
+#perf+
+debug.sf.enable_gl_backpressure=1
+debug.sf.disable_backpressure=0
+debug.sf.disable_client_composition_cache=1
+ro.surface_flinger.enable_frame_rate_override=false
+
+# Disable Limit 60FPS while Gaming on AOSP 15.0
+debug.graphics.game_default_frame_rate.disabled=true
+
 # Bastion prop
 # Battery Modifications
 persist.sys.shutdown.mode=hibernate
