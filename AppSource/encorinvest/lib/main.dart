@@ -248,7 +248,6 @@ class _AboutPageState extends State<AboutPage> {
       'credits_1', //
       'credits_2', //
       'credits_3', //
-      'credits_4', //
       'credits_5', //
       'credits_6', //
       'credits_7', //
