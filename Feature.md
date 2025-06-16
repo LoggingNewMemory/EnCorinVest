@@ -7,7 +7,9 @@ If your module is not listed here, you can try to combine it (Ex: SkiaVK / GL Mo
 - Storage Tweaks 
 - FPSGO & GED
 - Mali Scheduling
+- Swap Tweaks
+- Basic Kernel Tweaks
 - Disable Thermal (Gaming & Phoenix variant)
 - Fast Charge (Gaming & Ubur-ubur variant)
-- Hamada AI Next Gen (Auto switch to performance when enter game) (Still under dev)
+- Hamada AI Next Gen (Auto switch to performance when enter game)
 - Downscale Resolution
