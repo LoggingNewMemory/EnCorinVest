@@ -7,8 +7,7 @@ source "$MODULE_PATH/Scripts/corin.sh"
 mediatek() {
 	encore_balanced_common
 	encore_mediatek_normal
-	# mtkvest_normal
-	# log_execution "mtkvest_normal"
+	mtkvest_normal
 	corin_balanced
 	log_execution "corin_balanced"
 }
@@ -32,3 +31,4 @@ exynos() {
 
 ambatusoc
 notification "EnCorinVest - Balanced"
+log_execution "EnCorinVest_Balanced"

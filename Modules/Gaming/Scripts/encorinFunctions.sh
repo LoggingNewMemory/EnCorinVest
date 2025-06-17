@@ -49,12 +49,7 @@ notification() {
 
 ###########################################
 # EnCorinVest Logging Functions
-###########################################
-# Simple EnCorinVest Logging Functions - logcat & dmesg only
-# Replace the logging section in your encorinFunctions.sh
-
-###########################################
-# EnCorinVest Logging Functions
+# This will be used on debugging purpose
 ###########################################
 
 # Configuration
