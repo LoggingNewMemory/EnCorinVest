@@ -1,7 +1,7 @@
 name: EnCorinVest
 description: "EnCorinVest Apk By: Kanagawa Yamada"
 publish_to: 'none'
-version: 23.0.0
+version: 24.0.0
 
 environment:
   sdk: ^3.5.4
