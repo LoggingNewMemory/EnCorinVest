@@ -50,11 +50,17 @@ notification() {
 ###########################################
 # EnCorinVest Logging Functions
 ###########################################
+# Simple EnCorinVest Logging Functions - logcat & dmesg only
+# Replace the logging section in your encorinFunctions.sh
+
+###########################################
+# EnCorinVest Logging Functions
+###########################################
 
 # Configuration
 ENCORIN_LOG_FILE="/data/EnCorinVest/EnCorinVest.log"
 ENCORIN_LOG_DIR="/data/EnCorinVest"
-MAX_ENCORIN_LOG_SIZE=5242880  # 5MB limit
+MAX_ENCORIN_LOG_SIZE=20971520  # 20MB limit
 
 # Create log directory
 mkdir -p "$ENCORIN_LOG_DIR"
@@ -62,9 +68,34 @@ mkdir -p "$ENCORIN_LOG_DIR"
 # Delete and recreate log if too large
 rotate_encorin_log() {
     if [ -f "$ENCORIN_LOG_FILE" ] && [ $(stat -c%s "$ENCORIN_LOG_FILE" 2>/dev/null || echo 0) -gt $MAX_ENCORIN_LOG_SIZE ]; then
-        rm "$ENCORIN_LOG_FILE"
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] New log file created" > "$ENCORIN_LOG_FILE"
+        tail -n 2000 "$ENCORIN_LOG_FILE" > "${ENCORIN_LOG_FILE}.tmp" 2>/dev/null
+        mv "${ENCORIN_LOG_FILE}.tmp" "$ENCORIN_LOG_FILE" 2>/dev/null
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Log rotated" >> "$ENCORIN_LOG_FILE"
     fi
+}
+
+# Capture kernel messages (dmesg)
+capture_dmesg() {
+    local context="$1"
+    local lines="${2:-50}"
+    
+    {
+        echo "=== DMESG [$context] ==="
+        dmesg -T 2>/dev/null | tail -n $lines || dmesg 2>/dev/null | tail -n $lines
+        echo "=== END DMESG ==="
+    } >> "$ENCORIN_LOG_FILE"
+}
+
+# Capture system logs (logcat)
+capture_logcat() {
+    local context="$1"
+    local lines="${2:-50}"
+    
+    {
+        echo "=== LOGCAT [$context] ==="
+        logcat -d -t $lines 2>/dev/null | tail -n $lines
+        echo "=== END LOGCAT ==="
+    } >> "$ENCORIN_LOG_FILE"
 }
 
 # Log message with timestamp
@@ -76,52 +107,17 @@ log_encorin() {
 # Main logging function to call at end of other functions
 log_execution() {
     local function_name="$1"
-    local status="${2:-SUCCESS}"
+    local status="${2:-INVESTIGATING}"
     
-    # System state
-    local uptime=$(cat /proc/uptime | cut -d' ' -f1)
-    local load=$(cat /proc/loadavg | awk '{print $1}')
-    local mem_avail=$(cat /proc/meminfo | grep MemAvailable | awk '{print $2}')
-    
-    # CPU governor
-    local cpu_gov=""
-    for policy in /sys/devices/system/cpu/cpufreq/policy*/scaling_governor; do
-        if [ -f "$policy" ]; then
-            cpu_gov=$(cat "$policy" 2>/dev/null)
-            break
-        fi
-    done
-    
-    # CPU frequency (first policy)
-    local cpu_freq=""
-    for freq in /sys/devices/system/cpu/cpufreq/policy*/scaling_cur_freq; do
-        if [ -f "$freq" ]; then
-            cpu_freq=$(cat "$freq" 2>/dev/null)
-            break
-        fi
-    done
-    
-    # Temperature
-    local temp=""
-    for temp_file in /sys/class/thermal/thermal_zone*/temp; do
-        if [ -f "$temp_file" ]; then
-            local temp_val=$(cat "$temp_file" 2>/dev/null)
-            if [ -n "$temp_val" ] && [ "$temp_val" -gt 0 ]; then
-                temp="$(echo $temp_val | head -c 2)°C"
-                break
-            fi
-        fi
-    done
-    
-    # Lite mode status
-    local mode_status="FULL"
-    [ "$LITE_MODE" -eq 1 ] && mode_status="LITE"
-    
-    log_encorin "$function_name [$status] | Mode: $mode_status | Uptime: ${uptime}s | Load: $load | Mem: ${mem_avail}kB | Gov: $cpu_gov | Freq: $cpu_freq | Temp: $temp"
+    log_encorin "=== FREEZE INVESTIGATION: $function_name [$status] ==="
+    capture_dmesg "$function_name" 100
+    capture_logcat "$function_name" 100
+    log_encorin "=== END FREEZE INVESTIGATION: $function_name ==="
+    echo "" >> "$ENCORIN_LOG_FILE"
 }
 
 # Initialize logging
-log_encorin "EnCorinVest Logging Initialized - Device: $(getprop ro.product.model)"
+log_encorin "EnCorinVest Logging Started"
 
 ################################
 # From Encore Profiler + Utility
