@@ -48,7 +48,7 @@ tweak "1"  /sys/devices/system/cpu/cpu3/online
 for pl in /sys/devices/system/cpu/perf; do
     tweak "1"  "$pl/gpu_pmu_enable"
     tweak "1"  "$pl/fuel_gauge_enable"
-    tweak "1"  "$pl/enable"
+    # tweak "1"  "$pl/enable"
     tweak "1"  "$pl/charger_enable"
 done
 
@@ -161,7 +161,7 @@ tweak "1"  /sys/devices/system/cpu/eas/enable
 for pl in /sys/devices/system/cpu/perf; do
     tweak "0"  "$pl/gpu_pmu_enable"
     tweak "0"  "$pl/fuel_gauge_enable"
-    tweak "0"  "$pl/enable"
+    # tweak "0"  "$pl/enable"
     tweak "1"  "$pl/charger_enable"
 done
 

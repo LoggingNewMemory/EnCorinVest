@@ -7,7 +7,7 @@ mediatek() {
 	encore_perfcommon
 	encore_perfprofile
 	encore_mediatek_perf
-	mtkvest_perf
+	# mtkvest_perf
 	corin_perf
 	kill_all
 }
@@ -24,7 +24,7 @@ unisoc() {
 	encore_perfcommon
 	encore_perfprofile
 	encore_unisoc_perf
-	# corin_perf
+	corin_perf
 	kill_all
 }
 exynos() {
