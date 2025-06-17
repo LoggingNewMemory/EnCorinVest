@@ -1,11 +1,26 @@
 #!/system/bin/sh
 
-# EnCorinVest Service Script with Real-time Crash Detection
+# EnCorinVest Service Script with Minimal Crash Detection
 LOG_FILE="/data/EnCorinVest/EnCorinVest.log"
 LOG_DIR="/data/EnCorinVest"
+MAX_LOG_SIZE=5242880  # 5MB limit
 
 # Create log directory if it doesn't exist
 mkdir -p "$LOG_DIR"
+
+# Function to rotate log if too large
+rotate_log() {
+    if [ -f "$LOG_FILE" ] && [ $(stat -c%s "$LOG_FILE" 2>/dev/null || echo 0) -gt $MAX_LOG_SIZE ]; then
+        mv "$LOG_FILE" "${LOG_FILE}.old"
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Log rotated due to size limit" > "$LOG_FILE"
+    fi
+}
+
+# Function to log messages with timestamp
+log_message() {
+    rotate_log
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"
+}
 
 # Function to write log header
 write_log_header() {
@@ -22,98 +37,81 @@ write_log_header() {
     echo "===============================" >> "$LOG_FILE"
 }
 
-# Function to log messages with timestamp
-log_message() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"
-}
-
-# Function to capture system state for crash analysis
-capture_crash_details() {
+# Function to capture minimal crash details
+capture_crash_minimal() {
     local crash_type="$1"
     local crash_line="$2"
     
+    rotate_log
     write_log_header
-    log_message "=== $crash_type DETECTED ==="
-    log_message "Trigger: $crash_line"
+    log_message "=== $crash_type ==="
+    log_message "Details: $(echo "$crash_line" | head -c 200)"
     
-    # Capture recent kernel messages
-    echo "" >> "$LOG_FILE"
-    echo "[DMESG - Last 100 lines]" >> "$LOG_FILE"
-    dmesg | tail -100 >> "$LOG_FILE" 2>/dev/null
+    # Only capture critical system info (no full dumps)
+    local mem_avail=$(cat /proc/meminfo | grep MemAvailable | awk '{print $2}')
+    local load_avg=$(cat /proc/loadavg | awk '{print $1}')
+    log_message "Memory: ${mem_avail}kB available, Load: $load_avg"
     
-    # Capture recent logcat context
-    echo "" >> "$LOG_FILE"
-    echo "[LOGCAT CONTEXT - Last 200 lines]" >> "$LOG_FILE"
-    logcat -d -t 200 >> "$LOG_FILE" 2>/dev/null
-    
-    # Capture system info
-    echo "" >> "$LOG_FILE"
-    echo "[SYSTEM INFO]" >> "$LOG_FILE"
-    echo "Memory: $(cat /proc/meminfo | grep MemAvailable)" >> "$LOG_FILE"
-    echo "Load: $(cat /proc/loadavg)" >> "$LOG_FILE"
-    echo "Uptime: $(cat /proc/uptime)" >> "$LOG_FILE"
-    
-    log_message "=== END CRASH CAPTURE ==="
-    echo "" >> "$LOG_FILE"
+    log_message "=== END ==="
 }
 
-# Real-time crash monitoring using logcat
+# Simplified crash monitoring - only critical crashes
 monitor_crashes_realtime() {
-    # Monitor logcat in real-time for crashes
-    logcat -v time | while read -r line; do
+    logcat -v brief | while read -r line; do
         case "$line" in
-            *"FATAL EXCEPTION"*|*"AndroidRuntime"*"FATAL"*|*"*** FATAL EXCEPTION"*)
-                capture_crash_details "APPLICATION CRASH" "$line"
+            *"FATAL EXCEPTION"*|*"AndroidRuntime"*"FATAL"*)
+                capture_crash_minimal "APP_CRASH" "$line"
                 ;;
-            *"System.exit called"*|*"Process"*"died"*|*"system_server died"*)
-                capture_crash_details "SYSTEM PROCESS CRASH" "$line"
+            *"system_server died"*|*"SystemServer"*"died"*)
+                capture_crash_minimal "SYSTEM_CRASH" "$line"
                 ;;
-            *"tombstone"*|*"Tombstone written"*|*"*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***"*)
-                capture_crash_details "NATIVE CRASH" "$line"
+            *"Kernel panic"*|*"Internal error"*)
+                capture_crash_minimal "KERNEL_CRASH" "$line"
                 ;;
-            *"Kernel panic"*|*"Internal error"*|*"Oops"*)
-                capture_crash_details "KERNEL CRASH" "$line"
+            *"lowmemorykiller"*"killed"*)
+                capture_crash_minimal "OOM_KILL" "$line"
                 ;;
-            *"lowmemorykiller"*|*"Out of memory"*|*"OOM"*)
-                capture_crash_details "MEMORY CRASH" "$line"
+            *"System.exit called"*|*"Process"*"died"*)
+                capture_crash_minimal "PROCESS_DIED" "$line"
                 ;;
             *"Watchdog"*|*"SWT"*|*"SystemServer"*"Watchdog"*)
-                capture_crash_details "WATCHDOG CRASH" "$line"
+                capture_crash_minimal "WATCHDOG_FREEZE" "$line"
                 ;;
         esac
     done &
 }
 
-# Monitor kernel messages in real-time
+# Minimal kernel monitoring - panics and freezes
 monitor_kernel_realtime() {
-    # Monitor dmesg for kernel crashes
     dmesg -w | while read -r line; do
         case "$line" in
-            *"panic"*|*"Oops"*|*"BUG:"*|*"Call Trace"*|*"segfault"*)
-                capture_crash_details "KERNEL PANIC" "$line"
+            *"panic"*|*"Oops"*|*"BUG:"*)
+                capture_crash_minimal "KERNEL_PANIC" "$line"
                 ;;
-            *"Out of memory"*|*"Killed process"*|*"oom-killer"*)
-                capture_crash_details "KERNEL OOM" "$line"
+            *"hung_task"*|*"blocked for more than"*|*"INFO: task"*)
+                capture_crash_minimal "SYSTEM_HANG" "$line"
+                ;;
+            *"RCU stall"*|*"soft lockup"*|*"hard lockup"*)
+                capture_crash_minimal "SYSTEM_LOCKUP" "$line"
                 ;;
         esac
     done &
 }
 
-# Initialize crash logging
-write_log_header
-log_message "EnCorinVest Real-time Crash Monitor Initialized"
+# Initialize with minimal logging
+log_message "EnCorinVest Monitor Started - Device: $(getprop ro.product.model)"
 
 # Wait for boot completion
 while [ -z "$(getprop sys.boot_completed)" ]; do
     sleep 10
 done
 
-# Start real-time crash monitoring
-log_message "Starting real-time crash monitoring..."
+# Start monitoring
+log_message "Crash monitoring active"
 monitor_crashes_realtime
 monitor_kernel_realtime
 
-# Store current uptime for reboot detection
+# Store uptime for reboot detection
 cat /proc/uptime | cut -d' ' -f1 | cut -d'.' -f1 > "$LOG_DIR/last_uptime"
 
 # Mali Scheduler Tweaks By: MiAzami
@@ -122,7 +120,7 @@ mali1_dir=$(ls -d /sys/devices/platform/soc/*mali* 2>/dev/null | head -n 1)
 
 tweak() {
     if [ -e "$1" ]; then
-        echo "$2" > "$1" && echo "Applied $2 to $1"
+        echo "$2" > "$1"
     fi
 }
 
