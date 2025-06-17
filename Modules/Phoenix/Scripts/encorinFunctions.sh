@@ -49,7 +49,6 @@ notification() {
 
 ###########################################
 # EnCorinVest Logging Functions
-# This will be used on debugging purpose
 ###########################################
 
 # Configuration
