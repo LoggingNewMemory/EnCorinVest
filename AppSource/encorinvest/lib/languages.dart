@@ -74,6 +74,11 @@ class LangEN {
     'resolution_unavailable_message':
         'Resolution control is not available on this device.',
     'applying_changes': 'Applying changes...',
+    'copy_logs_title': 'Copy EnCorinVest Logs',
+    'copy_logs_description': 'Copy EnCorinVest logs to Download folder',
+    'copy_logs_button': 'Copy Logs',
+    'logs_copied_success': 'Logs Copied Successfully',
+    'logs_copied_failed': 'Failed to Copy Logs',
   };
 }
 
@@ -148,6 +153,11 @@ class LangID {
     'resolution_unavailable_message':
         'Kontrol resolusi tidak tersedia di perangkat ini.',
     'applying_changes': 'Menerapkan perubahan...',
+    'copy_logs_title': 'Salin Log EnCorinVest',
+    'copy_logs_description': 'Salin log EnCorinVest ke folder Download',
+    'copy_logs_button': 'Salin Log',
+    'logs_copied_success': 'Log Berhasil Disalin',
+    'logs_copied_failed': 'Gagal Menyalin Log',
   };
 }
 
@@ -217,6 +227,11 @@ class LangJP {
     'game_txt_hint': 'ゲームパッケージ名を1行に1つずつ入力...',
     'resolution_unavailable_message': 'このデバイスでは解像度制御は利用できません。',
     'applying_changes': '変更を適用中...',
+    'copy_logs_title': 'EnCorinVestログをコピー',
+    'copy_logs_description': 'EnCorinVestログをダウンロードフォルダにコピー',
+    'copy_logs_button': 'ログをコピー',
+    'logs_copied_success': 'ログのコピーが完了しました',
+    'logs_copied_failed': 'ログのコピーに失敗しました',
   };
 }
 
@@ -290,6 +305,11 @@ class LangJV {
     'resolution_unavailable_message':
         'Kontrol resolusi ora kasedhiya ing piranti iki.',
     'applying_changes': 'Nerapake owah-owahan...',
+    'copy_logs_title': 'Salin Log EnCorinVest',
+    'copy_logs_description': 'Salin log EnCorinVest menyang folder Download',
+    'copy_logs_button': 'Salin Log',
+    'logs_copied_success': 'Log Kasil Disalin',
+    'logs_copied_failed': 'Gagal Nyalin Log',
   };
 }
 

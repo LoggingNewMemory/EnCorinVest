@@ -27,6 +27,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
       'pgrep -x HamadaAI'; // Command to check if running
 
   // --- UI state ---
+  bool _isCopyingLogs = false;
   bool _hamadaAiEnabled = false; // State reflecting the config file
   bool _hamadaStartOnBoot = false; // State for the boot toggle
   bool _isHamadaCommandRunning = false; // Loading indicator for start/stop
@@ -94,6 +95,48 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     } catch (e) {
       print('Error checking root access: $e');
       return false;
+    }
+  }
+
+// --- Log Copying Logic ---
+  Future<void> _copyLogs() async {
+    if (!await _checkRootAccess() || !mounted) return;
+    setState(() => _isCopyingLogs = true);
+
+    final sourceLogPath = '/data/EnCorinVest/EnCorinVest.log';
+    final destinationLogPath = '/sdcard/Download/EnCorinVest.log';
+    print("Copying EnCorinVest.log to $destinationLogPath...");
+
+    try {
+      // Copy the EnCorinVest.log file
+      final command = 'cp $sourceLogPath $destinationLogPath';
+      final result = await _runRootCommandAndWait(command);
+
+      if (mounted) {
+        if (result.exitCode == 0) {
+          print("EnCorinVest.log copied successfully.");
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text(_localization.translate('logs_copied_success',
+                    args: {'path': destinationLogPath}))),
+          );
+        } else {
+          print('Failed to copy EnCorinVest.log: ${result.stderr}');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text(_localization.translate('logs_copied_failed'))),
+          );
+        }
+      }
+    } catch (e) {
+      print('Error copying EnCorinVest.log: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_localization.translate('logs_copied_error'))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isCopyingLogs = false);
     }
   }
 
@@ -777,6 +820,62 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                               Text(_localization.translate('reset_resolution')),
                         ),
                       ),
+                  ],
+                ),
+              ),
+            ),
+
+            // --- 4. Copy Logs Card ---
+            Card(
+              elevation: cardElevation,
+              margin: cardMargin,
+              shape: cardShape,
+              color: colorScheme.surfaceContainerHighest,
+              child: Padding(
+                padding: cardPadding,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _localization.translate('copy_logs_title'),
+                      style: textTheme.titleLarge?.copyWith(
+                          color: colorScheme.onSurface,
+                          fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _localization.translate('copy_logs_description'),
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          backgroundColor: colorScheme.secondaryContainer,
+                          foregroundColor: colorScheme.onSecondaryContainer,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                        ),
+                        onPressed: _isCopyingLogs ? null : _copyLogs,
+                        icon: _isCopyingLogs
+                            ? SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: colorScheme.onSecondaryContainer,
+                                ),
+                              )
+                            : Icon(Icons.description_outlined),
+                        label:
+                            Text(_localization.translate('copy_logs_button')),
+                      ),
+                    ),
                   ],
                 ),
               ),
