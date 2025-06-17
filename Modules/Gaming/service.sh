@@ -11,8 +11,8 @@ mkdir -p "$LOG_DIR"
 # Function to rotate log if too large
 rotate_log() {
     if [ -f "$LOG_FILE" ] && [ $(stat -c%s "$LOG_FILE" 2>/dev/null || echo 0) -gt $MAX_LOG_SIZE ]; then
-        mv "$LOG_FILE" "${LOG_FILE}.old"
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Log rotated due to size limit" > "$LOG_FILE"
+        rm -f "$LOG_FILE"
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] New log created after size limit reached" > "$LOG_FILE"
     fi
 }
 
