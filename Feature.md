@@ -10,6 +10,7 @@ If your module is not listed here, you can try to combine it (Ex: SkiaVK / GL Mo
 - Swap Tweaks
 - Basic Kernel Tweaks
 - Disable Thermal (Gaming & Phoenix variant)
+- Render Tweaks
 - Fast Charge (Gaming & Ubur-ubur variant)
 - Hamada AI Next Gen (Auto switch to performance when enter game)
 - Downscale Resolution
