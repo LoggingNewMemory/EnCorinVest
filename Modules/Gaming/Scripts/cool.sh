@@ -10,7 +10,7 @@ mediatek() {
     sleep 120
 	encore_balanced_common
 	encore_mediatek_normal
-	# mtkvest_normal
+	mtkvest_normal
 	corin_balanced
 }
 
