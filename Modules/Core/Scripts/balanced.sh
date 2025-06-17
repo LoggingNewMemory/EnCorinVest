@@ -8,7 +8,9 @@ mediatek() {
 	encore_balanced_common
 	encore_mediatek_normal
 	mtkvest_normal
+	log_execution "mtkvest_normal"
 	corin_balanced
+	log_execution "corin_balanced"
 }
 
 snapdragon() {

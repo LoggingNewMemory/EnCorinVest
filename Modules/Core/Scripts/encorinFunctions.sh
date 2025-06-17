@@ -47,6 +47,82 @@ notification() {
     su -lp 2000 -c "cmd notification post -S bigtext -t '$TITLE' -i file://$LOGO -I file://$LOGO TagEncorin '$MESSAGE'"
 }
 
+###########################################
+# EnCorinVest Logging Functions
+###########################################
+
+# Configuration
+ENCORIN_LOG_FILE="/data/EnCorinVest/EnCorinVest.log"
+ENCORIN_LOG_DIR="/data/EnCorinVest"
+MAX_ENCORIN_LOG_SIZE=5242880  # 5MB limit
+
+# Create log directory
+mkdir -p "$ENCORIN_LOG_DIR"
+
+# Delete and recreate log if too large
+rotate_encorin_log() {
+    if [ -f "$ENCORIN_LOG_FILE" ] && [ $(stat -c%s "$ENCORIN_LOG_FILE" 2>/dev/null || echo 0) -gt $MAX_ENCORIN_LOG_SIZE ]; then
+        rm "$ENCORIN_LOG_FILE"
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] New log file created" > "$ENCORIN_LOG_FILE"
+    fi
+}
+
+# Log message with timestamp
+log_encorin() {
+    rotate_encorin_log
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$ENCORIN_LOG_FILE"
+}
+
+# Main logging function to call at end of other functions
+log_execution() {
+    local function_name="$1"
+    local status="${2:-SUCCESS}"
+    
+    # System state
+    local uptime=$(cat /proc/uptime | cut -d' ' -f1)
+    local load=$(cat /proc/loadavg | awk '{print $1}')
+    local mem_avail=$(cat /proc/meminfo | grep MemAvailable | awk '{print $2}')
+    
+    # CPU governor
+    local cpu_gov=""
+    for policy in /sys/devices/system/cpu/cpufreq/policy*/scaling_governor; do
+        if [ -f "$policy" ]; then
+            cpu_gov=$(cat "$policy" 2>/dev/null)
+            break
+        fi
+    done
+    
+    # CPU frequency (first policy)
+    local cpu_freq=""
+    for freq in /sys/devices/system/cpu/cpufreq/policy*/scaling_cur_freq; do
+        if [ -f "$freq" ]; then
+            cpu_freq=$(cat "$freq" 2>/dev/null)
+            break
+        fi
+    done
+    
+    # Temperature
+    local temp=""
+    for temp_file in /sys/class/thermal/thermal_zone*/temp; do
+        if [ -f "$temp_file" ]; then
+            local temp_val=$(cat "$temp_file" 2>/dev/null)
+            if [ -n "$temp_val" ] && [ "$temp_val" -gt 0 ]; then
+                temp="$(echo $temp_val | head -c 2)°C"
+                break
+            fi
+        fi
+    done
+    
+    # Lite mode status
+    local mode_status="FULL"
+    [ "$LITE_MODE" -eq 1 ] && mode_status="LITE"
+    
+    log_encorin "$function_name [$status] | Mode: $mode_status | Uptime: ${uptime}s | Load: $load | Mem: ${mem_avail}kB | Gov: $cpu_gov | Freq: $cpu_freq | Temp: $temp"
+}
+
+# Initialize logging
+log_encorin "EnCorinVest Logging Initialized - Device: $(getprop ro.product.model)"
+
 ################################
 # From Encore Profiler + Utility
 ################################
