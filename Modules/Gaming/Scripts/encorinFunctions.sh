@@ -55,7 +55,7 @@ notification() {
 # Configuration
 ENCORIN_LOG_FILE="/data/EnCorinVest/EnCorinVest.log"
 ENCORIN_LOG_DIR="/data/EnCorinVest"
-MAX_ENCORIN_LOG_SIZE=20971520  # 20MB limit
+MAX_ENCORIN_LOG_SIZE=5242880  # 5MB limit
 
 # Create log directory
 mkdir -p "$ENCORIN_LOG_DIR"
