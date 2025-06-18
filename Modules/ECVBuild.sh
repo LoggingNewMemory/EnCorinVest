@@ -391,6 +391,14 @@ sync_files() {
             exit 1
         fi
 
+        # Sync system.prop
+        if [ -f "$SOURCE_DIR/system.prop" ]; then
+            cp -f "$SOURCE_DIR/system.prop" "$TARGET_DIR/system.prop"
+        else
+            echo "Error: system.prop not found in $SOURCE_DIR!"
+            exit 1
+        fi
+
         # Sync logo.png
         if [ -f "$SOURCE_DIR/logo.png" ]; then
             cp -f "$SOURCE_DIR/logo.png" "$TARGET_DIR/logo.png"
