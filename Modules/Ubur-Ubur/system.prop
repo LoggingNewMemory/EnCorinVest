@@ -5,10 +5,3 @@ PERF_RES_NET_MD_WEAK_SIG_OPT 1
 PERF_RES_NET_NETD_BOOST_UID 1
 PERF_RES_NET_MD_HSR_MODE 1
 PERF_RES_THERMAL_POLICY -1
-
-# Disable Limit 60FPS while Gaming on AOSP 15.0
-debug.graphics.game_default_frame_rate.disabled=true
-
-##############################
-# Bastion prop
-##############################

@@ -152,6 +152,7 @@ sh /data/adb/modules/EnCorinVest/KoboKanaeru/KoboKanaeru.sh
 resetprop -n debug.graphics.game_default_frame_rate.disabled true
 
 # From my GSI Port
+# Perf +
 resetprop -n debug.sf.enable_gl_backpressure 1
 resetprop -n debug.sf.disable_backpressure 0
 resetprop -n debug.sf.disable_client_composition_cache 1
