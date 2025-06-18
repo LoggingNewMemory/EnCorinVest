@@ -114,6 +114,10 @@ monitor_kernel_realtime
 # Store uptime for reboot detection
 cat /proc/uptime | cut -d' ' -f1 | cut -d'.' -f1 > "$LOG_DIR/last_uptime"
 
+##############################
+# Main Service Script
+##############################
+
 # Mali Scheduler Tweaks By: MiAzami
 mali_dir=$(ls -d /sys/devices/platform/soc/*mali*/scheduling 2>/dev/null | head -n 1)
 mali1_dir=$(ls -d /sys/devices/platform/soc/*mali* 2>/dev/null | head -n 1)
