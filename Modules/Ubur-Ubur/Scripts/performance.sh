@@ -15,7 +15,6 @@ mediatek() {
     log_execution "mtkvest_perf"
 	corin_perf
     log_execution "corin_perf"
-    dnd_off
 }
 
 snapdragon() {
@@ -27,7 +26,6 @@ snapdragon() {
     log_execution "encore_snapdragon_perf"
 	corin_perf
     log_execution "corin_perf"
-    dnd_off
 }
 
 unisoc() {
@@ -39,7 +37,6 @@ unisoc() {
     log_execution "encore_unisoc_perf"
  	corin_perf
     log_execution "corin_perf"
-    dnd_off
 }
 
 exynos() {
@@ -51,8 +48,8 @@ exynos() {
     log_execution "encore_exynos_perf"
 	corin_perf
     log_execution "corin_perf"
-    dnd_off
 }
 
 ambatusoc
 notification "EnCorinVest - Performance"
+dnd_on

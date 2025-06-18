@@ -13,7 +13,6 @@ mediatek() {
 	log_execution "mtkvest_normal"
 	corin_balanced
 	log_execution "corin_balanced"
-	dnd_on
 }
 
 snapdragon() {
@@ -23,7 +22,6 @@ snapdragon() {
 	log_execution "encore_snapdragon_normal"
 	corin_balanced
 	log_execution "corin_balanced"
-	dnd_on
 }
 
 unisoc() {
@@ -33,7 +31,6 @@ unisoc() {
 	log_execution "encore_unisoc_normal"
 	corin_balanced
 	log_execution "corin_balanced"
-	dnd_on
 }
 
 exynos() {
@@ -43,8 +40,8 @@ exynos() {
 	log_execution "encore_exynos_normal"
 	corin_balanced
 	log_execution "corin_balanced"
-	dnd_on
 }
 
 ambatusoc
 notification "EnCorinVest - Balanced"
+dnd_off

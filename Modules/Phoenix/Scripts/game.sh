@@ -15,7 +15,6 @@ mediatek() {
     log_execution "mtkvest_perf"
 	corin_perf
     log_execution "corin_perf"
-    dnd_off
 	kill_all
 }
 
@@ -28,7 +27,6 @@ snapdragon() {
     log_execution "encore_snapdragon_perf"
 	corin_perf
     log_execution "corin_perf"
-    dnd_off
 	kill_all
 }
 
@@ -41,7 +39,6 @@ unisoc() {
     log_execution "encore_unisoc_perf"
 	corin_perf
     log_execution "corin_perf"
-    dnd_off
 	kill_all
 }
 
@@ -54,9 +51,9 @@ exynos() {
     log_execution "encore_exynos_perf"
 	corin_perf
     log_execution "corin_perf"
-    dnd_off
 	kill_all
 }
 
 ambatusoc
 notification "EnCorinVest - Gaming Pro"
+dnd_on
