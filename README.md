@@ -20,6 +20,11 @@ How to use?
 - Give EnCorinVest apk root access 
 - Done
 
+Dev notes:
+- If EnCorinVest app install failed, you have to install it by yourself (APK is provided in GitHub)
+- Read the feature list, see what you can combine
+- HamadaAI can't be started? Manually select a mode first (balanced for example) then enable HamadaAI
+
 Support me? <br />
 [HERE (Indonesia / Philippines)](https://saweria.co/kanagawayamada) <br />
 [HERE (QRIS)](https://t.me/KLAGen2/86) <br />
