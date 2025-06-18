@@ -39,6 +39,16 @@ else
     DEFAULT_CPU_GOV="schedutil"
 fi
 
+# Taken from encore_utility
+# Thanks to Rem01 Gaming, definitely helping to reduce suddent lag bcs of notification
+dnd_off() {
+	cmd notification set_dnd off
+}
+
+dnd_on() {
+	cmd notification set_dnd priority
+}
+
 notification() {
     local TITLE="EnCorinVest"
     local MESSAGE="$1"

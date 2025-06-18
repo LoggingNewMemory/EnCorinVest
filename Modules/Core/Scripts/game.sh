@@ -15,8 +15,8 @@ mediatek() {
     log_execution "mtkvest_perf"
 	corin_perf
     log_execution "corin_perf"
+    dnd_off
 	kill_all
-    log_execution "kill_all"
 }
 
 snapdragon() {
@@ -28,8 +28,8 @@ snapdragon() {
     log_execution "encore_snapdragon_perf"
 	corin_perf
     log_execution "corin_perf"
+    dnd_off
 	kill_all
-    log_execution "kill_all"
 }
 
 unisoc() {
@@ -41,8 +41,8 @@ unisoc() {
     log_execution "encore_unisoc_perf"
 	corin_perf
     log_execution "corin_perf"
+    dnd_off
 	kill_all
-    log_execution "kill_all"
 }
 
 exynos() {
@@ -54,8 +54,8 @@ exynos() {
     log_execution "encore_exynos_perf"
 	corin_perf
     log_execution "corin_perf"
+    dnd_off
 	kill_all
-    log_execution "kill_all"
 }
 
 ambatusoc
