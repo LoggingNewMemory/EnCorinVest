@@ -152,6 +152,74 @@ select_telegram_groups() {
     done
 }
 
+# Function to select variants for upload
+select_variants() {
+    local available_variants=()
+    
+    # Find all zip files in Build directory
+    for zip_file in "$BUILD_DIR"/*.zip; do
+        if [ -f "$zip_file" ]; then
+            local filename=$(basename "$zip_file")
+            local variant=$(echo "$filename" | sed 's/EnCorinVest-\(.*\)-.*-.*.zip/\1/')
+            available_variants+=("$variant")
+        fi
+    done
+    
+    if [ ${#available_variants[@]} -eq 0 ]; then
+        echo "No variants found in Build directory!"
+        return 1
+    fi
+    
+    echo ""
+    echo "Available variants:"
+    echo "-------------------"
+    
+    local index=1
+    for variant in "${available_variants[@]}"; do
+        echo "$index. $variant"
+        ((index++))
+    done
+    
+    echo "a. All variants"
+    echo "0. Cancel"
+    echo ""
+    
+    while true; do
+        read -p "Select variants to upload (comma-separated numbers, 'a' for all, or '0' to cancel): " selection
+        selection=${selection,,}  # Convert to lowercase
+        
+        if [[ "$selection" == "0" ]]; then
+            return 1
+        elif [[ "$selection" == "a" || "$selection" == "all" ]]; then
+            SELECTED_VARIANTS=("${available_variants[@]}")
+            return 0
+        else
+            # Parse comma-separated selections
+            SELECTED_VARIANTS=()
+            IFS=',' read -ra SELECTIONS <<< "$selection"
+            
+            local valid=true
+            for sel in "${SELECTIONS[@]}"; do
+                sel=$(echo "$sel" | tr -d '[:space:]')  # Remove whitespace
+                if [[ "$sel" =~ ^[0-9]+$ ]] && [ "$sel" -ge 1 ] && [ "$sel" -le ${#available_variants[@]} ]; then
+                    local idx=$((sel-1))
+                    SELECTED_VARIANTS+=("${available_variants[$idx]}")
+                else
+                    echo "Invalid selection: $sel"
+                    valid=false
+                    break
+                fi
+            done
+            
+            if [ "$valid" = true ] && [ ${#SELECTED_VARIANTS[@]} -gt 0 ]; then
+                return 0
+            fi
+        fi
+        
+        echo "Please enter valid selections."
+    done
+}
+
 # Function to prompt for changelog
 prompt_changelog() {
     echo ""
@@ -206,6 +274,15 @@ upload_to_telegram() {
     local build_type="$2"
     
     if prompt_telegram_post; then
+        # Select variants to upload
+        if ! select_variants; then
+            echo "Variant selection cancelled."
+            return 1
+        fi
+        
+        echo ""
+        echo "Selected variants: ${SELECTED_VARIANTS[*]}"
+        
         # Prompt for changelog
         HAS_CHANGELOG=false
         if prompt_changelog; then
@@ -221,7 +298,8 @@ upload_to_telegram() {
             SUMMARY_MESSAGE+="📦 *Project:* EnCorinVest%0A"
             SUMMARY_MESSAGE+="🏷️ *Version:* $version%0A"
             SUMMARY_MESSAGE+="🔧 *Build Type:* $build_type%0A"
-            SUMMARY_MESSAGE+="📄 *Variants:* ${#TARGET_DIRS[@]} variants built%0A"
+            SUMMARY_MESSAGE+="📄 *Variants:* ${#SELECTED_VARIANTS[@]} variants selected%0A"
+            SUMMARY_MESSAGE+="📋 *Selected:* $(IFS=', '; echo "${SELECTED_VARIANTS[*]}")%0A"
             
             # Add changelog if provided
             if [ "$HAS_CHANGELOG" = true ] && [ -n "$CHANGELOG" ]; then
@@ -248,27 +326,33 @@ upload_to_telegram() {
                 local upload_success=0
                 local upload_total=0
                 
-                # Upload all zip files from Build directory
-                for zip_file in "$BUILD_DIR"/*.zip; do
-                    if [ -f "$zip_file" ]; then
-                        ((upload_total++))
-                        local filename=$(basename "$zip_file")
-                        local variant=$(echo "$filename" | cut -d'-' -f2)
-                        
-                        caption="📱 EnCorinVest - $variant - $version ($build_type)"
-                        
-                        if send_to_telegram "$zip_file" "$caption" "$chat_id"; then
-                            ((upload_success++))
+                # Upload only selected variants
+                for variant in "${SELECTED_VARIANTS[@]}"; do
+                    # Find the corresponding zip file
+                    for zip_file in "$BUILD_DIR"/*.zip; do
+                        if [ -f "$zip_file" ]; then
+                            local filename=$(basename "$zip_file")
+                            local file_variant=$(echo "$filename" | sed 's/EnCorinVest-\(.*\)-.*-.*.zip/\1/')
+                            
+                            if [[ "$file_variant" == "$variant" ]]; then
+                                ((upload_total++))
+                                caption="📱 EnCorinVest - $variant - $version ($build_type)"
+                                
+                                if send_to_telegram "$zip_file" "$caption" "$chat_id"; then
+                                    ((upload_success++))
+                                fi
+                                break
+                            fi
                         fi
-                    fi
+                    done
                 done
                 
                 # Send completion message
                 if [ $upload_success -eq $upload_total ]; then
-                    COMPLETION_MESSAGE="✅ *Upload Complete!*%0A%0AAll $upload_total variants uploaded successfully to $group_name."
+                    COMPLETION_MESSAGE="✅ *Upload Complete!*%0A%0AAll $upload_total selected variants uploaded successfully to $group_name."
                     send_message_to_telegram "$COMPLETION_MESSAGE" "$chat_id"
                 else
-                    COMPLETION_MESSAGE="⚠️ *Upload Partially Complete*%0A%0A$upload_success/$upload_total variants uploaded to $group_name."
+                    COMPLETION_MESSAGE="⚠️ *Upload Partially Complete*%0A%0A$upload_success/$upload_total selected variants uploaded to $group_name."
                     send_message_to_telegram "$COMPLETION_MESSAGE" "$chat_id"
                 fi
                 

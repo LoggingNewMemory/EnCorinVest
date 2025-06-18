@@ -1,5 +1,9 @@
 # Add your app package name for using performance profiles mode in here, no need reboot after add app
+# Also you don't need to scroll down to add your game, you can add it on top of the list
 
+com.tencent.tmgp.df
+com.garena.game.df
+com.proxima.dfm
 ea.game
 ea.gp
 com.miHoYo.bh3oversea
