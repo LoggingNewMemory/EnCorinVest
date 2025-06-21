@@ -12,9 +12,9 @@ tweak 1 /proc/game_state
 fi
 
 # MALI GPU Only
-if [ -e /sys/class/misc/mali0/device/power_policy ]; then
-tweak always_on /sys/class/misc/mali0/device/power_policy
-fi
+# if [ -e /sys/class/misc/mali0/device/power_policy ]; then
+# tweak always_on /sys/class/misc/mali0/device/power_policy
+# fi
 
 # Memory Optimization | Older Kernel May Not Have
 if [ -d /sys/kernel/mm/transparent_hugepage ]; then
@@ -82,7 +82,7 @@ done
 if [ -d /proc/gpufreq ]; then   
 for celes_gpu in /proc/gpufreq
     do
-    tweak 1 $celes_gpu/gpufreq_limited_thermal_ignore
+    # tweak 1 $celes_gpu/gpufreq_limited_thermal_ignore
     tweak 1 $celes_gpu/gpufreq_limited_oc_ignore
     tweak 1 $celes_gpu/gpufreq_limited_low_batt_volume_ignore
     tweak 1 $celes_gpu/gpufreq_limited_low_batt_volt_ignore
@@ -186,9 +186,9 @@ tweak 0 /proc/game_state
 fi
 
 # MALI GPU Only
-if [ -e /sys/class/misc/mali0/device/power_policy ]; then
-tweak coarse_demand /sys/class/misc/mali0/device/power_policy
-fi
+# if [ -e /sys/class/misc/mali0/device/power_policy ]; then
+# tweak coarse_demand /sys/class/misc/mali0/device/power_policy
+# fi
 
 # Memory Optimization | Older Kernel May Not Have
 if [ -d /sys/kernel/mm/transparent_hugepage ]; then
@@ -258,7 +258,7 @@ for cpuctl_tweak in /dev/cpuctl; do
 if [ -d "/proc/gpufreq" ]; then
 for celes_gpu in /proc/gpufreq
     do
-    tweak 0 $celes_gpu/gpufreq_limited_thermal_ignore
+    # tweak 0 $celes_gpu/gpufreq_limited_thermal_ignore
     tweak 0 $celes_gpu/gpufreq_limited_oc_ignore
     tweak 0 $celes_gpu/gpufreq_limited_low_batt_volume_ignore
     tweak 0 $celes_gpu/gpufreq_limited_low_batt_volt_ignore
@@ -371,9 +371,9 @@ tweak 0 /proc/game_state
 fi
 
 # MALI GPU Only
-if [ -e /sys/class/misc/mali0/device/power_policy ]; then
-tweak coarse_demand /sys/class/misc/mali0/device/power_policy
-fi
+# if [ -e /sys/class/misc/mali0/device/power_policy ]; then
+# tweak coarse_demand /sys/class/misc/mali0/device/power_policy
+# fi
 
 # Memory Optimization | Older Kernel May Not Have
 if [ -d /sys/kernel/mm/transparent_hugepage ]; then
@@ -442,7 +442,7 @@ for cpuctl_tweak in /dev/cpuctl; do
 if [ -d "/proc/gpufreq" ]; then
 for celes_gpu in /proc/gpufreq
     do
-    tweak 0 $celes_gpu/gpufreq_limited_thermal_ignore
+    # tweak 0 $celes_gpu/gpufreq_limited_thermal_ignore
     tweak 0 $celes_gpu/gpufreq_limited_oc_ignore
     tweak 0 $celes_gpu/gpufreq_limited_low_batt_volume_ignore
     tweak 0 $celes_gpu/gpufreq_limited_low_batt_volt_ignore
