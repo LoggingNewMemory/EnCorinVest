@@ -1,3 +1,4 @@
 [EnCorinVest config]
 language=EN
 current_mode=None
+DND=Yes
