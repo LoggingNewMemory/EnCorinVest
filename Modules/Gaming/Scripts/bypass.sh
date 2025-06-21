@@ -8,13 +8,18 @@ tweak() {
 
 # Transsision Bypass Charging
 
-BYPASS_PATH=$(grep "^BYPASS_PATH" /data/adb/modules/EnCorinVest/encorin.txt | cut -d'=' -f2 | tr -d ' ')
+# Check if bypass is supported
+BYPASS_SUPPORTED=$(grep "^BYPASS_SUPPORTED" /data/adb/modules/EnCorinVest/encorin.txt | cut -d'=' -f2 | tr -d ' ')
 
-if [ -e "$BYPASS_PATH" ]; then
-    BYPASS=$(grep "^BYPASS" /data/adb/modules/EnCorinVest/encorin.txt | cut -d'=' -f2 | tr -d ' ')
-    if [ "$BYPASS" = "No" ]; then
-        tweak 0 "$BYPASS_PATH"
-    elif [ "$BYPASS" = "Yes" ]; then
-        tweak 1 "$BYPASS_PATH"
+if [ "$BYPASS_SUPPORTED" = "Yes" ]; then
+    BYPASS_PATH=$(grep "^BYPASS_PATH" /data/adb/modules/EnCorinVest/encorin.txt | cut -d'=' -f2 | tr -d ' ')
+
+    if [ -e "$BYPASS_PATH" ]; then
+        BYPASS=$(grep "^BYPASS" /data/adb/modules/EnCorinVest/encorin.txt | cut -d'=' -f2 | tr -d ' ')
+        if [ "$BYPASS" = "No" ]; then
+            tweak 0 "$BYPASS_PATH"
+        elif [ "$BYPASS" = "Yes" ]; then
+            tweak 1 "$BYPASS_PATH"
+        fi
     fi
 fi

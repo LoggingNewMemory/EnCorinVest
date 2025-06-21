@@ -424,6 +424,20 @@ sync_files() {
             echo "Warning: game.txt not found in $SOURCE_DIR"
         fi
 
+        # Copy bypass_list.txt to all output folders
+        if [ -f "$SOURCE_DIR/bypass_list.txt" ]; then
+            cp -f "$SOURCE_DIR/bypass_list.txt" "$TARGET_DIR/bypass_list.txt"
+        else
+            echo "Warning: bypass_list.txt not found in $SOURCE_DIR"
+        fi
+
+         # Copy encorin.txt to all output folders
+        if [ -f "$SOURCE_DIR/encorin.txt" ]; then
+            cp -f "$SOURCE_DIR/encorin.txt" "$TARGET_DIR/encorin.txt"
+        else
+            echo "Warning: encorin.txt not found in $SOURCE_DIR"
+        fi
+
         # Sync Scripts folder
         if [ -d "$SOURCE_DIR/Scripts" ]; then
             mkdir -p "$TARGET_DIR/Scripts"

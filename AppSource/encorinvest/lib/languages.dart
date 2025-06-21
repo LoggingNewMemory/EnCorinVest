@@ -82,6 +82,11 @@ class LangEN {
     'dnd_title': 'DND Switch',
     'dnd_description': 'Automatically Turn DND on / off',
     'dnd_toggle_title': 'Enable DND Auto Switch',
+    'bypass_charging_title': 'Bypass Charging',
+    'bypass_charging_description': 'Charge your device without using battery',
+    'bypass_charging_toggle': 'Enable Bypass Charging',
+    'bypass_charging_unsupported':
+        'Bypass charging is not supported on your device',
   };
 }
 
@@ -164,6 +169,12 @@ class LangID {
     'dnd_title': 'Saklar DND',
     'dnd_description': 'Otomatis Nyalakan / Matikan DND',
     'dnd_toggle_title': 'Aktifkan Saklar Otomatis DND',
+    'bypass_charging_title': 'Bypass Charging',
+    'bypass_charging_description':
+        'Isi daya perangkat tanpa menggunakan baterai',
+    'bypass_charging_toggle': 'Aktifkan Bypass Charging',
+    'bypass_charging_unsupported':
+        'Bypass charging tidak didukung di perangkat Anda',
   };
 }
 
@@ -241,6 +252,10 @@ class LangJP {
     'dnd_title': 'DND スイッチ',
     'dnd_description': 'DND の自動オン/オフ切り替え',
     'dnd_toggle_title': 'DND 自動スイッチを有効にする',
+    'bypass_charging_title': 'バイパス充電',
+    'bypass_charging_description': 'バッテリーを使用せずにデバイスを充電する',
+    'bypass_charging_toggle': 'バイパス充電を有効にする',
+    'bypass_charging_unsupported': 'お使いのデバイスではバイパス充電はサポートされていません',
   };
 }
 
@@ -322,6 +337,11 @@ class LangJV {
     'dnd_title': 'Saklar DND',
     'dnd_description': 'Otomatis Nguripake / Mateni DND',
     'dnd_toggle_title': 'Aktifke Saklar Otomatis DND',
+    'bypass_charging_title': 'Bypass Charging',
+    'bypass_charging_description': 'Ngecas piranti tanpa nggunakake batere',
+    'bypass_charging_toggle': 'Aktifke Bypass Charging',
+    'bypass_charging_unsupported':
+        'Bypass charging ora didukung ing piranti sampeyan',
   };
 }
 
