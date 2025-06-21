@@ -622,7 +622,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     }
   }
 
-  // --- Bypass Charging Logic ---
+// --- Bypass Charging Logic ---
   Future<void> _checkBypassSupport() async {
     if (!await _checkRootAccess() || !mounted) return;
     setState(() => _isCheckingBypass = true);
@@ -638,30 +638,16 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
         _bypassPath =
             bypassListResult.stdout.toString().split('\n').first.trim();
 
-        // Update config file
-        final updateConfigCmd = '''
-          sed -i -e 's#^BYPASS_PATH=.*#BYPASS_PATH=$_bypassPath#' \\
-                -e 's#^BYPASS_SUPPORTED=.*#BYPASS_SUPPORTED=Yes#' \\
-                /data/adb/modules/EnCorinVest/encorin.txt
-        ''';
-        await _runRootCommandAndWait(updateConfigCmd);
-
-        // Read current bypass state
-        final configResult = await _runRootCommandAndWait(
-            'cat /data/adb/modules/EnCorinVest/encorin.txt');
-        if (configResult.exitCode == 0) {
-          final content = configResult.stdout.toString();
-          _bypassEnabled = content.contains('BYPASS=Yes');
+        // Read current bypass state from the bypass path file
+        final bypassStateResult =
+            await _runRootCommandAndWait('cat $_bypassPath');
+        if (bypassStateResult.exitCode == 0) {
+          _bypassEnabled = bypassStateResult.stdout.toString().trim() == '1';
         }
 
         if (mounted) setState(() => _isBypassSupported = true);
       } else {
         // No bypass support
-        final updateConfigCmd = '''
-          sed -i 's#^BYPASS_SUPPORTED=.*#BYPASS_SUPPORTED=No#' \\
-                /data/adb/modules/EnCorinVest/encorin.txt
-        ''';
-        await _runRootCommandAndWait(updateConfigCmd);
         if (mounted) setState(() => _isBypassSupported = false);
       }
     } catch (e) {
@@ -677,22 +663,15 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     setState(() => _isTogglingBypass = true);
 
     try {
-      // Update config file
-      final value = enable ? 'Yes' : 'No';
-      final updateConfigCmd = '''
-        sed -i 's#^BYPASS=.*#BYPASS=$value#' \\
-             /data/adb/modules/EnCorinVest/encorin.txt
-      ''';
-      await _runRootCommandAndWait(updateConfigCmd);
+      // Write 1 or 0 to the bypass path file
+      final value = enable ? '1' : '0';
+      final writeCmd = 'echo $value > $_bypassPath';
+      final writeResult = await _runRootCommandAndWait(writeCmd);
 
-      // Execute bypass script
-      final scriptResult = await _runRootCommandAndWait(
-          '/data/adb/modules/EnCorinVest/Scripts/bypass.sh');
-
-      if (scriptResult.exitCode == 0) {
+      if (writeResult.exitCode == 0) {
         if (mounted) setState(() => _bypassEnabled = enable);
       } else {
-        print('Bypass script failed: ${scriptResult.stderr}');
+        print('Failed to write bypass state: ${writeResult.stderr}');
       }
     } catch (e) {
       print('Error toggling bypass charging: $e');
