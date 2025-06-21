@@ -42,11 +42,17 @@ fi
 # Taken from encore_utility
 # Thanks to Rem01 Gaming, definitely helping to reduce suddent lag bcs of notification
 dnd_off() {
-	cmd notification set_dnd off
+	DND=$(grep "^DND" /data/adb/modules/EnCorinVest/encorin.txt | cut -d'=' -f2 | tr -d ' ')
+	if [ "$DND" = "Yes" ]; then
+		cmd notification set_dnd off
+	fi
 }
 
 dnd_on() {
-	cmd notification set_dnd priority
+	DND=$(grep "^DND" /data/adb/modules/EnCorinVest/encorin.txt | cut -d'=' -f2 | tr -d ' ')
+	if [ "$DND" = "Yes" ]; then
+		cmd notification set_dnd priority
+	fi
 }
 
 notification() {
