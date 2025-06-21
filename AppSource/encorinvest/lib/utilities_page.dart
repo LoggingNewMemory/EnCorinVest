@@ -44,6 +44,13 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
   bool _dndEnabled = false;
   bool _isDndConfigUpdating = false;
 
+  // --- Bypass Charging State ---
+  bool _isBypassSupported = false;
+  bool _bypassEnabled = false;
+  bool _isCheckingBypass = false;
+  bool _isTogglingBypass = false;
+  String _bypassPath = '';
+
   // --- Original values (fetched once if service is available) ---
   String _originalSize = '';
   int _originalDensity = 0;
@@ -64,6 +71,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     _checkResolutionServiceAvailability();
     _checkHamadaStartOnBoot();
     _loadGameTxt();
+    _checkBypassSupport(); // Add this line
   }
 
   Future<ProcessResult> _runRootCommandAndWait(String command) async {
@@ -614,6 +622,85 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     }
   }
 
+  // --- Bypass Charging Logic ---
+  Future<void> _checkBypassSupport() async {
+    if (!await _checkRootAccess() || !mounted) return;
+    setState(() => _isCheckingBypass = true);
+
+    try {
+      // Check if bypass_list.txt exists
+      final bypassListResult = await _runRootCommandAndWait(
+          'cat /data/adb/modules/EnCorinVest/bypass_list.txt');
+
+      if (bypassListResult.exitCode == 0 &&
+          bypassListResult.stdout.toString().trim().isNotEmpty) {
+        // Get first line as the bypass path
+        _bypassPath =
+            bypassListResult.stdout.toString().split('\n').first.trim();
+
+        // Update config file
+        final updateConfigCmd = '''
+          sed -i -e 's#^BYPASS_PATH=.*#BYPASS_PATH=$_bypassPath#' \\
+                -e 's#^BYPASS_SUPPORTED=.*#BYPASS_SUPPORTED=Yes#' \\
+                /data/adb/modules/EnCorinVest/encorin.txt
+        ''';
+        await _runRootCommandAndWait(updateConfigCmd);
+
+        // Read current bypass state
+        final configResult = await _runRootCommandAndWait(
+            'cat /data/adb/modules/EnCorinVest/encorin.txt');
+        if (configResult.exitCode == 0) {
+          final content = configResult.stdout.toString();
+          _bypassEnabled = content.contains('BYPASS=Yes');
+        }
+
+        if (mounted) setState(() => _isBypassSupported = true);
+      } else {
+        // No bypass support
+        final updateConfigCmd = '''
+          sed -i 's#^BYPASS_SUPPORTED=.*#BYPASS_SUPPORTED=No#' \\
+                /data/adb/modules/EnCorinVest/encorin.txt
+        ''';
+        await _runRootCommandAndWait(updateConfigCmd);
+        if (mounted) setState(() => _isBypassSupported = false);
+      }
+    } catch (e) {
+      print('Error checking bypass support: $e');
+      if (mounted) setState(() => _isBypassSupported = false);
+    } finally {
+      if (mounted) setState(() => _isCheckingBypass = false);
+    }
+  }
+
+  Future<void> _toggleBypassCharging(bool enable) async {
+    if (!await _checkRootAccess() || !mounted || !_isBypassSupported) return;
+    setState(() => _isTogglingBypass = true);
+
+    try {
+      // Update config file
+      final value = enable ? 'Yes' : 'No';
+      final updateConfigCmd = '''
+        sed -i 's#^BYPASS=.*#BYPASS=$value#' \\
+             /data/adb/modules/EnCorinVest/encorin.txt
+      ''';
+      await _runRootCommandAndWait(updateConfigCmd);
+
+      // Execute bypass script
+      final scriptResult = await _runRootCommandAndWait(
+          '/data/adb/modules/EnCorinVest/Scripts/bypass.sh');
+
+      if (scriptResult.exitCode == 0) {
+        if (mounted) setState(() => _bypassEnabled = enable);
+      } else {
+        print('Bypass script failed: ${scriptResult.stderr}');
+      }
+    } catch (e) {
+      print('Error toggling bypass charging: $e');
+    } finally {
+      if (mounted) setState(() => _isTogglingBypass = false);
+    }
+  }
+
   @override
   void dispose() {
     if (_resolutionServiceAvailable &&
@@ -949,7 +1036,92 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
               ),
             ),
 
-            // --- 5. Copy Logs Card ---
+            // --- 5. Bypass Charging Card ---
+            Card(
+              elevation: cardElevation,
+              margin: cardMargin,
+              shape: cardShape,
+              color: colorScheme.surfaceContainerHighest,
+              child: Padding(
+                padding: cardPadding,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _localization.translate('bypass_charging_title'),
+                      style: textTheme.titleLarge?.copyWith(
+                          color: colorScheme.onSurface,
+                          fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _localization.translate('bypass_charging_description'),
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    if (!_isBypassSupported && !_isCheckingBypass)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16.0),
+                        child: Text(
+                          _localization
+                              .translate('bypass_charging_unsupported'),
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.error,
+                          ),
+                        ),
+                      ),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          backgroundColor: colorScheme.primaryContainer,
+                          foregroundColor: colorScheme.onPrimaryContainer,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                        ),
+                        onPressed:
+                            _isCheckingBypass ? null : _checkBypassSupport,
+                        child: _isCheckingBypass
+                            ? SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: colorScheme.onPrimaryContainer,
+                                ),
+                              )
+                            : Text(_localization.translate('detect_button')),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SwitchListTile(
+                      title: Text(
+                          _localization.translate('bypass_charging_toggle')),
+                      value: _bypassEnabled,
+                      onChanged: (!_isBypassSupported || _isTogglingBypass)
+                          ? null
+                          : (bool value) {
+                              _toggleBypassCharging(value);
+                            },
+                      secondary: _isTogglingBypass
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2))
+                          : Icon(Icons.battery_charging_full),
+                      activeColor: colorScheme.primary,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // --- 6. Copy Logs Card ---
             Card(
               elevation: cardElevation,
               margin: cardMargin,
