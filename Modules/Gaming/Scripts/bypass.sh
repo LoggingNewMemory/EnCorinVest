@@ -8,18 +8,13 @@ tweak() {
 
 # Transsision Bypass Charging
 
-dnd_off() {
-	DND=$(grep "^DND" /data/adb/modules/EnCorinVest/encorin.txt | cut -d'=' -f2 | tr -d ' ')
-	if [ "$DND" = "Yes" ]; then
-		cmd notification set_dnd off
-	fi
-}
+BYPASS_PATH=$(grep "^BYPASS_PATH" /data/adb/modules/EnCorinVest/encorin.txt | cut -d'=' -f2 | tr -d ' ')
 
-dnd_on() {
-	DND=$(grep "^DND" /data/adb/modules/EnCorinVest/encorin.txt | cut -d'=' -f2 | tr -d ' ')
-	if [ "$DND" = "Yes" ]; then
-		cmd notification set_dnd priority
-	fi
-}
-
-/sys/devices/platform/charger/bypass_charger
+if [ -e "$BYPASS_PATH" ]; then
+    BYPASS=$(grep "^BYPASS" /data/adb/modules/EnCorinVest/encorin.txt | cut -d'=' -f2 | tr -d ' ')
+    if [ "$BYPASS" = "No" ]; then
+        tweak 0 "$BYPASS_PATH"
+    elif [ "$BYPASS" = "Yes" ]; then
+        tweak 1 "$BYPASS_PATH"
+    fi
+fi
