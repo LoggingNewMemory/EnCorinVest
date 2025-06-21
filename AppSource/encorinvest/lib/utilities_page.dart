@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
-import 'dart:convert'; // Import for base64 encoding
-import 'languages.dart'; // Ensure this import points to your languages file
+import 'dart:convert';
+import 'languages.dart';
 
 class UtilitiesPage extends StatefulWidget {
   final String selectedLanguage;
@@ -41,6 +41,8 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
   bool _isGameTxtSaving = false;
   String _gameTxtContent = ''; // Content of game.txt
   final TextEditingController _gameTxtController = TextEditingController();
+  bool _dndEnabled = false;
+  bool _isDndConfigUpdating = false;
 
   // --- Original values (fetched once if service is available) ---
   String _originalSize = '';
@@ -58,6 +60,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
         AppLocalizations(widget.selectedLanguage); // Instantiate localization
     // --- UPDATED: Read config first, then check process ---
     _readAndApplyHamadaConfig();
+    _readAndApplyDndConfig();
     _checkResolutionServiceAvailability();
     _checkHamadaStartOnBoot();
     _loadGameTxt();
@@ -98,7 +101,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     }
   }
 
-// --- Log Copying Logic ---
+  // --- Log Copying Logic ---
   Future<void> _copyLogs() async {
     if (!await _checkRootAccess() || !mounted) return;
     setState(() => _isCopyingLogs = true);
@@ -137,6 +140,78 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
       }
     } finally {
       if (mounted) setState(() => _isCopyingLogs = false);
+    }
+  }
+
+  // --- DND Logic ---
+  Future<bool?> _readDndConfig() async {
+    if (!await _checkRootAccess()) return null;
+    print("Reading DND config from $_configFilePath");
+
+    final result = await _runRootCommandAndWait('cat $_configFilePath');
+    if (result.exitCode == 0) {
+      final content = result.stdout.toString();
+      final match = RegExp(r'^DND=(.*)$', multiLine: true).firstMatch(content);
+      if (match != null) {
+        bool enabled = match.group(1)?.trim().toLowerCase() == 'yes';
+        print("DND config found: $enabled");
+        return enabled;
+      }
+    }
+    print("DND config not found, defaulting to false");
+    return false;
+  }
+
+  Future<bool> _writeDndConfig(bool enabled) async {
+    if (!await _checkRootAccess() || !mounted) return false;
+
+    setState(() => _isDndConfigUpdating = true);
+    print("Writing DND=$enabled to $_configFilePath");
+
+    final valueString = enabled ? 'Yes' : 'No';
+    final sedCommand =
+        '''sed -i -e 's#^DND=.*#DND=$valueString#' -e t -e '\$aDND=$valueString' $_configFilePath''';
+
+    try {
+      final result = await _runRootCommandAndWait(sedCommand);
+
+      if (result.exitCode == 0) {
+        print("DND config file update successful.");
+        if (mounted) setState(() => _dndEnabled = enabled);
+        return true;
+      } else {
+        print(
+            'DND config file update failed. Exit Code: ${result.exitCode}, Stderr: ${result.stderr}');
+        return false;
+      }
+    } catch (e) {
+      print('Error updating DND config file: $e');
+      return false;
+    } finally {
+      if (mounted) setState(() => _isDndConfigUpdating = false);
+    }
+  }
+
+  Future<void> _readAndApplyDndConfig() async {
+    bool? configState = await _readDndConfig();
+
+    if (mounted) {
+      setState(() {
+        _dndEnabled = configState ?? false;
+        print("Initial DND state from config: $_dndEnabled");
+      });
+    }
+  }
+
+  Future<void> _toggleDnd(bool enable) async {
+    if (!await _checkRootAccess() || !mounted) return;
+    if (_isDndConfigUpdating) return;
+
+    bool configWritten = await _writeDndConfig(enable);
+    if (!configWritten && mounted) {
+      print("Error: DND config write failed.");
+    } else if (configWritten && mounted) {
+      print("DND state updated to $enable");
     }
   }
 
@@ -561,8 +636,10 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     final cardPadding =
         const EdgeInsets.symmetric(horizontal: 16, vertical: 16);
 
-    bool isHamadaBusy =
-        _isHamadaCommandRunning || _isServiceFileUpdating || _isConfigUpdating;
+    bool isHamadaBusy = _isHamadaCommandRunning ||
+        _isServiceFileUpdating ||
+        _isConfigUpdating ||
+        _isDndConfigUpdating;
 
     return Scaffold(
       appBar: AppBar(
@@ -575,7 +652,54 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // --- 1. HAMADA AI Card ---
+            // --- 1. DND Card ---
+            Card(
+              elevation: cardElevation,
+              margin: cardMargin,
+              shape: cardShape,
+              color: colorScheme.surfaceContainerHighest,
+              child: Padding(
+                padding: cardPadding,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _localization.translate('dnd_title'),
+                      style: textTheme.titleLarge?.copyWith(
+                          color: colorScheme.onSurface,
+                          fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _localization.translate('dnd_description'),
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SwitchListTile(
+                      title: Text(_localization.translate('dnd_toggle_title')),
+                      value: _dndEnabled,
+                      onChanged: _isDndConfigUpdating
+                          ? null
+                          : (bool value) {
+                              _toggleDnd(value);
+                            },
+                      secondary: _isDndConfigUpdating
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2))
+                          : Icon(Icons.bedtime),
+                      activeColor: colorScheme.primary,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // --- 2. HAMADA AI Card ---
             Card(
               elevation: cardElevation,
               margin: cardMargin,
@@ -635,7 +759,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                       secondary: _isServiceFileUpdating
                           ? SizedBox(
                               width: 20,
-                              height: 20,
+                              height: 15,
                               child: CircularProgressIndicator(strokeWidth: 2))
                           : Icon(Icons.sync_disabled),
                       activeColor: colorScheme.primary,
@@ -646,7 +770,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
               ),
             ),
 
-            // --- 2. Edit game.txt Card ---
+            // --- 3. Edit game.txt Card ---
             Card(
               elevation: cardElevation,
               margin: cardMargin,
@@ -722,7 +846,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
               ),
             ),
 
-            // --- 3. Downscale Resolution Card ---
+            // --- 4. Downscale Resolution Card ---
             Card(
               elevation: cardElevation,
               margin: cardMargin,
@@ -825,7 +949,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
               ),
             ),
 
-            // --- 4. Copy Logs Card ---
+            // --- 5. Copy Logs Card ---
             Card(
               elevation: cardElevation,
               margin: cardMargin,

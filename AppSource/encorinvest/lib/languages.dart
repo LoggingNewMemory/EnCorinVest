@@ -79,6 +79,9 @@ class LangEN {
     'copy_logs_button': 'Copy Logs',
     'logs_copied_success': 'Logs Copied Successfully',
     'logs_copied_failed': 'Failed to Copy Logs',
+    'dnd_title': 'DND Switch',
+    'dnd_description': 'Automatically Turn DND on / off',
+    'dnd_toggle_title': 'Enable DND Auto Switch',
   };
 }
 
@@ -158,6 +161,9 @@ class LangID {
     'copy_logs_button': 'Salin Log',
     'logs_copied_success': 'Log Berhasil Disalin',
     'logs_copied_failed': 'Gagal Menyalin Log',
+    'dnd_title': 'Saklar DND',
+    'dnd_description': 'Otomatis Nyalakan / Matikan DND',
+    'dnd_toggle_title': 'Aktifkan Saklar Otomatis DND',
   };
 }
 
@@ -232,6 +238,9 @@ class LangJP {
     'copy_logs_button': 'ログをコピー',
     'logs_copied_success': 'ログのコピーが完了しました',
     'logs_copied_failed': 'ログのコピーに失敗しました',
+    'dnd_title': 'DND スイッチ',
+    'dnd_description': 'DND の自動オン/オフ切り替え',
+    'dnd_toggle_title': 'DND 自動スイッチを有効にする',
   };
 }
 
@@ -310,6 +319,9 @@ class LangJV {
     'copy_logs_button': 'Salin Log',
     'logs_copied_success': 'Log Kasil Disalin',
     'logs_copied_failed': 'Gagal Nyalin Log',
+    'dnd_title': 'Saklar DND',
+    'dnd_description': 'Otomatis Nguripake / Mateni DND',
+    'dnd_toggle_title': 'Aktifke Saklar Otomatis DND',
   };
 }
 
