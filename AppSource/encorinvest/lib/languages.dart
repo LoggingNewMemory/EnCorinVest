@@ -87,6 +87,7 @@ class LangEN {
     'bypass_charging_toggle': 'Enable Bypass Charging',
     'bypass_charging_unsupported':
         'Bypass charging is not supported on your device',
+    'detect_button': 'Detect Bypass Charging',
   };
 }
 
@@ -175,6 +176,7 @@ class LangID {
     'bypass_charging_toggle': 'Aktifkan Bypass Charging',
     'bypass_charging_unsupported':
         'Bypass charging tidak didukung di perangkat Anda',
+    'detect_button': 'Deteksi Bypass Charging',
   };
 }
 
@@ -256,6 +258,7 @@ class LangJP {
     'bypass_charging_description': 'バッテリーを使用せずにデバイスを充電する',
     'bypass_charging_toggle': 'バイパス充電を有効にする',
     'bypass_charging_unsupported': 'お使いのデバイスではバイパス充電はサポートされていません',
+    'detect_button': 'バイパス充電を検出',
   };
 }
 
@@ -342,6 +345,7 @@ class LangJV {
     'bypass_charging_toggle': 'Aktifke Bypass Charging',
     'bypass_charging_unsupported':
         'Bypass charging ora didukung ing piranti sampeyan',
+    'detect_button': 'Deteksi Bypass Charging',
   };
 }
 
