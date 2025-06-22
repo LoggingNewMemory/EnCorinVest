@@ -16,15 +16,15 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
   // --- File Paths & Commands ---
   final String _serviceFilePath = '/data/adb/modules/EnCorinVest/service.sh';
   final String _gameTxtPath = '/data/EnCorinVest/game.txt';
-  // --- Path to the config file ---
   final String _configFilePath = '/data/adb/modules/EnCorinVest/encorin.txt';
   final String _hamadaMarker = '# Start HamadaAI (Default is Disabled)';
-  final String _hamadaProcessName =
-      'HamadaAI'; // Process name for start/kill/check
-  final String _hamadaStartCommand = 'HamadaAI'; // Command to start
-  final String _hamadaStopCommand = 'killall HamadaAI'; // Command to stop
-  final String _hamadaCheckCommand =
-      'pgrep -x HamadaAI'; // Command to check if running
+  final String _hamadaProcessName = 'HamadaAI';
+  final String _hamadaStartCommand = 'HamadaAI';
+  final String _hamadaStopCommand = 'killall HamadaAI';
+  final String _hamadaCheckCommand = 'pgrep -x HamadaAI';
+  final String _modulePath = '/data/adb/modules/EnCorinVest';
+  final String _bypassControllerPath =
+      '/data/adb/modules/EnCorinVest/Scripts/encorin_bypass_controller.sh';
 
   // --- UI state ---
   bool _isCopyingLogs = false;
@@ -49,7 +49,6 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
   bool _bypassEnabled = false;
   bool _isCheckingBypass = false;
   bool _isTogglingBypass = false;
-  String _bypassPath = '';
 
   // --- Original values (fetched once if service is available) ---
   String _originalSize = '';
@@ -305,22 +304,15 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     try {
       if (enable) {
         await _runRootCommandFireAndForget(commandToRun);
-        commandSuccess = true; // Assume success for fire-and-forget
-        if (mounted) {
-          print('Start command executed.');
+        commandSuccess = true;
+
+        // If bypass is enabled, trigger the bypass controller
+        if (_bypassEnabled) {
+          await _runRootCommandAndWait('$_bypassControllerPath enable');
         }
       } else {
         final result = await _runRootCommandAndWait(commandToRun);
         commandSuccess = result.exitCode == 0;
-        if (mounted) {
-          print(
-              'Killall result: Exit Code ${result.exitCode}, Stderr: ${result.stderr}');
-          if (!commandSuccess) {
-            print("Failed to stop Hamada AI process.");
-          } else {
-            print("Stop command executed successfully.");
-          }
-        }
       }
 
       if (commandSuccess) {
@@ -330,14 +322,9 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
         } else if (configWritten && mounted) {
           print("Hamada AI state and config updated to $enable");
         }
-      } else {
-        if (mounted) {
-          print("Error: Command execution failed for $commandToRun");
-        }
       }
     } catch (e) {
       print('Error $actionKey Hamada AI: $e');
-      if (mounted) {}
     } finally {
       if (mounted) setState(() => _isHamadaCommandRunning = false);
     }
@@ -628,26 +615,32 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     setState(() => _isCheckingBypass = true);
 
     try {
-      // Check if bypass_list.txt exists
-      final bypassListResult = await _runRootCommandAndWait(
-          'cat /data/adb/modules/EnCorinVest/bypass_list.txt');
+      // Run the bypass controller test command
+      final result =
+          await _runRootCommandAndWait('$_bypassControllerPath test');
 
-      if (bypassListResult.exitCode == 0 &&
-          bypassListResult.stdout.toString().trim().isNotEmpty) {
-        // Get first line as the bypass path
-        _bypassPath =
-            bypassListResult.stdout.toString().split('\n').first.trim();
+      if (result.exitCode == 0) {
+        // Read the config file to check if bypass is supported
+        final configResult =
+            await _runRootCommandAndWait('cat $_configFilePath');
+        if (configResult.exitCode == 0) {
+          final content = configResult.stdout.toString();
+          final supportedMatch =
+              RegExp(r'^BYPASS_SUPPORTED=(.*)$', multiLine: true)
+                  .firstMatch(content);
+          final bypassMatch =
+              RegExp(r'^BYPASS=(.*)$', multiLine: true).firstMatch(content);
 
-        // Read current bypass state from the bypass path file
-        final bypassStateResult =
-            await _runRootCommandAndWait('cat $_bypassPath');
-        if (bypassStateResult.exitCode == 0) {
-          _bypassEnabled = bypassStateResult.stdout.toString().trim() == '1';
+          if (mounted) {
+            setState(() {
+              _isBypassSupported =
+                  supportedMatch?.group(1)?.trim().toLowerCase() == 'yes';
+              _bypassEnabled =
+                  bypassMatch?.group(1)?.trim().toLowerCase() == 'yes';
+            });
+          }
         }
-
-        if (mounted) setState(() => _isBypassSupported = true);
       } else {
-        // No bypass support
         if (mounted) setState(() => _isBypassSupported = false);
       }
     } catch (e) {
@@ -659,19 +652,34 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
   }
 
   Future<void> _toggleBypassCharging(bool enable) async {
-    if (!await _checkRootAccess() || !mounted || !_isBypassSupported) return;
+    if (!await _checkRootAccess() || !mounted) return;
     setState(() => _isTogglingBypass = true);
 
     try {
-      // Write 1 or 0 to the bypass path file
-      final value = enable ? '1' : '0';
-      final writeCmd = 'echo $value > $_bypassPath';
-      final writeResult = await _runRootCommandAndWait(writeCmd);
+      final command = enable
+          ? '$_bypassControllerPath enable'
+          : '$_bypassControllerPath disable';
 
-      if (writeResult.exitCode == 0) {
-        if (mounted) setState(() => _bypassEnabled = enable);
+      final result = await _runRootCommandAndWait(command);
+
+      if (result.exitCode == 0) {
+        // Read the config file to verify the new state
+        final configResult =
+            await _runRootCommandAndWait('cat $_configFilePath');
+        if (configResult.exitCode == 0) {
+          final content = configResult.stdout.toString();
+          final bypassMatch =
+              RegExp(r'^BYPASS=(.*)$', multiLine: true).firstMatch(content);
+
+          if (mounted) {
+            setState(() {
+              _bypassEnabled =
+                  bypassMatch?.group(1)?.trim().toLowerCase() == 'yes';
+            });
+          }
+        }
       } else {
-        print('Failed to write bypass state: ${writeResult.stderr}');
+        print('Failed to toggle bypass charging: ${result.stderr}');
       }
     } catch (e) {
       print('Error toggling bypass charging: $e');
