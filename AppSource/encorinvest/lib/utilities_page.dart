@@ -626,8 +626,6 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     }
   }
 
-// Fixed Bypass Charging Logic methods
-
 // --- Bypass Charging Logic ---
   Future<void> _checkBypassSupport() async {
     if (!await _checkRootAccess() || !mounted) return;
@@ -637,121 +635,34 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     });
 
     try {
-      // First, run the bypass controller test script
-      final testScriptPath =
-          '/data/adb/modules/EnCorinVest/Scripts/encorin_bypass_controller.sh';
-      print("Running bypass controller test: $testScriptPath test");
+      // Simply read the config file to check current status
+      final readConfigResult =
+          await _runRootCommandAndWait('cat $MODULE_PATH/encorin.txt');
+      String configContent = readConfigResult.exitCode == 0
+          ? readConfigResult.stdout.toString()
+          : '';
 
-      final testResult = await _runRootCommandAndWait('$testScriptPath test');
-      print("Bypass test result - Exit code: ${testResult.exitCode}");
-      print("Bypass test stdout: ${testResult.stdout}");
-      print("Bypass test stderr: ${testResult.stderr}");
+      // Parse the bypass support status from config
+      bool isSupportedByHardware = configContent
+          .contains(RegExp(r'^BYPASS_SUPPORTED=Yes', multiLine: true));
 
-      bool isSupportedByHardware = testResult.exitCode == 0;
+      // Parse the current bypass state
+      bool currentBypassEnabled = false;
+      final bypassMatch =
+          RegExp(r'^BYPASS=(.*)$', multiLine: true).firstMatch(configContent);
+      if (bypassMatch != null) {
+        String bypassValue = bypassMatch.group(1)?.trim().toLowerCase() ?? 'no';
+        currentBypassEnabled = bypassValue == 'yes';
+      }
 
-      if (isSupportedByHardware) {
-        // Hardware supports bypass, now update the config file
-        print("Hardware supports bypass charging, updating config...");
-
-        // Read current config to check if BYPASS_SUPPORTED already exists
-        final readConfigResult =
-            await _runRootCommandAndWait('cat $MODULE_PATH/encorin.txt');
-        String configContent = '';
-
-        if (readConfigResult.exitCode == 0) {
-          configContent = readConfigResult.stdout.toString();
-        }
-
-        // Check if BYPASS_SUPPORTED line already exists
-        bool bypassSupportedExists = configContent
-            .contains(RegExp(r'^BYPASS_SUPPORTED=', multiLine: true));
-
-        String updateSupportCommand;
-        if (bypassSupportedExists) {
-          // Update existing line
-          updateSupportCommand =
-              '''sed -i 's#^BYPASS_SUPPORTED=.*#BYPASS_SUPPORTED=Yes#' $MODULE_PATH/encorin.txt''';
-        } else {
-          // Add new line at the end
-          updateSupportCommand =
-              '''echo "BYPASS_SUPPORTED=Yes" >> $MODULE_PATH/encorin.txt''';
-        }
-
-        final updateResult = await _runRootCommandAndWait(updateSupportCommand);
-
-        if (updateResult.exitCode != 0) {
-          print(
-              "Failed to update BYPASS_SUPPORTED in config: ${updateResult.stderr}");
-        }
-
-        // Now read the current bypass state from config
-        final configResult =
-            await _runRootCommandAndWait('cat $MODULE_PATH/encorin.txt');
-        bool currentBypassEnabled = false;
-
-        if (configResult.exitCode == 0) {
-          final configContent = configResult.stdout.toString();
-          final bypassMatch = RegExp(r'^BYPASS=(.*)$', multiLine: true)
-              .firstMatch(configContent);
-
-          if (bypassMatch != null) {
-            String bypassValue =
-                bypassMatch.group(1)?.trim().toLowerCase() ?? 'no';
-            currentBypassEnabled = bypassValue == 'yes';
-          }
-        }
-
-        if (mounted) {
-          setState(() {
-            _isBypassSupported = true;
-            _bypassEnabled = currentBypassEnabled;
-            _bypassSupportStatus =
-                _localization.translate('bypass_charging_supported');
-          });
-        }
-      } else {
-        // Hardware doesn't support bypass
-        print("Hardware does not support bypass charging");
-
-        // Read current config to check if BYPASS_SUPPORTED already exists
-        final readConfigResult =
-            await _runRootCommandAndWait('cat $MODULE_PATH/encorin.txt');
-        String configContent = '';
-
-        if (readConfigResult.exitCode == 0) {
-          configContent = readConfigResult.stdout.toString();
-        }
-
-        // Check if BYPASS_SUPPORTED line already exists
-        bool bypassSupportedExists = configContent
-            .contains(RegExp(r'^BYPASS_SUPPORTED=', multiLine: true));
-
-        String updateSupportCommand;
-        if (bypassSupportedExists) {
-          // Update existing line
-          updateSupportCommand =
-              '''sed -i 's#^BYPASS_SUPPORTED=.*#BYPASS_SUPPORTED=No#' $MODULE_PATH/encorin.txt''';
-        } else {
-          // Add new line at the end
-          updateSupportCommand =
-              '''echo "BYPASS_SUPPORTED=No" >> $MODULE_PATH/encorin.txt''';
-        }
-
-        final updateResult = await _runRootCommandAndWait(updateSupportCommand);
-
-        if (updateResult.exitCode != 0) {
-          print(
-              "Failed to update BYPASS_SUPPORTED in config: ${updateResult.stderr}");
-        }
-
-        if (mounted) {
-          setState(() {
-            _isBypassSupported = false;
-            _bypassEnabled = false;
-            _bypassSupportStatus =
-                _localization.translate('bypass_charging_unsupported');
-          });
-        }
+      if (mounted) {
+        setState(() {
+          _isBypassSupported = isSupportedByHardware;
+          _bypassEnabled = currentBypassEnabled;
+          _bypassSupportStatus = isSupportedByHardware
+              ? _localization.translate('bypass_charging_supported')
+              : _localization.translate('bypass_charging_unsupported');
+        });
       }
     } catch (e) {
       print('Error checking bypass support: $e');
@@ -776,27 +687,9 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
       print("Writing BYPASS=$enable to $_configFilePath");
       final valueString = enable ? 'Yes' : 'No';
 
-      // First, read the current config to check if BYPASS line exists
-      final readResult = await _runRootCommandAndWait('cat $_configFilePath');
-      String configContent = '';
-
-      if (readResult.exitCode == 0) {
-        configContent = readResult.stdout.toString();
-      }
-
-      // Check if BYPASS line already exists
-      bool bypassExists =
-          configContent.contains(RegExp(r'^BYPASS=', multiLine: true));
-
-      String sedCommand;
-      if (bypassExists) {
-        // Update existing BYPASS line
-        sedCommand =
-            '''sed -i 's#^BYPASS=.*#BYPASS=$valueString#' $_configFilePath''';
-      } else {
-        // Add new BYPASS line at the end of the file
-        sedCommand = '''echo "BYPASS=$valueString" >> $_configFilePath''';
-      }
+      // Use sed to update or add the BYPASS line
+      final sedCommand =
+          '''sed -i -e 's#^BYPASS=.*#BYPASS=$valueString#' -e t -e '\$aBYPASS=$valueString' $_configFilePath''';
 
       final result = await _runRootCommandAndWait(sedCommand);
 
@@ -814,15 +707,13 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
 
         if (controllerResult.exitCode == 0) {
           print("Bypass controller executed successfully: $action");
-          if (mounted) {
-            setState(() => _bypassEnabled = enable);
-          }
         } else {
           print("Bypass controller failed: ${controllerResult.stderr}");
-          // Still update the state since config was updated, but log the controller failure
-          if (mounted) {
-            setState(() => _bypassEnabled = enable);
-          }
+          // Continue anyway since config was updated
+        }
+
+        if (mounted) {
+          setState(() => _bypassEnabled = enable);
         }
       } else {
         print(

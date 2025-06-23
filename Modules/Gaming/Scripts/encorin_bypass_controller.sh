@@ -21,8 +21,6 @@ update_config() {
     local value="$2"
     
     if [ -f "$CONFIG_FILE" ]; then
-        # Create backup
-        cp "$CONFIG_FILE" "$CONFIG_FILE.bak"
         # Use sed to replace the value, or add if doesn't exist
         if grep -q "^$key=" "$CONFIG_FILE"; then
             sed -i "s/^$key=.*/$key=$value/" "$CONFIG_FILE"
@@ -290,34 +288,28 @@ test_bypass_support() {
     
     # List of methods to test (ordered by common usage)
     local methods="OPLUS_MMI SUSPEND_COMMON DISABLE_COMMON GOOGLE_PIXEL SAMSUNG_STORE_MODE QCOM_SUSPEND HUAWEI_COMMON CONTROL_COMMON TRANSISSION_BYPASSCHG"
-    local supported_methods=""
     local count=0
     
     for method in $methods; do
         echo "Testing method: $method"
         if test_bypass_method "$method"; then
             echo "  ✓ $method - Supported"
-            supported_methods="$supported_methods $method"
             count=$((count + 1))
         else
             echo "  ✗ $method - Not supported"
         fi
     done
     
+    echo ""
     if [ $count -gt 0 ]; then
-        echo ""
         echo "Found $count supported bypass method(s)"
         update_config "BYPASS_SUPPORTED" "Yes"
-        update_config "SUPPORTED_METHODS" "$supported_methods"
-        # Set the first supported method as default
-        local first_method=$(echo $supported_methods | awk '{print $1}')
-        update_config "DEFAULT_METHOD" "$first_method"
+        echo "BYPASS_SUPPORTED set to: Yes"
         return 0
     else
-        echo ""
         echo "No bypass methods supported on this device"
         update_config "BYPASS_SUPPORTED" "No"
-        update_config "SUPPORTED_METHODS" ""
+        echo "BYPASS_SUPPORTED set to: No"
         return 1
     fi
 }
@@ -367,8 +359,6 @@ disable_bypass() {
     update_config "BYPASS" "No"
     update_config "ACTIVE_METHOD" ""
 }
-
-
 
 # Show usage
 show_usage() {
