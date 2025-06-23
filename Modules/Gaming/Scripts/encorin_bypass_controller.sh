@@ -43,6 +43,12 @@ get_bypass_status() {
     grep "^BYPASS=" "$CONFIG_FILE" 2>/dev/null | grep -v "BYPASS_SUPPORTED" | cut -d'=' -f2 | tr -d ' ' | head -1
 }
 
+# Function to check if bypass is currently enabled (returns 0 for Yes, 1 for No)
+is_bypass_enabled() {
+    local status=$(get_bypass_status)
+    [ "$status" = "Yes" ]
+}
+
 # Function to write to node with error handling
 write_node() {
     local node="$1"
@@ -320,8 +326,7 @@ enable_bypass() {
     fi
     
     # Check if bypass is already enabled
-    local current_bypass=$(get_bypass_status)
-    if [ "$current_bypass" = "true" ]; then
+    if is_bypass_enabled; then
         echo "Executed Successfully."
         return 0
     fi
@@ -332,7 +337,7 @@ enable_bypass() {
     for method in $methods; do
         if test_bypass_method "$method"; then
             if apply_bypass_method "$method" "bypass"; then
-                update_config "BYPASS" "true"
+                update_config "BYPASS" "Yes"
                 update_config "BYPASS_METHOD" "$method"
                 echo "Executed Successfully."
                 bypass_success=1
@@ -342,7 +347,7 @@ enable_bypass() {
     done
     
     if [ "$bypass_success" -eq 0 ]; then
-        update_config "BYPASS" "false"
+        update_config "BYPASS" "No"
         echo "Executed Successfully." 
         return 1
     fi
@@ -363,7 +368,7 @@ disable_bypass() {
         apply_bypass_method "$m" "restore" # Best effort restore
     done
     
-    update_config "BYPASS" "false"
+    update_config "BYPASS" "No"
     echo "Executed Successfully."
 }
 
@@ -395,7 +400,7 @@ show_status() {
     local bypass_method=$(get_config "BYPASS_METHOD")
     local bypass_supported=$(get_config "BYPASS_SUPPORTED")
     
-    echo "Bypass Status: ${bypass_status:-false}"
+    echo "Bypass Status: ${bypass_status:-No}"
     echo "Active Method: ${bypass_method:-none}"
     echo "Bypass Supported: ${bypass_supported:-unknown}"
 }
