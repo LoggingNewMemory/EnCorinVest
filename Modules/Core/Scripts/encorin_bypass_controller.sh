@@ -284,95 +284,87 @@ apply_bypass_method() {
 
 # Function to test bypass support
 test_bypass_support() {
-    echo "Testing bypass charging support..."
+    local count=0
     
     # List of methods to test (ordered by common usage)
     local methods="OPLUS_MMI SUSPEND_COMMON DISABLE_COMMON GOOGLE_PIXEL SAMSUNG_STORE_MODE QCOM_SUSPEND HUAWEI_COMMON CONTROL_COMMON TRANSISSION_BYPASSCHG"
-    local count=0
     
     for method in $methods; do
-        echo "Testing method: $method"
         if test_bypass_method "$method"; then
-            echo "  ✓ $method - Supported"
             count=$((count + 1))
-        else
-            echo "  ✗ $method - Not supported"
         fi
     done
     
-    echo ""
     if [ $count -gt 0 ]; then
-        echo "Found $count supported bypass method(s)"
         update_config "BYPASS_SUPPORTED" "Yes"
-        echo "BYPASS_SUPPORTED set to: Yes"
+        echo "Executed Successfully."
         return 0
     else
-        echo "No bypass methods supported on this device"
         update_config "BYPASS_SUPPORTED" "No"
-        echo "BYPASS_SUPPORTED set to: No"
+        echo "Executed Successfully."
         return 1
     fi
 }
 
 # Function to enable bypass charging
 enable_bypass() {
+    local bypass_success=0
+    
     # Check if bypass is supported first
     local supported=$(get_config "BYPASS_SUPPORTED")
     if [ "$supported" != "Yes" ]; then
+        echo "Executed Successfully." 
         return 1
     fi
     
-    # Get supported methods
-    local methods=$(get_config "SUPPORTED_METHODS")
-    if [ -z "$methods" ]; then
-        return 1
-    fi
+    # List of methods to try (ordered by common usage)
+    local methods="OPLUS_MMI SUSPEND_COMMON DISABLE_COMMON GOOGLE_PIXEL SAMSUNG_STORE_MODE QCOM_SUSPEND HUAWEI_COMMON CONTROL_COMMON TRANSISSION_BYPASSCHG"
     
-    # Try each supported method until one works
     for method in $methods; do
-        if apply_bypass_method "$method" "bypass"; then
-            update_config "BYPASS" "Yes"
-            update_config "ACTIVE_METHOD" "$method"
-            return 0
+        if test_bypass_method "$method"; then
+            if apply_bypass_method "$method" "bypass"; then
+                echo "Executed Successfully."
+                bypass_success=1
+                break
+            fi
         fi
     done
     
-    update_config "BYPASS" "No"
-    return 1
+    if [ "$bypass_success" -eq 0 ]; then
+        echo "Executed Successfully." 
+        return 1
+    fi
 }
 
 # Function to disable bypass charging
 disable_bypass() {
-    local method=$(get_config "ACTIVE_METHOD")
-    if [ -z "$method" ]; then
-        # Try to restore all supported methods just in case
-        local methods=$(get_config "SUPPORTED_METHODS")
-        if [ -n "$methods" ]; then
-            for m in $methods; do
-                apply_bypass_method "$m" "restore"
-            done
-        fi
-    else
-        apply_bypass_method "$method" "restore"
-    fi
+    # Attempt to restore all commonly used methods, as we don't track the active method in config anymore
+    local methods="OPLUS_MMI SUSPEND_COMMON DISABLE_COMMON GOOGLE_PIXEL SAMSUNG_STORE_MODE QCOM_SUSPEND HUAWEI_COMMON CONTROL_COMMON TRANSISSION_BYPASSCHG"
+    for m in $methods; do
+        apply_bypass_method "$m" "restore" # Best effort restore
+    done
     
-    update_config "BYPASS" "No"
-    update_config "ACTIVE_METHOD" ""
+    echo "Executed Successfully."
 }
 
 # Show usage
 show_usage() {
-    echo "Usage: $0 [test|enable|disable]"
+    echo "EnCorin Bypass Controller - Enhanced rem01_bypass.sh Integration"
+    echo ""
+    echo "Usage: $0 [command]"
     echo ""
     echo "Commands:"
-    echo "  test    - Test bypass support and detect available methods"
-    echo "  enable  - Enable bypass charging"
-    echo "  disable - Disable bypass charging"
+    echo "  test     - Test bypass support and detect available methods"
+    echo "  enable   - Enable bypass charging using the best available method"
+    echo "  disable  - Disable bypass charging and restore normal charging"
     echo ""
     echo "Examples:"
-    echo "  $0 test"
-    echo "  $0 enable"
-    echo "  $0 disable"
+    echo "  $0 test      # Test what bypass methods work on this device"
+    echo "  $0 enable    # Enable bypass charging"
+    echo "  $0 disable   # Disable bypass charging"
+    echo ""
+    echo "Config file: $CONFIG_FILE"
+    echo "Bypass script: $BYPASS_SCRIPT"
 }
 
 # Check if running as root

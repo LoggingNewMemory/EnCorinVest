@@ -2,5 +2,3 @@
 language=EN
 current_mode=None
 DND=No
-BYPASS=No
-BYPASS_SUPPORTED=No

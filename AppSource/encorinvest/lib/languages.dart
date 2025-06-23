@@ -84,7 +84,8 @@ class LangEN {
     'dnd_description': 'Automatically Turn DND on / off',
     'dnd_toggle_title': 'Enable DND Auto Switch',
     'bypass_charging_title': 'Bypass Charging',
-    'bypass_charging_description': 'Enable Bypass Charging when Using HamadaAI',
+    'bypass_charging_description':
+        'Enable Bypass Charging While in Performance & Gaming Pro on Supported Device',
     'bypass_charging_toggle': 'Enable Bypass Charging',
     'bypass_charging_unsupported':
         'Bypass charging is not supported on your device',
