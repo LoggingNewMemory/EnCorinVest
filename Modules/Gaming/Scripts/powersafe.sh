@@ -45,3 +45,5 @@ exynos() {
 
 ambatusoc
 notification "EnCorinVest - Powersafe"
+dnd_off
+bypass_off
