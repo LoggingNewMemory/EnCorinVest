@@ -176,7 +176,7 @@ class LangID {
     'dnd_toggle_title': 'Aktifkan Saklar Otomatis DND',
     'bypass_charging_title': 'Bypass Charging',
     'bypass_charging_description':
-        'Aktifkan Bypass Charging saat Menggunakan HamadaAI',
+        'Aktifkan Bypass Charging Saat Mode Performa & Gaming Pro di Perangkat yang Didukung',
     'bypass_charging_toggle': 'Aktifkan Bypass Charging',
     'bypass_charging_unsupported':
         'Bypass charging tidak didukung di perangkat Anda',
@@ -261,7 +261,8 @@ class LangJP {
     'dnd_description': 'DND の自動オン/オフ切り替え',
     'dnd_toggle_title': 'DND 自動スイッチを有効にする',
     'bypass_charging_title': 'バイパス充電',
-    'bypass_charging_description': 'HamadaAI使用時にバイパス充電を有効にする',
+    'bypass_charging_description':
+        'サポートされているデバイスでパフォーマンス＆ゲーミングプロ中にバイパス充電を有効にする',
     'bypass_charging_toggle': 'バイパス充電を有効にする',
     'bypass_charging_unsupported': 'お使いのデバイスではバイパス充電はサポートされていません',
     'detect_button': 'バイパス充電を検出',
@@ -350,7 +351,7 @@ class LangJV {
     'dnd_toggle_title': 'Aktifke Saklar Otomatis DND',
     'bypass_charging_title': 'Bypass Charging',
     'bypass_charging_description':
-        'Aktifke Bypass Charging nalika Nggunakake HamadaAI',
+        'Aktifke Bypass Charging Nalika Mode Performa & Gaming Pro ing Piranti sing Didukung',
     'bypass_charging_toggle': 'Aktifke Bypass Charging',
     'bypass_charging_unsupported':
         'Bypass charging ora didukung ing piranti sampeyan',
