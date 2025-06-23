@@ -296,11 +296,11 @@ test_bypass_support() {
     done
     
     if [ $count -gt 0 ]; then
-        update_config "BYPASS_SUPPORTED" "Yes"
+        update_config "SUPPORTED_BYPASS" "Yes"
         echo "Executed Successfully."
         return 0
     else
-        update_config "BYPASS_SUPPORTED" "No"
+        update_config "SUPPORTED_BYPASS" "No"
         echo "Executed Successfully."
         return 1
     fi
@@ -311,7 +311,7 @@ enable_bypass() {
     local bypass_success=0
     
     # Check if bypass is supported first
-    local supported=$(get_config "BYPASS_SUPPORTED")
+    local supported=$(get_config "SUPPORTED_BYPASS")
     if [ "$supported" != "Yes" ]; then
         echo "Executed Successfully." 
         return 1
@@ -323,7 +323,7 @@ enable_bypass() {
     for method in $methods; do
         if test_bypass_method "$method"; then
             if apply_bypass_method "$method" "bypass"; then
-                update_config "BYPASS" "Yes"
+                update_config "ENABLE_BYPASS" "Yes"
                 echo "Executed Successfully."
                 bypass_success=1
                 break
@@ -345,7 +345,7 @@ disable_bypass() {
         apply_bypass_method "$m" "restore" # Best effort restore
     done
     
-    update_config "BYPASS" "No"
+    update_config "ENABLE_BYPASS" "No"
     echo "Executed Successfully."
 }
 

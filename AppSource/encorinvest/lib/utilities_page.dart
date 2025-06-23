@@ -627,48 +627,88 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
   }
 
 // --- Bypass Charging Logic ---
-// This method runs only when the Detect button is pressed
-  Future<void> _checkBypassSupport() async {
+// Update the _loadInitialBypassState method to be more explicit about the config priority
+  Future<void> _loadInitialBypassState() async {
     if (!await _checkRootAccess() || !mounted) return;
-    setState(() {
-      _isCheckingBypass = true;
-      _bypassSupportStatus = ''; // Reset on new check
-    });
 
     try {
-      // Run the bypass controller test script to detect hardware support
-      final controllerScriptPath =
-          '/data/adb/modules/EnCorinVest/Scripts/encorin_bypass_controller.sh';
-
-      print("Running bypass controller test: $controllerScriptPath test");
-      final testResult =
-          await _runRootCommandAndWait('$controllerScriptPath test');
-
-      if (testResult.exitCode != 0) {
-        print("Bypass controller test failed: ${testResult.stderr}");
-        // If the test script fails, we can still try to read existing config
-      } else {
-        print("Bypass controller test completed successfully");
-      }
-
-      // Now read the config file to check the results
       final readConfigResult =
           await _runRootCommandAndWait('cat $MODULE_PATH/encorin.txt');
       String configContent = readConfigResult.exitCode == 0
           ? readConfigResult.stdout.toString()
           : '';
 
-      // Parse the bypass support status from config (should be set by the test script)
+      // Check hardware support first
       bool isSupportedByHardware = configContent
-          .contains(RegExp(r'^BYPASS_SUPPORTED=Yes', multiLine: true));
+          .contains(RegExp(r'^SUPPORTED_BYPASS=Yes', multiLine: true));
 
-      // Parse the current bypass state
+      // Check bypass state - new ENABLE_BYPASS takes priority, fallback to old BYPASS
       bool currentBypassEnabled = false;
-      final bypassMatch =
-          RegExp(r'^BYPASS=(.*)$', multiLine: true).firstMatch(configContent);
-      if (bypassMatch != null) {
-        String bypassValue = bypassMatch.group(1)?.trim().toLowerCase() ?? 'no';
-        currentBypassEnabled = bypassValue == 'yes';
+      final enableBypassMatch = RegExp(r'^ENABLE_BYPASS=(.*)$', multiLine: true)
+          .firstMatch(configContent);
+      if (enableBypassMatch != null) {
+        currentBypassEnabled =
+            enableBypassMatch.group(1)?.trim().toLowerCase() == 'yes';
+      } else {
+        // Only check old BYPASS field if ENABLE_BYPASS doesn't exist
+        final bypassMatch =
+            RegExp(r'^BYPASS=(.*)$', multiLine: true).firstMatch(configContent);
+        if (bypassMatch != null) {
+          currentBypassEnabled =
+              bypassMatch.group(1)?.trim().toLowerCase() == 'yes';
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _isBypassSupported = isSupportedByHardware;
+          _bypassEnabled = currentBypassEnabled;
+        });
+      }
+    } catch (e) {
+      print('Error loading initial bypass state: $e');
+      if (mounted) {
+        setState(() {
+          _isBypassSupported = false;
+          _bypassEnabled = false;
+        });
+      }
+    }
+  }
+
+// Update the _checkBypassSupport method to be more consistent
+  Future<void> _checkBypassSupport() async {
+    if (!await _checkRootAccess() || !mounted) return;
+    setState(() {
+      _isCheckingBypass = true;
+      _bypassSupportStatus = '';
+    });
+
+    try {
+      // Run the bypass controller test script
+      final controllerScriptPath =
+          '/data/adb/modules/EnCorinVest/Scripts/encorin_bypass_controller.sh';
+      final testResult =
+          await _runRootCommandAndWait('$controllerScriptPath test');
+
+      // Read the updated config
+      final readConfigResult =
+          await _runRootCommandAndWait('cat $MODULE_PATH/encorin.txt');
+      String configContent = readConfigResult.exitCode == 0
+          ? readConfigResult.stdout.toString()
+          : '';
+
+      // Parse the results
+      bool isSupportedByHardware = configContent
+          .contains(RegExp(r'^SUPPORTED_BYPASS=Yes', multiLine: true));
+
+      // Get current state - prioritize ENABLE_BYPASS over BYPASS
+      bool currentBypassEnabled = false;
+      final enableBypassMatch = RegExp(r'^ENABLE_BYPASS=(.*)$', multiLine: true)
+          .firstMatch(configContent);
+      if (enableBypassMatch != null) {
+        currentBypassEnabled =
+            enableBypassMatch.group(1)?.trim().toLowerCase() == 'yes';
       }
 
       if (mounted) {
@@ -679,10 +719,6 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
               ? _localization.translate('bypass_charging_supported')
               : _localization.translate('bypass_charging_unsupported');
         });
-
-        print("Bypass support detection completed:");
-        print("Hardware supported: $isSupportedByHardware");
-        print("Currently enabled: $currentBypassEnabled");
       }
     } catch (e) {
       print('Error checking bypass support: $e');
@@ -699,88 +735,28 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     }
   }
 
-// Method to load initial bypass state from config (without running test)
-  Future<void> _loadInitialBypassState() async {
-    if (!await _checkRootAccess() || !mounted) return;
-
-    try {
-      // Simply read the config file to check current status
-      final readConfigResult =
-          await _runRootCommandAndWait('cat $MODULE_PATH/encorin.txt');
-      String configContent = readConfigResult.exitCode == 0
-          ? readConfigResult.stdout.toString()
-          : '';
-
-      // Parse the bypass support status from config
-      bool isSupportedByHardware = configContent
-          .contains(RegExp(r'^BYPASS_SUPPORTED=Yes', multiLine: true));
-
-      // Parse the current bypass state
-      bool currentBypassEnabled = false;
-      final bypassMatch =
-          RegExp(r'^BYPASS=(.*)$', multiLine: true).firstMatch(configContent);
-      if (bypassMatch != null) {
-        String bypassValue = bypassMatch.group(1)?.trim().toLowerCase() ?? 'no';
-        currentBypassEnabled = bypassValue == 'yes';
-      }
-
-      if (mounted) {
-        setState(() {
-          _isBypassSupported = isSupportedByHardware;
-          _bypassEnabled = currentBypassEnabled;
-          // Don't set status text on initial load
-        });
-      }
-    } catch (e) {
-      print('Error loading initial bypass state: $e');
-      if (mounted) {
-        setState(() {
-          _isBypassSupported = false;
-          _bypassEnabled = false;
-        });
-      }
-    }
-  }
-
+// Update the _toggleBypassCharging method to focus on ENABLE_BYPASS
   Future<void> _toggleBypassCharging(bool enable) async {
     if (!await _checkRootAccess() || !mounted || !_isBypassSupported) return;
     setState(() => _isTogglingBypass = true);
 
     try {
-      print("Writing BYPASS=$enable to $_configFilePath");
       final valueString = enable ? 'Yes' : 'No';
 
-      // Use sed to update or add the BYPASS line
-      final sedCommand =
-          '''sed -i -e 's#^BYPASS=.*#BYPASS=$valueString#' -e t -e '\$aBYPASS=$valueString' $_configFilePath''';
+      // Update ENABLE_BYPASS (primary config)
+      final enableBypassSedCommand =
+          '''sed -i -e 's#^ENABLE_BYPASS=.*#ENABLE_BYPASS=$valueString#' -e t -e '\$aENABLE_BYPASS=$valueString' $_configFilePath''';
 
-      final result = await _runRootCommandAndWait(sedCommand);
+      await _runRootCommandAndWait(enableBypassSedCommand);
 
-      if (result.exitCode == 0) {
-        print("Bypass config file update successful.");
+      // Run the bypass controller script to apply changes
+      final controllerScriptPath =
+          '/data/adb/modules/EnCorinVest/Scripts/encorin_bypass_controller.sh';
+      final action = enable ? 'enable' : 'disable';
+      await _runRootCommandAndWait('$controllerScriptPath $action');
 
-        // Run the bypass controller script to apply the change
-        final controllerScriptPath =
-            '/data/adb/modules/EnCorinVest/Scripts/encorin_bypass_controller.sh';
-        final action = enable ? 'enable' : 'disable';
-
-        print("Running bypass controller: $controllerScriptPath $action");
-        final controllerResult =
-            await _runRootCommandAndWait('$controllerScriptPath $action');
-
-        if (controllerResult.exitCode == 0) {
-          print("Bypass controller executed successfully: $action");
-        } else {
-          print("Bypass controller failed: ${controllerResult.stderr}");
-          // Continue anyway since config was updated
-        }
-
-        if (mounted) {
-          setState(() => _bypassEnabled = enable);
-        }
-      } else {
-        print(
-            'Bypass config file update failed. Exit Code: ${result.exitCode}, Stderr: ${result.stderr}');
+      if (mounted) {
+        setState(() => _bypassEnabled = enable);
       }
     } catch (e) {
       print('Error updating bypass config: $e');
