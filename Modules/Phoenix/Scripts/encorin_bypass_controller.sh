@@ -27,10 +27,6 @@ update_config() {
         else
             echo "$key=$value" >> "$CONFIG_FILE"
         fi
-    else
-        # Create config file if it doesn't exist
-        mkdir -p "$(dirname "$CONFIG_FILE")"
-        echo "$key=$value" > "$CONFIG_FILE"
     fi
 }
 
@@ -40,6 +36,17 @@ get_config() {
     if [ -f "$CONFIG_FILE" ]; then
         grep "^$key=" "$CONFIG_FILE" 2>/dev/null | cut -d'=' -f2 | head -1
     fi
+}
+
+# Function to get current bypass status using your grep command
+get_bypass_status() {
+    grep "^BYPASS=" "$CONFIG_FILE" 2>/dev/null | grep -v "BYPASS_SUPPORTED" | cut -d'=' -f2 | tr -d ' ' | head -1
+}
+
+# Function to check if bypass is currently enabled (returns 0 for Yes, 1 for No)
+is_bypass_enabled() {
+    local status=$(get_bypass_status)
+    [ "$status" = "Yes" ]
 }
 
 # Function to write to node with error handling
@@ -309,6 +316,7 @@ test_bypass_support() {
 # Function to enable bypass charging
 enable_bypass() {
     local bypass_success=0
+    local active_method=""
     
     # Check if bypass is supported first
     local supported=$(get_config "BYPASS_SUPPORTED")
@@ -317,12 +325,20 @@ enable_bypass() {
         return 1
     fi
     
+    # Check if bypass is already enabled
+    if is_bypass_enabled; then
+        echo "Executed Successfully."
+        return 0
+    fi
+    
     # List of methods to try (ordered by common usage)
     local methods="OPLUS_MMI SUSPEND_COMMON DISABLE_COMMON GOOGLE_PIXEL SAMSUNG_STORE_MODE QCOM_SUSPEND HUAWEI_COMMON CONTROL_COMMON TRANSISSION_BYPASSCHG"
     
     for method in $methods; do
         if test_bypass_method "$method"; then
             if apply_bypass_method "$method" "bypass"; then
+                update_config "BYPASS" "Yes"
+                update_config "BYPASS_METHOD" "$method"
                 echo "Executed Successfully."
                 bypass_success=1
                 break
@@ -331,6 +347,7 @@ enable_bypass() {
     done
     
     if [ "$bypass_success" -eq 0 ]; then
+        update_config "BYPASS" "No"
         echo "Executed Successfully." 
         return 1
     fi
@@ -338,12 +355,20 @@ enable_bypass() {
 
 # Function to disable bypass charging
 disable_bypass() {
-    # Attempt to restore all commonly used methods, as we don't track the active method in config anymore
+    local current_method=$(get_config "BYPASS_METHOD")
+    
+    # If we know the active method, try to restore it specifically first
+    if [ -n "$current_method" ] && [ "$current_method" != "" ]; then
+        apply_bypass_method "$current_method" "restore"
+    fi
+    
+    # Also attempt to restore all commonly used methods as fallback
     local methods="OPLUS_MMI SUSPEND_COMMON DISABLE_COMMON GOOGLE_PIXEL SAMSUNG_STORE_MODE QCOM_SUSPEND HUAWEI_COMMON CONTROL_COMMON TRANSISSION_BYPASSCHG"
     for m in $methods; do
         apply_bypass_method "$m" "restore" # Best effort restore
     done
     
+    update_config "BYPASS" "No"
     echo "Executed Successfully."
 }
 
@@ -357,14 +382,27 @@ show_usage() {
     echo "  test     - Test bypass support and detect available methods"
     echo "  enable   - Enable bypass charging using the best available method"
     echo "  disable  - Disable bypass charging and restore normal charging"
+    echo "  status   - Show current bypass status"
     echo ""
     echo "Examples:"
     echo "  $0 test      # Test what bypass methods work on this device"
     echo "  $0 enable    # Enable bypass charging"
     echo "  $0 disable   # Disable bypass charging"
+    echo "  $0 status    # Show current bypass status"
     echo ""
     echo "Config file: $CONFIG_FILE"
     echo "Bypass script: $BYPASS_SCRIPT"
+}
+
+# Function to show current status
+show_status() {
+    local bypass_status=$(get_bypass_status)
+    local bypass_method=$(get_config "BYPASS_METHOD")
+    local bypass_supported=$(get_config "BYPASS_SUPPORTED")
+    
+    echo "Bypass Status: ${bypass_status:-No}"
+    echo "Active Method: ${bypass_method:-none}"
+    echo "Bypass Supported: ${bypass_supported:-unknown}"
 }
 
 # Check if running as root
@@ -383,6 +421,9 @@ case "$1" in
         ;;
     "disable")
         disable_bypass
+        ;;
+    "status")
+        show_status
         ;;
     *)
         show_usage
