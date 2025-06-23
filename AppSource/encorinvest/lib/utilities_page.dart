@@ -699,34 +699,24 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     setState(() => _isTogglingBypass = true);
 
     try {
-      // Determine the command to run based on the 'enable' flag.
-      final command = enable
-          ? '$MODULE_PATH/Scripts/encorin_bypass_controller.sh enable'
-          : '$MODULE_PATH/Scripts/encorin_bypass_controller.sh disable';
+      print("Writing BYPASS=$enable to $_configFilePath");
+      final valueString = enable ? 'Yes' : 'No';
+      final sedCommand =
+          '''sed -i 's#^BYPASS=.*#BYPASS=$valueString#' $_configFilePath''';
 
-      // Run the command without checking exit code for immediate success assumption
-      await _runRootCommandFireAndForget(command); // Changed to fire-and-forget
+      final result = await _runRootCommandAndWait(sedCommand);
 
-      // Assume success and update UI immediately
-      if (mounted) {
-        setState(() => _bypassEnabled = enable);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(enable
-                ? 'Bypass charging enabled'
-                : 'Bypass charging disabled'),
-          ),
-        );
+      if (result.exitCode == 0) {
+        print("Bypass config file update successful.");
+        if (mounted) {
+          setState(() => _bypassEnabled = enable);
+        }
+      } else {
+        print(
+            'Bypass config file update failed. Exit Code: ${result.exitCode}, Stderr: ${result.stderr}');
       }
     } catch (e) {
-      print('Error toggling bypass charging: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error toggling bypass charging'),
-          ),
-        );
-      }
+      print('Error updating bypass config: $e');
     } finally {
       if (mounted) setState(() => _isTogglingBypass = false);
     }
