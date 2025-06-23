@@ -75,7 +75,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     _checkResolutionServiceAvailability();
     _checkHamadaStartOnBoot();
     _loadGameTxt();
-    _checkBypassSupport(); // Check for bypass support on page load
+    _loadInitialBypassState(); // Load initial bypass state on page load
   }
 
   Future<ProcessResult> _runRootCommandAndWait(String command) async {
@@ -627,6 +627,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
   }
 
 // --- Bypass Charging Logic ---
+// This method runs only when the Detect button is pressed
   Future<void> _checkBypassSupport() async {
     if (!await _checkRootAccess() || !mounted) return;
     setState(() {
@@ -635,7 +636,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     });
 
     try {
-      // First, run the bypass controller test script to detect hardware support
+      // Run the bypass controller test script to detect hardware support
       final controllerScriptPath =
           '/data/adb/modules/EnCorinVest/Scripts/encorin_bypass_controller.sh';
 
@@ -695,6 +696,49 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
       }
     } finally {
       if (mounted) setState(() => _isCheckingBypass = false);
+    }
+  }
+
+// Method to load initial bypass state from config (without running test)
+  Future<void> _loadInitialBypassState() async {
+    if (!await _checkRootAccess() || !mounted) return;
+
+    try {
+      // Simply read the config file to check current status
+      final readConfigResult =
+          await _runRootCommandAndWait('cat $MODULE_PATH/encorin.txt');
+      String configContent = readConfigResult.exitCode == 0
+          ? readConfigResult.stdout.toString()
+          : '';
+
+      // Parse the bypass support status from config
+      bool isSupportedByHardware = configContent
+          .contains(RegExp(r'^BYPASS_SUPPORTED=Yes', multiLine: true));
+
+      // Parse the current bypass state
+      bool currentBypassEnabled = false;
+      final bypassMatch =
+          RegExp(r'^BYPASS=(.*)$', multiLine: true).firstMatch(configContent);
+      if (bypassMatch != null) {
+        String bypassValue = bypassMatch.group(1)?.trim().toLowerCase() ?? 'no';
+        currentBypassEnabled = bypassValue == 'yes';
+      }
+
+      if (mounted) {
+        setState(() {
+          _isBypassSupported = isSupportedByHardware;
+          _bypassEnabled = currentBypassEnabled;
+          // Don't set status text on initial load
+        });
+      }
+    } catch (e) {
+      print('Error loading initial bypass state: $e');
+      if (mounted) {
+        setState(() {
+          _isBypassSupported = false;
+          _bypassEnabled = false;
+        });
+      }
     }
   }
 
