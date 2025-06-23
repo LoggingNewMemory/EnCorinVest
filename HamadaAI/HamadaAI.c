@@ -130,10 +130,10 @@ int main(void) {
                 snprintf(command, sizeof(command), "sh %s", PERFORMANCE_SCRIPT);
                 system(command);
                 
-                // Execute bypass script if enabled
+                // Execute bypass script with enable if enabled
                 if (bypass_enabled) {
-                    printf("Bypass enabled - executing bypass controller\n");
-                    snprintf(command, sizeof(command), "sh %s", BYPASS_SCRIPT);
+                    printf("Bypass enabled - executing bypass controller enable\n");
+                    snprintf(command, sizeof(command), "sh %s enable", BYPASS_SCRIPT);
                     system(command);
                 }
                 
@@ -146,6 +146,14 @@ int main(void) {
                 char command[BUFFER_SIZE];
                 snprintf(command, sizeof(command), "sh %s", BALANCED_SCRIPT);
                 system(command);
+                
+                // Execute bypass script with disable if it was previously enabled
+                if (bypass_enabled && last_executed == EXEC_GAME) {
+                    printf("Exiting game - executing bypass controller disable\n");
+                    snprintf(command, sizeof(command), "sh %s disable", BYPASS_SCRIPT);
+                    system(command);
+                }
+                
                 last_executed = EXEC_NORMAL;
             }
         }
