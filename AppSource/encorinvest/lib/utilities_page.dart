@@ -633,36 +633,23 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
 
     try {
       final readConfigResult =
-          await _runRootCommandAndWait('cat $MODULE_PATH/encorin.txt');
+          await _runRootCommandAndWait('cat $_configFilePath');
       String configContent = readConfigResult.exitCode == 0
           ? readConfigResult.stdout.toString()
           : '';
 
-      // Check hardware support first
-      bool isSupportedByHardware = configContent
+      // Check hardware support
+      bool isSupported = configContent
           .contains(RegExp(r'^SUPPORTED_BYPASS=Yes', multiLine: true));
 
-      // Check bypass state - new ENABLE_BYPASS takes priority, fallback to old BYPASS
-      bool currentBypassEnabled = false;
-      final enableBypassMatch = RegExp(r'^ENABLE_BYPASS=(.*)$', multiLine: true)
-          .firstMatch(configContent);
-      if (enableBypassMatch != null) {
-        currentBypassEnabled =
-            enableBypassMatch.group(1)?.trim().toLowerCase() == 'yes';
-      } else {
-        // Only check old BYPASS field if ENABLE_BYPASS doesn't exist
-        final bypassMatch =
-            RegExp(r'^BYPASS=(.*)$', multiLine: true).firstMatch(configContent);
-        if (bypassMatch != null) {
-          currentBypassEnabled =
-              bypassMatch.group(1)?.trim().toLowerCase() == 'yes';
-        }
-      }
+      // Check bypass state
+      bool isEnabled = configContent
+          .contains(RegExp(r'^ENABLE_BYPASS=Yes', multiLine: true));
 
       if (mounted) {
         setState(() {
-          _isBypassSupported = isSupportedByHardware;
-          _bypassEnabled = currentBypassEnabled;
+          _isBypassSupported = isSupported;
+          _bypassEnabled = isEnabled;
         });
       }
     } catch (e) {
@@ -676,7 +663,6 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     }
   }
 
-// Update the _checkBypassSupport method to be more consistent
   Future<void> _checkBypassSupport() async {
     if (!await _checkRootAccess() || !mounted) return;
     setState(() {
@@ -693,29 +679,22 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
 
       // Read the updated config
       final readConfigResult =
-          await _runRootCommandAndWait('cat $MODULE_PATH/encorin.txt');
+          await _runRootCommandAndWait('cat $_configFilePath');
       String configContent = readConfigResult.exitCode == 0
           ? readConfigResult.stdout.toString()
           : '';
 
       // Parse the results
-      bool isSupportedByHardware = configContent
+      bool isSupported = configContent
           .contains(RegExp(r'^SUPPORTED_BYPASS=Yes', multiLine: true));
-
-      // Get current state - prioritize ENABLE_BYPASS over BYPASS
-      bool currentBypassEnabled = false;
-      final enableBypassMatch = RegExp(r'^ENABLE_BYPASS=(.*)$', multiLine: true)
-          .firstMatch(configContent);
-      if (enableBypassMatch != null) {
-        currentBypassEnabled =
-            enableBypassMatch.group(1)?.trim().toLowerCase() == 'yes';
-      }
+      bool isEnabled = configContent
+          .contains(RegExp(r'^ENABLE_BYPASS=Yes', multiLine: true));
 
       if (mounted) {
         setState(() {
-          _isBypassSupported = isSupportedByHardware;
-          _bypassEnabled = currentBypassEnabled;
-          _bypassSupportStatus = isSupportedByHardware
+          _isBypassSupported = isSupported;
+          _bypassEnabled = isEnabled;
+          _bypassSupportStatus = isSupported
               ? _localization.translate('bypass_charging_supported')
               : _localization.translate('bypass_charging_unsupported');
         });
@@ -735,7 +714,6 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     }
   }
 
-// Update the _toggleBypassCharging method to focus on ENABLE_BYPASS
   Future<void> _toggleBypassCharging(bool enable) async {
     if (!await _checkRootAccess() || !mounted || !_isBypassSupported) return;
     setState(() => _isTogglingBypass = true);
@@ -743,11 +721,11 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     try {
       final valueString = enable ? 'Yes' : 'No';
 
-      // Update ENABLE_BYPASS (primary config)
-      final enableBypassSedCommand =
+      // Update ENABLE_BYPASS in config file
+      final sedCommand =
           '''sed -i -e 's#^ENABLE_BYPASS=.*#ENABLE_BYPASS=$valueString#' -e t -e '\$aENABLE_BYPASS=$valueString' $_configFilePath''';
 
-      await _runRootCommandAndWait(enableBypassSedCommand);
+      await _runRootCommandAndWait(sedCommand);
 
       // Run the bypass controller script to apply changes
       final controllerScriptPath =

@@ -62,14 +62,14 @@ dnd_on() {
 SCRIPT_PATH="/data/adb/modules/EnCorinVest/Scripts"
 
 bypass_on() {
-    BYPASS=$(grep "^BYPASS=" /data/adb/modules/EnCorinVest/encorin.txt | grep -v "BYPASS_SUPPORTED" | cut -d'=' -f2 | tr -d ' ')
+    BYPASS=$(grep "^ENABLE_BYPASS=" /data/adb/modules/EnCorinVest/encorin.txt | grep -v "SUPPORTED_BYPASS" | cut -d'=' -f2 | tr -d ' ')
     if [ "$BYPASS" = "Yes" ]; then
         sh $SCRIPT_PATH/encorin_bypass_controller.sh enable
     fi
 }
 
 bypass_off() {
-    BYPASS=$(grep "^BYPASS=" /data/adb/modules/EnCorinVest/encorin.txt | grep -v "BYPASS_SUPPORTED" | cut -d'=' -f2 | tr -d ' ')
+    BYPASS=$(grep "^ENABLE_BYPASS=" /data/adb/modules/EnCorinVest/encorin.txt | grep -v "SUPPORTED_BYPASS" | cut -d'=' -f2 | tr -d ' ')
     if [ "$BYPASS" = "Yes" ]; then
         sh $SCRIPT_PATH/encorin_bypass_controller.sh disable
     fi
