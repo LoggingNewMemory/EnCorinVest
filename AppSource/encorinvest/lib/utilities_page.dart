@@ -635,14 +635,29 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     });
 
     try {
-      // Simply read the config file to check current status
+      // First, run the bypass controller test script to detect hardware support
+      final controllerScriptPath =
+          '/data/adb/modules/EnCorinVest/Scripts/encorin_bypass_controller.sh';
+
+      print("Running bypass controller test: $controllerScriptPath test");
+      final testResult =
+          await _runRootCommandAndWait('$controllerScriptPath test');
+
+      if (testResult.exitCode != 0) {
+        print("Bypass controller test failed: ${testResult.stderr}");
+        // If the test script fails, we can still try to read existing config
+      } else {
+        print("Bypass controller test completed successfully");
+      }
+
+      // Now read the config file to check the results
       final readConfigResult =
           await _runRootCommandAndWait('cat $MODULE_PATH/encorin.txt');
       String configContent = readConfigResult.exitCode == 0
           ? readConfigResult.stdout.toString()
           : '';
 
-      // Parse the bypass support status from config
+      // Parse the bypass support status from config (should be set by the test script)
       bool isSupportedByHardware = configContent
           .contains(RegExp(r'^BYPASS_SUPPORTED=Yes', multiLine: true));
 
@@ -663,6 +678,10 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
               ? _localization.translate('bypass_charging_supported')
               : _localization.translate('bypass_charging_unsupported');
         });
+
+        print("Bypass support detection completed:");
+        print("Hardware supported: $isSupportedByHardware");
+        print("Currently enabled: $currentBypassEnabled");
       }
     } catch (e) {
       print('Error checking bypass support: $e');
