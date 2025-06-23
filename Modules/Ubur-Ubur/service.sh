@@ -151,6 +151,9 @@ sh /data/adb/modules/EnCorinVest/KoboKanaeru/KoboKanaeru.sh
 # Disable Limit 60FPS while Gaming on AOSP 15.0
 resetprop -n debug.graphics.game_default_frame_rate.disabled true
 
+# Disable FPS Drop when low battery
+resetprop -n sys.surfaceflinger.idle_reduce_framerate_enable no
+
 # From my GSI Port
 # Perf +
 resetprop -n debug.sf.enable_gl_backpressure 1
