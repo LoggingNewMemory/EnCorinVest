@@ -52,8 +52,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
   bool _bypassEnabled = false;
   bool _isCheckingBypass = false;
   bool _isTogglingBypass = false;
-  String _bypassSupportStatus = ''; // New state for status text
-  String _bypassPath = '';
+  String _bypassSupportStatus = '';
 
   // --- Original values (fetched once if service is available) ---
   String _originalSize = '';
@@ -627,36 +626,32 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
   }
 
 // --- Bypass Charging Logic ---
-// Update the _loadInitialBypassState method to be more explicit about the config priority
+
   Future<void> _loadInitialBypassState() async {
     if (!await _checkRootAccess() || !mounted) return;
 
     try {
-      final readConfigResult =
-          await _runRootCommandAndWait('cat $_configFilePath');
-      String configContent = readConfigResult.exitCode == 0
-          ? readConfigResult.stdout.toString()
-          : '';
+      // Simply read the ENABLE_BYPASS value from config
+      final result = await _runRootCommandAndWait('cat $_configFilePath');
+      if (result.exitCode == 0) {
+        final content = result.stdout.toString();
 
-      // Check hardware support
-      bool isSupported = configContent
-          .contains(RegExp(r'^SUPPORTED_BYPASS=Yes', multiLine: true));
+        // Check if ENABLE_BYPASS exists and get its value
+        final enabledMatch = RegExp(r'^ENABLE_BYPASS=(Yes|No)', multiLine: true)
+            .firstMatch(content);
 
-      // Check bypass state
-      bool isEnabled = configContent
-          .contains(RegExp(r'^ENABLE_BYPASS=Yes', multiLine: true));
-
-      if (mounted) {
-        setState(() {
-          _isBypassSupported = isSupported;
-          _bypassEnabled = isEnabled;
-        });
+        if (mounted) {
+          setState(() {
+            // If ENABLE_BYPASS exists, use its value, otherwise default to false
+            _bypassEnabled = enabledMatch?.group(1)?.toLowerCase() == 'yes';
+            print("Initial bypass state from config: $_bypassEnabled");
+          });
+        }
       }
     } catch (e) {
       print('Error loading initial bypass state: $e');
       if (mounted) {
         setState(() {
-          _isBypassSupported = false;
           _bypassEnabled = false;
         });
       }
@@ -671,40 +666,34 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     });
 
     try {
-      // Run the bypass controller test script
-      final controllerScriptPath =
+      // Run detection script
+      final controllerPath =
           '/data/adb/modules/EnCorinVest/Scripts/encorin_bypass_controller.sh';
-      final testResult =
-          await _runRootCommandAndWait('$controllerScriptPath test');
+      await _runRootCommandAndWait('$controllerPath test');
 
-      // Read the updated config
-      final readConfigResult =
-          await _runRootCommandAndWait('cat $_configFilePath');
-      String configContent = readConfigResult.exitCode == 0
-          ? readConfigResult.stdout.toString()
-          : '';
+      // Read updated config to check support status
+      final result = await _runRootCommandAndWait('cat $_configFilePath');
+      if (result.exitCode == 0) {
+        final content = result.stdout.toString();
+        final supportedMatch =
+            RegExp(r'^SUPPORTED_BYPASS=(Yes|No)', multiLine: true)
+                .firstMatch(content);
 
-      // Parse the results
-      bool isSupported = configContent
-          .contains(RegExp(r'^SUPPORTED_BYPASS=Yes', multiLine: true));
-      bool isEnabled = configContent
-          .contains(RegExp(r'^ENABLE_BYPASS=Yes', multiLine: true));
-
-      if (mounted) {
-        setState(() {
-          _isBypassSupported = isSupported;
-          _bypassEnabled = isEnabled;
-          _bypassSupportStatus = isSupported
-              ? _localization.translate('bypass_charging_supported')
-              : _localization.translate('bypass_charging_unsupported');
-        });
+        if (mounted) {
+          setState(() {
+            _isBypassSupported =
+                supportedMatch?.group(1)?.toLowerCase() == 'yes';
+            _bypassSupportStatus = _isBypassSupported
+                ? _localization.translate('bypass_charging_supported')
+                : _localization.translate('bypass_charging_unsupported');
+          });
+        }
       }
     } catch (e) {
       print('Error checking bypass support: $e');
       if (mounted) {
         setState(() {
           _isBypassSupported = false;
-          _bypassEnabled = false;
           _bypassSupportStatus =
               _localization.translate('bypass_charging_unsupported');
         });
@@ -714,30 +703,72 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     }
   }
 
+  Future<bool> _updateBypassConfig(bool enabled) async {
+    try {
+      final value = enabled ? 'Yes' : 'No';
+
+      // Read current config
+      final readResult = await _runRootCommandAndWait('cat $_configFilePath');
+      if (readResult.exitCode != 0) return false;
+
+      String content = readResult.stdout.toString();
+
+      // Update ENABLE_BYPASS value
+      if (content.contains('ENABLE_BYPASS=')) {
+        content = content.replaceAll(
+          RegExp(r'^ENABLE_BYPASS=.*$', multiLine: true),
+          'ENABLE_BYPASS=$value',
+        );
+      } else {
+        // Add ENABLE_BYPASS if it doesn't exist
+        content += '\nENABLE_BYPASS=$value\n';
+      }
+
+      // Write updated config back to file
+      final base64Content = base64Encode(utf8.encode(content));
+      final writeResult = await _runRootCommandAndWait(
+        'echo "$base64Content" | base64 -d > $_configFilePath && chmod 644 $_configFilePath',
+      );
+
+      return writeResult.exitCode == 0;
+    } catch (e) {
+      print('Error updating bypass config: $e');
+      return false;
+    }
+  }
+
   Future<void> _toggleBypassCharging(bool enable) async {
-    if (!await _checkRootAccess() || !mounted || !_isBypassSupported) return;
+    if (!await _checkRootAccess() || !mounted) return;
     setState(() => _isTogglingBypass = true);
 
     try {
-      final valueString = enable ? 'Yes' : 'No';
+      // Update config file first
+      final configUpdated = await _updateBypassConfig(enable);
+      if (!configUpdated) {
+        print('Failed to update bypass config');
+        return;
+      }
 
-      // Update ENABLE_BYPASS in config file
-      final sedCommand =
-          '''sed -i -e 's#^ENABLE_BYPASS=.*#ENABLE_BYPASS=$valueString#' -e t -e '\$aENABLE_BYPASS=$valueString' $_configFilePath''';
+      // If supported, execute controller script
+      if (_isBypassSupported) {
+        final controllerPath =
+            '/data/adb/modules/EnCorinVest/Scripts/encorin_bypass_controller.sh';
+        final action = enable ? 'enable' : 'disable';
+        final result = await _runRootCommandAndWait('$controllerPath $action');
 
-      await _runRootCommandAndWait(sedCommand);
+        if (result.exitCode != 0) {
+          print('Bypass controller failed: ${result.stderr}');
+          // Still update the UI state since config was updated successfully
+        }
+      }
 
-      // Run the bypass controller script to apply changes
-      final controllerScriptPath =
-          '/data/adb/modules/EnCorinVest/Scripts/encorin_bypass_controller.sh';
-      final action = enable ? 'enable' : 'disable';
-      await _runRootCommandAndWait('$controllerScriptPath $action');
-
+      // Update UI state to match the config
       if (mounted) {
         setState(() => _bypassEnabled = enable);
+        print("Bypass charging toggled to: $enable");
       }
     } catch (e) {
-      print('Error updating bypass config: $e');
+      print('Error toggling bypass charging: $e');
     } finally {
       if (mounted) setState(() => _isTogglingBypass = false);
     }
@@ -863,24 +894,20 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                           : (bool value) {
                               _toggleHamadaAI(value);
                             },
-                      secondary: _isHamadaCommandRunning || _isConfigUpdating
+                      secondary: _isHamadaCommandRunning
                           ? SizedBox(
                               width: 20,
                               height: 20,
                               child: CircularProgressIndicator(strokeWidth: 2))
-                          : Icon(Icons.power_settings_new),
+                          : Icon(Icons.psychology_alt),
                       activeColor: colorScheme.primary,
                       contentPadding: EdgeInsets.zero,
                     ),
-                    const SizedBox(height: 12),
-                    Divider(
-                        height: 16,
-                        color: colorScheme.outlineVariant.withOpacity(0.5)),
                     SwitchListTile(
-                      title: Text(
-                          _localization.translate('hamada_ai_start_on_boot')),
+                      title: Text(_localization.translate(
+                          'hamada_ai_start_on_boot')), // Corrected key
                       value: _hamadaStartOnBoot,
-                      onChanged: isHamadaBusy
+                      onChanged: _isServiceFileUpdating
                           ? null
                           : (bool value) {
                               _setHamadaStartOnBoot(value);
@@ -888,9 +915,9 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                       secondary: _isServiceFileUpdating
                           ? SizedBox(
                               width: 20,
-                              height: 15,
+                              height: 20,
                               child: CircularProgressIndicator(strokeWidth: 2))
-                          : Icon(Icons.sync_disabled),
+                          : Icon(Icons.rocket_launch),
                       activeColor: colorScheme.primary,
                       contentPadding: EdgeInsets.zero,
                     ),
@@ -898,8 +925,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                 ),
               ),
             ),
-
-            // --- 3. Edit game.txt Card ---
+            // --- 3. Resolution Card ---
             Card(
               elevation: cardElevation,
               margin: cardMargin,
@@ -911,173 +937,190 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _localization.translate('edit_game_txt_title'),
-                      style: textTheme.titleLarge?.copyWith(
-                          color: colorScheme.onSurface,
-                          fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 16),
-                    if (_isGameTxtLoading)
-                      Center(child: CircularProgressIndicator())
-                    else
-                      TextField(
-                        controller: _gameTxtController,
-                        maxLines: 8,
-                        minLines: 5,
-                        keyboardType: TextInputType.multiline,
-                        decoration: InputDecoration(
-                          hintText: _localization.translate('game_txt_hint'),
-                          border: OutlineInputBorder(
-                            borderSide: BorderSide(color: colorScheme.outline),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(
-                                color: colorScheme.primary, width: 2.0),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          contentPadding: EdgeInsets.all(12),
-                          fillColor: colorScheme.surfaceContainer,
-                          filled: true,
-                        ),
-                        style: textTheme.bodyMedium
-                            ?.copyWith(color: colorScheme.onSurface),
-                        readOnly: _isGameTxtSaving,
-                      ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          backgroundColor: colorScheme.primary,
-                          foregroundColor: colorScheme.onPrimary,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8)),
-                        ),
-                        onPressed: _isGameTxtLoading || _isGameTxtSaving
-                            ? null
-                            : _saveGameTxt,
-                        child: _isGameTxtSaving
-                            ? SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: colorScheme.onPrimary,
-                                ),
-                              )
-                            : Text(_localization.translate('save_button')),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // --- 4. Downscale Resolution Card ---
-            Card(
-              elevation: cardElevation,
-              margin: cardMargin,
-              shape: cardShape,
-              color: colorScheme.surfaceContainerHighest,
-              child: Padding(
-                padding: cardPadding,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _localization.translate('downscale_resolution'),
+                      _localization
+                          .translate('downscale_resolution'), // Renamed key
                       style: textTheme.titleLarge?.copyWith(
                           color: colorScheme.onSurface,
                           fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 8),
+                    // If you want a description for resolution, add 'downscale_resolution_description' to languages.dart
+                    // Text(
+                    //   _localization.translate('downscale_resolution_description'), // New key needed in languages.dart
+                    //   style: textTheme.bodySmall?.copyWith(
+                    //     color: colorScheme.onSurfaceVariant,
+                    //     fontStyle: FontStyle.italic,
+                    //   ),
+                    // ),
+                    // const SizedBox(height: 16),
                     if (!_resolutionServiceAvailable)
                       Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 16.0),
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
                         child: Text(
-                          _localization
-                              .translate('resolution_unavailable_message'),
-                          style: textTheme.bodyMedium
-                              ?.copyWith(color: colorScheme.error),
+                          _localization.translate(
+                              'resolution_unavailable_message'), // Renamed key
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.error,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
                         ),
                       )
-                    else if (_isResolutionChanging)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 16.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            SizedBox(
-                                width: 20,
-                                height: 20,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 3)),
-                            SizedBox(width: 12),
-                            Text(_localization.translate('applying_changes'),
-                                style: textTheme.bodyMedium),
-                          ],
-                        ),
-                      )
-                    else
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4.0),
-                        child: Text(
-                          _localization.translate('selected_resolution', args: {
-                            'resolution': _getCurrentPercentageLabel()
-                          }),
-                          style: textTheme.bodyMedium
-                              ?.copyWith(color: colorScheme.onSurfaceVariant),
-                        ),
+                    else ...[
+                      Row(
+                        children: [
+                          Icon(Icons.screen_rotation,
+                              color: colorScheme.onSurfaceVariant),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Slider(
+                              value: _resolutionValue,
+                              min: 0,
+                              max: (_resolutionPercentages.length - 1)
+                                  .toDouble(),
+                              divisions: _resolutionPercentages.length - 1,
+                              label: _getCurrentPercentageLabel(),
+                              onChanged: _isResolutionChanging
+                                  ? null
+                                  : (double value) {
+                                      setState(() {
+                                        _resolutionValue = value;
+                                      });
+                                    },
+                              onChangeEnd: _isResolutionChanging
+                                  ? null
+                                  : (double value) {
+                                      _applyResolution(value);
+                                    },
+                              activeColor: colorScheme.primary,
+                              inactiveColor:
+                                  colorScheme.onSurfaceVariant.withOpacity(0.3),
+                            ),
+                          ),
+                          Text(_getCurrentPercentageLabel(),
+                              style: textTheme.bodyLarge
+                                  ?.copyWith(color: colorScheme.onSurface)),
+                        ],
                       ),
-                    const SizedBox(height: 12),
-                    Slider(
-                      value: _resolutionValue,
-                      min: 0,
-                      max: (_resolutionPercentages.length - 1).toDouble(),
-                      divisions: _resolutionPercentages.length - 1,
-                      label: _getCurrentPercentageLabel(),
-                      onChanged: (_resolutionServiceAvailable &&
-                              !_isResolutionChanging)
-                          ? (value) {
-                              if (mounted)
-                                setState(() => _resolutionValue = value);
-                            }
-                          : null,
-                      onChangeEnd: (_resolutionServiceAvailable &&
-                              !_isResolutionChanging)
-                          ? (value) {
-                              _applyResolution(value);
-                            }
-                          : null,
-                      activeColor: colorScheme.primary,
-                      inactiveColor: colorScheme.primary.withOpacity(0.3),
-                    ),
-                    const SizedBox(height: 16),
-                    if (_resolutionServiceAvailable)
+                      const SizedBox(height: 8),
                       SizedBox(
                         width: double.infinity,
-                        child: OutlinedButton(
-                          style: OutlinedButton.styleFrom(
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 12),
-                            side: BorderSide(color: colorScheme.outline),
+                            backgroundColor: colorScheme.secondaryContainer,
+                            foregroundColor: colorScheme.onSecondaryContainer,
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8)),
                           ),
                           onPressed: _isResolutionChanging
                               ? null
-                              : () =>
-                                  _resetResolution(), // Call without showSnackbar: true
-                          child:
+                              : () => _resetResolution(),
+                          icon: _isResolutionChanging
+                              ? SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2))
+                              : Icon(Icons.refresh),
+                          label:
                               Text(_localization.translate('reset_resolution')),
                         ),
                       ),
+                    ],
                   ],
                 ),
               ),
             ),
-
+            // --- 4. game.txt Editor Card ---
+            Card(
+              elevation: cardElevation,
+              margin: cardMargin,
+              shape: cardShape,
+              color: colorScheme.surfaceContainerHighest,
+              child: Padding(
+                padding: cardPadding,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _localization
+                          .translate('edit_game_txt_title'), // Renamed key
+                      style: textTheme.titleLarge?.copyWith(
+                          color: colorScheme.onSurface,
+                          fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 8),
+                    // If you want a description for game.txt editor, add 'edit_game_txt_description' to languages.dart
+                    // Text(
+                    //   _localization.translate('edit_game_txt_description'), // New key needed in languages.dart
+                    //   style: textTheme.bodySmall?.copyWith(
+                    //     color: colorScheme.onSurfaceVariant,
+                    //     fontStyle: FontStyle.italic,
+                    //   ),
+                    // ),
+                    // const SizedBox(height: 16),
+                    TextField(
+                      controller: _gameTxtController,
+                      maxLines: 10,
+                      minLines: 5,
+                      enabled: !_isGameTxtLoading && !_isGameTxtSaving,
+                      decoration: InputDecoration(
+                        hintText: _localization.translate('game_txt_hint'),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                              color: colorScheme.outline, width: 1.0),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                              color: colorScheme.outline, width: 1.0),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                              color: colorScheme.primary, width: 2.0),
+                        ),
+                        filled: true,
+                        fillColor: colorScheme.surfaceContainerLow,
+                        contentPadding: const EdgeInsets.all(12),
+                      ),
+                      style: textTheme.bodyMedium
+                          ?.copyWith(color: colorScheme.onSurface),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        // Removed the "Reading File" button
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              backgroundColor: colorScheme.primaryContainer,
+                              foregroundColor: colorScheme.onPrimaryContainer,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8)),
+                            ),
+                            onPressed:
+                                _isGameTxtSaving ? null : () => _saveGameTxt(),
+                            icon: _isGameTxtSaving
+                                ? SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2))
+                                : Icon(Icons.save),
+                            label: Text(_localization.translate('save_button')),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
             // --- 5. Bypass Charging Card ---
             Card(
               elevation: cardElevation,
@@ -1106,69 +1149,68 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                     const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,
-                      child: ElevatedButton(
+                      child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 12),
-                          backgroundColor: colorScheme.primaryContainer,
-                          foregroundColor: colorScheme.onPrimaryContainer,
+                          backgroundColor: colorScheme.tertiaryContainer,
+                          foregroundColor: colorScheme.onTertiaryContainer,
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8)),
                         ),
                         onPressed:
                             _isCheckingBypass ? null : _checkBypassSupport,
-                        child: _isCheckingBypass
+                        icon: _isCheckingBypass
                             ? SizedBox(
                                 width: 20,
                                 height: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  color: colorScheme.onPrimaryContainer,
+                                  color: colorScheme.onTertiaryContainer,
                                 ),
                               )
-                            : Text(_localization.translate('detect_button')),
+                            : Icon(Icons.flash_on),
+                        label: Text(_localization
+                            .translate('detect_button')), // Renamed key
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    if (_bypassSupportStatus.isNotEmpty && !_isCheckingBypass)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8.0),
-                        child: Center(
-                          child: Text(
-                            _bypassSupportStatus,
-                            style: textTheme.bodyMedium?.copyWith(
-                              color: _isBypassSupported
-                                  ? colorScheme.primary
-                                  : colorScheme.error,
-                              fontWeight: FontWeight.bold,
-                            ),
+                    if (_bypassSupportStatus.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Center(
+                        child: Text(
+                          _bypassSupportStatus,
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: _isBypassSupported
+                                ? Colors.green
+                                : colorScheme.error,
+                            fontWeight: FontWeight.bold,
                           ),
+                          textAlign: TextAlign.center,
                         ),
                       ),
-                    if (_isBypassSupported)
-                      SwitchListTile(
-                        title: Text(
-                            _localization.translate('bypass_charging_toggle')),
-                        value: _bypassEnabled,
-                        onChanged: (_isTogglingBypass)
-                            ? null
-                            : (bool value) {
-                                _toggleBypassCharging(value);
-                              },
-                        secondary: _isTogglingBypass
-                            ? SizedBox(
-                                width: 20,
-                                height: 20,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2))
-                            : Icon(Icons.battery_charging_full),
-                        activeColor: colorScheme.primary,
-                        contentPadding: EdgeInsets.zero,
-                      ),
+                    ],
+                    const SizedBox(height: 16),
+                    SwitchListTile(
+                      title: Text(_localization
+                          .translate('bypass_charging_toggle')), // Renamed key
+                      value: _bypassEnabled,
+                      onChanged: (_isTogglingBypass || !_isBypassSupported)
+                          ? null
+                          : (bool value) {
+                              _toggleBypassCharging(value);
+                            },
+                      secondary: _isTogglingBypass
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2))
+                          : Icon(Icons.battery_charging_full),
+                      activeColor: colorScheme.primary,
+                      contentPadding: EdgeInsets.zero,
+                    ),
                   ],
                 ),
               ),
             ),
-
             // --- 6. Copy Logs Card ---
             Card(
               elevation: cardElevation,

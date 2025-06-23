@@ -1,7 +1,8 @@
 #!/system/bin/sh
 
-# EnCorin Bypass Controller
-# Enhanced version that adapts to rem01_bypass.sh structure
+# EnCorin Bypass Controller - Fixed Version
+# No temp files used, prevents config duplication
+# Removed ENABLE_BYPASS references as requested
 
 MODULE_PATH="/data/adb/modules/EnCorinVest"
 CONFIG_FILE="$MODULE_PATH/encorin.txt"
@@ -15,43 +16,37 @@ else
     exit 1
 fi
 
-# Function to update config value
+# Initialize config with default values if needed
+initialize_config() {
+    [ -f "$CONFIG_FILE" ] && return
+    
+    mkdir -p "$(dirname "$CONFIG_FILE")"
+    echo "SUPPORTED_BYPASS=No" > "$CONFIG_FILE"
+}
+
+# Atomic config update without temp files
 update_config() {
     local key="$1"
     local value="$2"
     
-    if [ -f "$CONFIG_FILE" ]; then
-        # Use sed to replace the value, or add if doesn't exist
-        if grep -q "^$key=" "$CONFIG_FILE"; then
-            sed -i "s/^$key=.*/$key=$value/" "$CONFIG_FILE"
-        else
-            echo "$key=$value" >> "$CONFIG_FILE"
-        fi
-    else
-        # Create config file if it doesn't exist
-        mkdir -p "$(dirname "$CONFIG_FILE")"
-        echo "$key=$value" > "$CONFIG_FILE"
-    fi
+    initialize_config
+    
+    # Read existing config, update the key, and write back atomically
+    {
+        grep -v "^$key=" "$CONFIG_FILE" || true
+        echo "$key=$value"
+    } > "$CONFIG_FILE.new" && mv "$CONFIG_FILE.new" "$CONFIG_FILE"
 }
 
-# Function to get config value
+# Get config value
 get_config() {
     local key="$1"
-    if [ -f "$CONFIG_FILE" ]; then
-        grep "^$key=" "$CONFIG_FILE" 2>/dev/null | cut -d'=' -f2 | head -1
-    fi
+    grep "^$key=" "$CONFIG_FILE" 2>/dev/null | cut -d'=' -f2
 }
 
-# Function to write to node with error handling
+# Node operations
 write_node() {
-    local node="$1"
-    local value="$2"
-    
-    if [ -w "$node" ]; then
-        echo "$value" > "$node" 2>/dev/null
-        return $?
-    fi
-    return 1
+    [ -w "$1" ] && echo "$2" > "$1" 2>/dev/null
 }
 
 # Function to read from node
@@ -323,7 +318,6 @@ enable_bypass() {
     for method in $methods; do
         if test_bypass_method "$method"; then
             if apply_bypass_method "$method" "bypass"; then
-                update_config "ENABLE_BYPASS" "Yes"
                 echo "Executed Successfully."
                 bypass_success=1
                 break
@@ -337,15 +331,14 @@ enable_bypass() {
     fi
 }
 
-# Function to disable bypass charging
+# Fixed disable_bypass function
 disable_bypass() {
-    # Attempt to restore all commonly used methods, as we don't track the active method in config anymore
+    # Restore all possible methods
     local methods="OPLUS_MMI SUSPEND_COMMON DISABLE_COMMON GOOGLE_PIXEL SAMSUNG_STORE_MODE QCOM_SUSPEND HUAWEI_COMMON CONTROL_COMMON TRANSISSION_BYPASSCHG"
     for m in $methods; do
-        apply_bypass_method "$m" "restore" # Best effort restore
+        apply_bypass_method "$m" "restore" >/dev/null
     done
     
-    update_config "ENABLE_BYPASS" "No"
     echo "Executed Successfully."
 }
 
@@ -353,7 +346,7 @@ disable_bypass() {
 show_usage() {
     echo "EnCorin Bypass Controller - Enhanced rem01_bypass.sh Integration"
     echo ""
-    echo "Usage: $0 [command]"
+    echo "Usage: \$0 [command]"
     echo ""
     echo "Commands:"
     echo "  test     - Test bypass support and detect available methods"
@@ -361,9 +354,9 @@ show_usage() {
     echo "  disable  - Disable bypass charging and restore normal charging"
     echo ""
     echo "Examples:"
-    echo "  $0 test      # Test what bypass methods work on this device"
-    echo "  $0 enable    # Enable bypass charging"
-    echo "  $0 disable   # Disable bypass charging"
+    echo "  \$0 test      # Test what bypass methods work on this device"
+    echo "  \$0 enable    # Enable bypass charging"
+    echo "  \$0 disable   # Disable bypass charging"
     echo ""
     echo "Config file: $CONFIG_FILE"
     echo "Bypass script: $BYPASS_SCRIPT"
@@ -376,18 +369,10 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 # Main execution
+initialize_config
 case "$1" in
-    "test")
-        test_bypass_support
-        ;;
-    "enable")
-        enable_bypass
-        ;;
-    "disable")
-        disable_bypass
-        ;;
-    *)
-        show_usage
-        exit 1
-        ;;
+    "test") test_bypass_support ;;
+    "enable") enable_bypass ;;
+    "disable") disable_bypass ;;
+    *) show_usage ;;
 esac
