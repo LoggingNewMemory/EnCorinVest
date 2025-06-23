@@ -84,7 +84,7 @@ class LangEN {
     'dnd_description': 'Automatically Turn DND on / off',
     'dnd_toggle_title': 'Enable DND Auto Switch',
     'bypass_charging_title': 'Bypass Charging',
-    'bypass_charging_description': 'Charge your device without using battery',
+    'bypass_charging_description': 'Enable Bypass Charging when Using HamadaAI',
     'bypass_charging_toggle': 'Enable Bypass Charging',
     'bypass_charging_unsupported':
         'Bypass charging is not supported on your device',
@@ -175,7 +175,7 @@ class LangID {
     'dnd_toggle_title': 'Aktifkan Saklar Otomatis DND',
     'bypass_charging_title': 'Bypass Charging',
     'bypass_charging_description':
-        'Isi daya perangkat tanpa menggunakan baterai',
+        'Aktifkan Bypass Charging saat Menggunakan HamadaAI',
     'bypass_charging_toggle': 'Aktifkan Bypass Charging',
     'bypass_charging_unsupported':
         'Bypass charging tidak didukung di perangkat Anda',
@@ -260,7 +260,7 @@ class LangJP {
     'dnd_description': 'DND の自動オン/オフ切り替え',
     'dnd_toggle_title': 'DND 自動スイッチを有効にする',
     'bypass_charging_title': 'バイパス充電',
-    'bypass_charging_description': 'バッテリーを使用せずにデバイスを充電する',
+    'bypass_charging_description': 'HamadaAI使用時にバイパス充電を有効にする',
     'bypass_charging_toggle': 'バイパス充電を有効にする',
     'bypass_charging_unsupported': 'お使いのデバイスではバイパス充電はサポートされていません',
     'detect_button': 'バイパス充電を検出',
@@ -348,7 +348,8 @@ class LangJV {
     'dnd_description': 'Otomatis Nguripake / Mateni DND',
     'dnd_toggle_title': 'Aktifke Saklar Otomatis DND',
     'bypass_charging_title': 'Bypass Charging',
-    'bypass_charging_description': 'Ngecas piranti tanpa nggunakake batere',
+    'bypass_charging_description':
+        'Aktifke Bypass Charging nalika Nggunakake HamadaAI',
     'bypass_charging_toggle': 'Aktifke Bypass Charging',
     'bypass_charging_unsupported':
         'Bypass charging ora didukung ing piranti sampeyan',
