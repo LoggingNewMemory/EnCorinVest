@@ -52,6 +52,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
   bool _bypassEnabled = false;
   bool _isCheckingBypass = false;
   bool _isTogglingBypass = false;
+  String _bypassSupportStatus = ''; // New state for status text
   String _bypassPath = '';
 
   // --- Original values (fetched once if service is available) ---
@@ -74,7 +75,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     _checkResolutionServiceAvailability();
     _checkHamadaStartOnBoot();
     _loadGameTxt();
-    _checkBypassSupport(); // Add this line
+    _checkBypassSupport(); // Check for bypass support on page load
   }
 
   Future<ProcessResult> _runRootCommandAndWait(String command) async {
@@ -625,110 +626,109 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     }
   }
 
-// --- Bypass Charging Logic ---
+  // --- Bypass Charging Logic ---
   Future<void> _checkBypassSupport() async {
     if (!await _checkRootAccess() || !mounted) return;
-    setState(() => _isCheckingBypass = true);
+    setState(() {
+      _isCheckingBypass = true;
+      _bypassSupportStatus = ''; // Reset on new check
+    });
 
     try {
-      // Run the test command to check bypass support
-      final result = await _runRootCommandAndWait(
-          '$MODULE_PATH/Scripts/encorin_bypass_controller.sh test'); //
+      final configResult =
+          await _runRootCommandAndWait('cat $MODULE_PATH/encorin.txt');
+      if (configResult.exitCode == 0) {
+        final configContent = configResult.stdout.toString();
+        final lines = configContent.split('\n');
 
-      if (result.exitCode == 0) {
-        //
-        // Read the config file to get the support status
-        final configResult =
-            await _runRootCommandAndWait('cat $MODULE_PATH/encorin.txt'); //
-        if (configResult.exitCode == 0) {
-          //
-          final configContent = configResult.stdout.toString(); //
-          final supportedMatch =
-              RegExp(r'BYPASS_SUPPORTED=(Yes|No)').firstMatch(configContent); //
-          final enabledMatch =
-              RegExp(r'BYPASS=(Yes|No)').firstMatch(configContent); //
+        bool foundBypassSupported = false;
+        bool isEnabled = false;
 
-          if (mounted) {
-            //
-            setState(() {
-              //
-              _isBypassSupported = supportedMatch?.group(1) == 'Yes'; //
-              _bypassEnabled = enabledMatch?.group(1) == 'Yes'; //
-            });
+        for (final line in lines) {
+          final trimmedLine = line.trim();
+          if (trimmedLine.startsWith('BYPASS_SUPPORTED=')) {
+            if (trimmedLine.substring(17).toLowerCase() == 'yes') {
+              foundBypassSupported = true;
+            }
+          }
+          if (trimmedLine.startsWith('BYPASS=')) {
+            if (trimmedLine.substring(7).toLowerCase() == 'yes') {
+              isEnabled = true;
+            }
           }
         }
+
+        if (mounted) {
+          setState(() {
+            _isBypassSupported = foundBypassSupported;
+            _bypassEnabled = isEnabled;
+            if (foundBypassSupported) {
+              _bypassSupportStatus =
+                  _localization.translate('bypass_charging_supported');
+            } else {
+              _bypassSupportStatus =
+                  _localization.translate('bypass_charging_unsupported');
+            }
+          });
+        }
       } else {
-        if (mounted) setState(() => _isBypassSupported = false); //
+        if (mounted) {
+          setState(() {
+            _isBypassSupported = false;
+            _bypassSupportStatus =
+                _localization.translate('bypass_charging_unsupported');
+          });
+        }
       }
     } catch (e) {
-      print('Error checking bypass support: $e'); //
-      if (mounted) setState(() => _isBypassSupported = false); //
+      print('Error checking bypass support: $e');
+      if (mounted) {
+        setState(() {
+          _isBypassSupported = false;
+          _bypassSupportStatus =
+              _localization.translate('bypass_charging_unsupported');
+        });
+      }
     } finally {
-      if (mounted) setState(() => _isCheckingBypass = false); //
+      if (mounted) setState(() => _isCheckingBypass = false);
     }
   }
 
   Future<void> _toggleBypassCharging(bool enable) async {
-    if (!await _checkRootAccess() || !mounted || !_isBypassSupported) return; //
-    setState(() => _isTogglingBypass = true); //
+    if (!await _checkRootAccess() || !mounted || !_isBypassSupported) return;
+    setState(() => _isTogglingBypass = true);
 
     try {
-      // Run the enable/disable command
-      final command = enable //
-          ? '$MODULE_PATH/Scripts/encorin_bypass_controller.sh enable' //
-          : '$MODULE_PATH/Scripts/encorin_bypass_controller.sh disable'; //
+      // Determine the command to run based on the 'enable' flag.
+      final command = enable
+          ? '$MODULE_PATH/Scripts/encorin_bypass_controller.sh enable'
+          : '$MODULE_PATH/Scripts/encorin_bypass_controller.sh disable';
 
-      final result = await _runRootCommandAndWait(command); //
+      // Run the command without checking exit code for immediate success assumption
+      await _runRootCommandFireAndForget(command); // Changed to fire-and-forget
 
-      if (result.exitCode == 0) {
-        //
-        // Update the config file to reflect the new state
-        final updateCmd = enable //
-            ? 'sed -i "s/^BYPASS=.*/BYPASS=Yes/" $MODULE_PATH/encorin.txt' //
-            : 'sed -i "s/^BYPASS=.*/BYPASS=No/" $MODULE_PATH/encorin.txt'; //
-
-        await _runRootCommandAndWait(updateCmd); //
-
-        if (mounted) {
-          //
-          setState(() => _bypassEnabled = enable); //
-          ScaffoldMessenger.of(context).showSnackBar(
-            //
-            SnackBar(
-              //
-              content: Text(enable //
-                  ? 'Bypass charging enabled' //
-                  : 'Bypass charging disabled'), //
-            ),
-          );
-        }
-      } else {
-        print('Failed to toggle bypass charging: ${result.stderr}'); //
-        if (mounted) {
-          //
-          ScaffoldMessenger.of(context).showSnackBar(
-            //
-            SnackBar(
-              //
-              content: Text('Failed to toggle bypass charging'), //
-            ),
-          );
-        }
+      // Assume success and update UI immediately
+      if (mounted) {
+        setState(() => _bypassEnabled = enable);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(enable
+                ? 'Bypass charging enabled'
+                : 'Bypass charging disabled'),
+          ),
+        );
       }
     } catch (e) {
-      print('Error toggling bypass charging: $e'); //
+      print('Error toggling bypass charging: $e');
       if (mounted) {
-        //
         ScaffoldMessenger.of(context).showSnackBar(
-          //
           SnackBar(
-            //
-            content: Text('Error toggling bypass charging'), //
+            content: Text('Error toggling bypass charging'),
           ),
         );
       }
     } finally {
-      if (mounted) setState(() => _isTogglingBypass = false); //
+      if (mounted) setState(() => _isTogglingBypass = false);
     }
   }
 
@@ -1093,17 +1093,6 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    if (!_isBypassSupported && !_isCheckingBypass)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 16.0),
-                        child: Text(
-                          _localization
-                              .translate('bypass_charging_unsupported'),
-                          style: textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.error,
-                          ),
-                        ),
-                      ),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -1129,24 +1118,41 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    SwitchListTile(
-                      title: Text(
-                          _localization.translate('bypass_charging_toggle')),
-                      value: _bypassEnabled,
-                      onChanged: (!_isBypassSupported || _isTogglingBypass)
-                          ? null
-                          : (bool value) {
-                              _toggleBypassCharging(value);
-                            },
-                      secondary: _isTogglingBypass
-                          ? SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2))
-                          : Icon(Icons.battery_charging_full),
-                      activeColor: colorScheme.primary,
-                      contentPadding: EdgeInsets.zero,
-                    ),
+                    if (_bypassSupportStatus.isNotEmpty && !_isCheckingBypass)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0),
+                        child: Center(
+                          child: Text(
+                            _bypassSupportStatus,
+                            style: textTheme.bodyMedium?.copyWith(
+                              color: _isBypassSupported
+                                  ? colorScheme.primary
+                                  : colorScheme.error,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    if (_isBypassSupported)
+                      SwitchListTile(
+                        title: Text(
+                            _localization.translate('bypass_charging_toggle')),
+                        value: _bypassEnabled,
+                        onChanged: (_isTogglingBypass)
+                            ? null
+                            : (bool value) {
+                                _toggleBypassCharging(value);
+                              },
+                        secondary: _isTogglingBypass
+                            ? SizedBox(
+                                width: 20,
+                                height: 20,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2))
+                            : Icon(Icons.battery_charging_full),
+                        activeColor: colorScheme.primary,
+                        contentPadding: EdgeInsets.zero,
+                      ),
                   ],
                 ),
               ),
