@@ -11,11 +11,6 @@ if [ -e /proc/game_state ]; then
 tweak 1 /proc/game_state
 fi
 
-# MALI GPU Only
-# if [ -e /sys/class/misc/mali0/device/power_policy ]; then
-# tweak always_on /sys/class/misc/mali0/device/power_policy
-# fi
-
 # Memory Optimization | Older Kernel May Not Have
 if [ -d /sys/kernel/mm/transparent_hugepage ]; then
     for memtweak in /sys/kernel/mm/transparent_hugepage; do
@@ -165,7 +160,6 @@ settings put secure low_priority 0
 # From MTKVest
 
 cmd power set-adaptive-power-saver-enabled false
-cmd power set-fixed-performance-mode-enabled true
 
 # From Corin 
 cmd looper_stats disable
@@ -184,11 +178,6 @@ fi
 if [ -e /proc/game_state ]; then
 tweak 0 /proc/game_state
 fi
-
-# MALI GPU Only
-# if [ -e /sys/class/misc/mali0/device/power_policy ]; then
-# tweak coarse_demand /sys/class/misc/mali0/device/power_policy
-# fi
 
 # Memory Optimization | Older Kernel May Not Have
 if [ -d /sys/kernel/mm/transparent_hugepage ]; then
@@ -350,7 +339,6 @@ settings put secure low_priority 0
 # From MTKVest
 
 cmd power set-adaptive-power-saver-enabled false
-cmd power set-fixed-performance-mode-enabled true
 
 # From Corin 
 cmd looper_stats enable
@@ -369,11 +357,6 @@ fi
 if [ -e /proc/game_state ]; then
 tweak 0 /proc/game_state
 fi
-
-# MALI GPU Only
-# if [ -e /sys/class/misc/mali0/device/power_policy ]; then
-# tweak coarse_demand /sys/class/misc/mali0/device/power_policy
-# fi
 
 # Memory Optimization | Older Kernel May Not Have
 if [ -d /sys/kernel/mm/transparent_hugepage ]; then
@@ -524,7 +507,6 @@ settings put secure low_priority 1
 # From MTKVest
 
 cmd power set-adaptive-power-saver-enabled true
-cmd power set-fixed-performance-mode-enabled false
 
 # From Corin 
 cmd looper_stats enable
