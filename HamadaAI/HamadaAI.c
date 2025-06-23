@@ -7,33 +7,12 @@
 #define GAME_LIST "/data/EnCorinVest/game.txt"
 #define PERFORMANCE_SCRIPT "/data/adb/modules/EnCorinVest/Scripts/performance.sh"
 #define BALANCED_SCRIPT "/data/adb/modules/EnCorinVest/Scripts/balanced.sh"
-#define BYPASS_SCRIPT "/data/adb/modules/EnCorinVest/Scripts/encorin_bypass_controller.sh"
-#define CONFIG_FILE "/data/adb/modules/EnCorinVest/encorin.txt"
 
 #define MAX_PATTERNS 256
 #define MAX_PATTERN_LENGTH 256
 #define BUFFER_SIZE 1024
 
 typedef enum { EXEC_NONE, EXEC_GAME, EXEC_NORMAL } ExecType;
-
-bool is_bypass_enabled() {
-    FILE *file = fopen(CONFIG_FILE, "r");
-    if (!file) {
-        return false;
-    }
-
-    char line[BUFFER_SIZE];
-    while (fgets(line, sizeof(line), file)) {
-        line[strcspn(line, "\n")] = '\0';
-        if (strstr(line, "BYPASS=") != NULL) {
-            fclose(file);
-            return (strstr(line, "BYPASS=Yes") != NULL);
-        }
-    }
-
-    fclose(file);
-    return false;
-}
 
 int main(void) {
     // Check if game.txt exists
@@ -47,7 +26,6 @@ int main(void) {
     bool prev_screen_on = true; // initial status (assumed on)
     ExecType last_executed = EXEC_NONE;
     int delay_seconds = 5;
-    bool bypass_enabled = is_bypass_enabled();
 
     while (1) {
         // Build game package list from GAME_LIST.
@@ -87,7 +65,7 @@ int main(void) {
             if (current_screen_on) {
                 printf("Screen turned on - setting delay to 5 seconds\n");
                 delay_seconds = 5;
-            } else {
+            } else if (current_screen_on) {
                 printf("Screen turned off - setting delay to 10 seconds for power conservation\n");
                 delay_seconds = 10;
             }
@@ -118,9 +96,6 @@ int main(void) {
             }
         }
 
-        // Re-check bypass status each loop (allows runtime config changes)
-        bypass_enabled = is_bypass_enabled();
-
         // Process app detection (only if screen is on)
         if (current_screen_on && strlen(matched_package) > 0) {
             // A game package was detected.
@@ -129,14 +104,6 @@ int main(void) {
                 char command[BUFFER_SIZE];
                 snprintf(command, sizeof(command), "sh %s", PERFORMANCE_SCRIPT);
                 system(command);
-                
-                // Execute bypass script with enable if enabled
-                if (bypass_enabled) {
-                    printf("Bypass enabled - executing bypass controller enable\n");
-                    snprintf(command, sizeof(command), "sh %s enable", BYPASS_SCRIPT);
-                    system(command);
-                }
-                
                 last_executed = EXEC_GAME;
             }
         } else {
@@ -146,14 +113,6 @@ int main(void) {
                 char command[BUFFER_SIZE];
                 snprintf(command, sizeof(command), "sh %s", BALANCED_SCRIPT);
                 system(command);
-                
-                // Execute bypass script with disable if it was previously enabled
-                if (bypass_enabled && last_executed == EXEC_GAME) {
-                    printf("Exiting game - executing bypass controller disable\n");
-                    snprintf(command, sizeof(command), "sh %s disable", BYPASS_SCRIPT);
-                    system(command);
-                }
-                
                 last_executed = EXEC_NORMAL;
             }
         }
