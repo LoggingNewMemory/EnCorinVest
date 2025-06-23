@@ -45,3 +45,4 @@ exynos() {
 ambatusoc
 notification "EnCorinVest - Balanced"
 dnd_off
+bypass_off

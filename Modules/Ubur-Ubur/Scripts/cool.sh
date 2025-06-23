@@ -64,3 +64,5 @@ exynos() {
 
 ambatusoc
 notification "EnCorinVest - Cooling Done"
+dnd_off
+bypass_off

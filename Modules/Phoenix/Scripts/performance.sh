@@ -53,3 +53,4 @@ exynos() {
 ambatusoc
 notification "EnCorinVest - Performance"
 dnd_on
+bypass_on

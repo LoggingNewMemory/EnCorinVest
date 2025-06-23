@@ -41,6 +41,56 @@ class ConfigManager {
     return {'language': language, 'current_mode': currentMode};
   }
 
+  /// Updates a specific field in the config file without clearing other content
+  static Future<void> _updateConfigField(String fieldName, String value) async {
+    try {
+      // First, check if the config file exists and has content
+      var readResult = await run(
+          'su', ['-c', 'cat $_configFilePath 2>/dev/null || echo ""'],
+          verbose: false);
+
+      List<String> lines = [];
+      bool fieldFound = false;
+
+      if (readResult.exitCode == 0 &&
+          readResult.stdout.toString().trim().isNotEmpty) {
+        // File exists and has content
+        String content = readResult.stdout.toString();
+        lines = content.split('\n');
+
+        // Update existing field or mark that it wasn't found
+        for (int i = 0; i < lines.length; i++) {
+          if (lines[i].startsWith('$fieldName=')) {
+            lines[i] = '$fieldName=${value.toUpperCase()}';
+            fieldFound = true;
+            break;
+          }
+        }
+      } else {
+        // File doesn't exist or is empty, create basic structure
+        lines = ['[EnCorinVest config]'];
+      }
+
+      // If field wasn't found, add it
+      if (!fieldFound) {
+        lines.add('$fieldName=${value.toUpperCase()}');
+      }
+
+      // Remove empty lines at the end
+      while (lines.isNotEmpty && lines.last.trim().isEmpty) {
+        lines.removeLast();
+      }
+
+      // Write the updated content back
+      String updatedContent = lines.join('\n') + '\n';
+      await run('su', ['-c', 'echo "$updatedContent" > $_configFilePath'],
+          verbose: false);
+    } catch (e) {
+      print('Error updating config field $fieldName: $e');
+    }
+  }
+
+  /// Legacy method for writing entire config (kept for compatibility)
   static Future<void> writeConfig(
       {required String language, required String currentMode}) async {
     String content = '[EnCorinVest config]\n'
@@ -55,15 +105,14 @@ class ConfigManager {
     }
   }
 
+  /// Saves only the language field, preserving other config values
   static Future<void> saveLanguage(String languageCode) async {
-    var currentConfig = await readConfig();
-    await writeConfig(
-        language: languageCode, currentMode: currentConfig['current_mode']!);
+    await _updateConfigField('language', languageCode);
   }
 
+  /// Saves only the current_mode field, preserving other config values
   static Future<void> saveMode(String mode) async {
-    var currentConfig = await readConfig();
-    await writeConfig(language: currentConfig['language']!, currentMode: mode);
+    await _updateConfigField('current_mode', mode);
   }
 }
 

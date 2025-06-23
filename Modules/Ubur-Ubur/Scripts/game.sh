@@ -57,3 +57,4 @@ exynos() {
 ambatusoc
 notification "EnCorinVest - Gaming Pro"
 dnd_on
+bypass_on
