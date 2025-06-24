@@ -31,7 +31,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
 
   // --- UI state ---
   bool _isCopyingLogs = false;
-  bool _hamadaAiEnabled = false; // State reflecting the config file
+  bool _hamadaAiEnabled = false; // State reflecting actual process status
   bool _hamadaStartOnBoot = false; // State for the boot toggle
   bool _isHamadaCommandRunning = false; // Loading indicator for start/stop
   bool _isServiceFileUpdating =
@@ -69,7 +69,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     _localization =
         AppLocalizations(widget.selectedLanguage); // Instantiate localization
     // --- UPDATED: Read config first, then check process ---
-    _readAndApplyHamadaConfig();
+    _checkHamadaProcessStatus(); // Check initial process status
     _readAndApplyDndConfig();
     _checkResolutionServiceAvailability();
     _checkHamadaStartOnBoot();
@@ -154,7 +154,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     }
   }
 
-  // --- DND Logic ---
+  // --- Updated DND Logic ---
   Future<bool?> _readDndConfig() async {
     if (!await _checkRootAccess()) return null;
     print("Reading DND config from $_configFilePath");
@@ -180,19 +180,41 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     print("Writing DND=$enabled to $_configFilePath");
 
     final valueString = enabled ? 'Yes' : 'No';
-    final sedCommand =
-        '''sed -i -e 's#^DND=.*#DND=$valueString#' -e t -e '\$aDND=$valueString' $_configFilePath''';
 
     try {
-      final result = await _runRootCommandAndWait(sedCommand);
+      // Read the current config file
+      final readResult = await _runRootCommandAndWait('cat $_configFilePath');
+      if (readResult.exitCode != 0) {
+        print('Failed to read config file: ${readResult.stderr}');
+        return false;
+      }
 
-      if (result.exitCode == 0) {
-        print("DND config file update successful.");
-        if (mounted) setState(() => _dndEnabled = enabled);
-        return true;
+      String content = readResult.stdout.toString();
+
+      // Only update if DND line exists
+      if (content.contains(RegExp(r'^DND=', multiLine: true))) {
+        content = content.replaceAll(
+          RegExp(r'^DND=.*$', multiLine: true),
+          'DND=$valueString',
+        );
+
+        // Write back to file
+        String base64Content = base64Encode(utf8.encode(content));
+        final writeCommand =
+            '''echo '$base64Content' | base64 -d > $_configFilePath''';
+        final writeResult = await _runRootCommandAndWait(writeCommand);
+
+        if (writeResult.exitCode == 0) {
+          print("DND config file update successful.");
+          if (mounted) setState(() => _dndEnabled = enabled);
+          return true;
+        } else {
+          print(
+              'DND config file write failed. Exit Code: ${writeResult.exitCode}, Stderr: ${writeResult.stderr}');
+          return false;
+        }
       } else {
-        print(
-            'DND config file update failed. Exit Code: ${result.exitCode}, Stderr: ${result.stderr}');
+        print('DND line not found in config file. Skipping update.');
         return false;
       }
     } catch (e) {
@@ -226,127 +248,53 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     }
   }
 
-  // --- Hamada AI Logic ---
+  // --- Updated Hamada AI Logic ---
+  Future<void> _checkHamadaProcessStatus() async {
+    if (!await _checkRootAccess()) return;
 
-  Future<bool?> _readHamadaConfig() async {
-    if (!await _checkRootAccess()) return null;
-    print("Checking HamadaAI process status using ps command");
-    final result = await _runRootCommandAndWait('ps -A | grep HamadaAI');
-
-    // If grep finds the process, exit code is 0
-    // If grep doesn't find the process, exit code is 1
+    final result = await _runRootCommandAndWait(_hamadaCheckCommand);
     bool isRunning = result.exitCode == 0;
-    print("HamadaAI process running: $isRunning");
-    return isRunning;
-  }
-
-  Future<bool> _writeHamadaConfig(bool enabled) async {
-    if (!await _checkRootAccess() || !mounted) return false;
-
-    setState(() => _isConfigUpdating = true);
-    print("Writing HamadaAI=$enabled to $_configFilePath");
-
-    final valueString = enabled ? 'true' : 'false';
-    final sedCommand =
-        '''sed -i -e 's#^HamadaAI=.*#HamadaAI=$valueString#' -e t -e '\$aHamadaAI=$valueString' $_configFilePath''';
-
-    try {
-      final result = await _runRootCommandAndWait(sedCommand);
-
-      if (result.exitCode == 0) {
-        print("Config file update successful.");
-        if (mounted) setState(() => _hamadaAiEnabled = enabled);
-        return true;
-      } else {
-        print(
-            'Config file update failed. Exit Code: ${result.exitCode}, Stderr: ${result.stderr}');
-        return false;
-      }
-    } catch (e) {
-      print('Error updating config file: $e');
-      return false;
-    } finally {
-      if (mounted) setState(() => _isConfigUpdating = false);
-    }
-  }
-
-  Future<void> _readAndApplyHamadaConfig() async {
-    bool? configState = await _readHamadaConfig();
 
     if (mounted) {
       setState(() {
-        _hamadaAiEnabled = configState ?? false;
-        print("Initial Hamada AI state from config: $_hamadaAiEnabled");
+        _hamadaAiEnabled = isRunning;
       });
-      await _verifyHamadaProcessStatus();
-    }
-  }
-
-  Future<void> _verifyHamadaProcessStatus() async {
-    if (!await _checkRootAccess()) return;
-    final result = await _runRootCommandAndWait(_hamadaCheckCommand);
-    bool isRunning = result.exitCode == 0;
-    print("Actual Hamada AI process running state: $isRunning");
-
-    if (mounted && _hamadaAiEnabled != isRunning) {
-      print(
-          "Warning: Hamada AI config state ($_hamadaAiEnabled) mismatches running state ($isRunning).");
+      print("HamadaAI process running: $isRunning");
     }
   }
 
   Future<void> _toggleHamadaAI(bool enable) async {
     if (!await _checkRootAccess() || !mounted) return;
-    if (_isConfigUpdating) return;
+    if (_isHamadaCommandRunning) return;
 
     setState(() => _isHamadaCommandRunning = true);
-    final commandToRun = enable ? _hamadaStartCommand : _hamadaStopCommand;
-    final actionKey = enable ? 'Starting' : 'Stopping';
 
-    print('$actionKey Hamada AI...');
-
-    bool commandSuccess = false;
     try {
       if (enable) {
-        await _runRootCommandFireAndForget(commandToRun);
-        commandSuccess = true; // Assume success for fire-and-forget
-        if (mounted) {
-          print('Start command executed.');
-        }
-      } else {
-        final result = await _runRootCommandAndWait(commandToRun);
-        commandSuccess = result.exitCode == 0;
-        if (mounted) {
-          print(
-              'Killall result: Exit Code ${result.exitCode}, Stderr: ${result.stderr}');
-          if (!commandSuccess) {
-            print("Failed to stop Hamada AI process.");
-          } else {
-            print("Stop command executed successfully.");
-          }
-        }
-      }
+        // Start HamadaAI
+        await _runRootCommandFireAndForget(_hamadaStartCommand);
+        print('HamadaAI start command executed');
 
-      if (commandSuccess) {
-        bool configWritten = await _writeHamadaConfig(enable);
-        if (!configWritten && mounted) {
-          print("Error: Config write failed after command execution.");
-        } else if (configWritten && mounted) {
-          print("Hamada AI state and config updated to $enable");
-        }
+        // Wait a moment and verify it started
+        await Future.delayed(Duration(milliseconds: 500));
+        await _checkHamadaProcessStatus();
       } else {
+        // Stop HamadaAI
+        final result = await _runRootCommandAndWait(_hamadaStopCommand);
+        print('HamadaAI stop result: Exit Code ${result.exitCode}');
+
         if (mounted) {
-          print("Error: Command execution failed for $commandToRun");
+          setState(() => _hamadaAiEnabled = false);
         }
       }
     } catch (e) {
-      print('Error $actionKey Hamada AI: $e');
-      if (mounted) {}
+      print('Error toggling HamadaAI: $e');
     } finally {
       if (mounted) setState(() => _isHamadaCommandRunning = false);
     }
   }
 
-  // Replace the _checkHamadaStartOnBoot method with this simpler version:
+  // Keep the existing boot logic unchanged
   Future<void> _checkHamadaStartOnBoot() async {
     if (!await _checkRootAccess()) return;
     final result = await _runRootCommandAndWait('cat $_serviceFilePath');
@@ -363,20 +311,20 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     if (!await _checkRootAccess() || !mounted) return;
 
     setState(() => _isServiceFileUpdating = true);
-    print('Writing service file...');
 
     try {
       final readResult = await _runRootCommandAndWait('cat $_serviceFilePath');
       if (readResult.exitCode != 0) {
         throw Exception('Failed read: ${readResult.stderr}');
       }
+
       String content = readResult.stdout.toString();
       List<String> lines = content.replaceAll('\r\n', '\n').split('\n');
 
-// Remove any existing "HamadaAI" entry
+      // Remove any existing "HamadaAI" entry
       lines.removeWhere((line) => line.trim() == _hamadaStartCommand);
 
-// Remove trailing empty lines
+      // Remove trailing empty lines
       while (lines.isNotEmpty && lines.last.trim().isEmpty) {
         lines.removeLast();
       }
@@ -390,26 +338,22 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
       if (newContent.isNotEmpty && !newContent.endsWith('\n')) {
         newContent += '\n';
       }
+
       String base64Content = base64Encode(utf8.encode(newContent));
       final writeCmd =
           '''echo '$base64Content' | base64 -d > $_serviceFilePath''';
 
-      print("Attempting to write service file...");
       final writeResult = await _runRootCommandAndWait(writeCmd);
 
       if (writeResult.exitCode != 0) {
-        print('Write failed. Exit Code: ${writeResult.exitCode}');
-        print('Stderr: ${writeResult.stderr}');
-        print('Stdout: ${writeResult.stdout}');
         throw Exception('Failed write: ${writeResult.stderr}');
       }
 
       if (mounted) setState(() => _hamadaStartOnBoot = enable);
-      print("Service file write successful.");
+      print("Service file updated successfully.");
     } catch (e) {
       print('Error updating service file: $e');
-      if (mounted)
-        setState(() => _hamadaStartOnBoot = !enable); // Revert visual state
+      if (mounted) setState(() => _hamadaStartOnBoot = !enable);
     } finally {
       if (mounted) setState(() => _isServiceFileUpdating = false);
     }
@@ -625,7 +569,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     }
   }
 
-// --- Bypass Charging Logic ---
+// --- Updated Bypass Charging Logic ---
 
   Future<void> _loadInitialBypassState() async {
     if (!await _checkRootAccess() || !mounted) return;
@@ -671,7 +615,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
           '/data/adb/modules/EnCorinVest/Scripts/encorin_bypass_controller.sh';
       await _runRootCommandAndWait('$controllerPath test');
 
-      // Read updated config to check support status
+      // Read config to check SUPPORTED_BYPASS value
       final result = await _runRootCommandAndWait('cat $_configFilePath');
       if (result.exitCode == 0) {
         final content = result.stdout.toString();
@@ -681,11 +625,36 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
 
         if (mounted) {
           setState(() {
-            _isBypassSupported =
-                supportedMatch?.group(1)?.toLowerCase() == 'yes';
-            _bypassSupportStatus = _isBypassSupported
-                ? _localization.translate('bypass_charging_supported')
-                : _localization.translate('bypass_charging_unsupported');
+            if (supportedMatch != null) {
+              // SUPPORTED_BYPASS exists in config
+              if (supportedMatch.group(1)?.toLowerCase() == 'yes') {
+                // SUPPORTED_BYPASS=Yes -> supported
+                _isBypassSupported = true;
+                _bypassSupportStatus =
+                    _localization.translate('bypass_charging_supported');
+              } else {
+                // SUPPORTED_BYPASS=No -> not supported
+                _isBypassSupported = false;
+                _bypassSupportStatus =
+                    _localization.translate('bypass_charging_unsupported');
+              }
+            } else {
+              // SUPPORTED_BYPASS doesn't exist in config -> not supported
+              _isBypassSupported = false;
+              _bypassSupportStatus =
+                  _localization.translate('bypass_charging_unsupported');
+            }
+            print(
+                "Bypass support status: $_isBypassSupported (${supportedMatch?.group(1) ?? 'not found'})");
+          });
+        }
+      } else {
+        // Failed to read config file
+        if (mounted) {
+          setState(() {
+            _isBypassSupported = false;
+            _bypassSupportStatus =
+                _localization.translate('bypass_charging_unsupported');
           });
         }
       }
@@ -709,28 +678,38 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
 
       // Read current config
       final readResult = await _runRootCommandAndWait('cat $_configFilePath');
-      if (readResult.exitCode != 0) return false;
+      if (readResult.exitCode != 0) {
+        print('Failed to read config file: ${readResult.stderr}');
+        return false;
+      }
 
       String content = readResult.stdout.toString();
 
-      // Update ENABLE_BYPASS value
-      if (content.contains('ENABLE_BYPASS=')) {
+      // Only update if ENABLE_BYPASS line exists
+      if (content.contains(RegExp(r'^ENABLE_BYPASS=', multiLine: true))) {
         content = content.replaceAll(
           RegExp(r'^ENABLE_BYPASS=.*$', multiLine: true),
           'ENABLE_BYPASS=$value',
         );
+
+        // Write updated config back to file
+        final base64Content = base64Encode(utf8.encode(content));
+        final writeResult = await _runRootCommandAndWait(
+          'echo "$base64Content" | base64 -d > $_configFilePath',
+        );
+
+        if (writeResult.exitCode == 0) {
+          print("ENABLE_BYPASS config update successful.");
+          return true;
+        } else {
+          print(
+              'ENABLE_BYPASS config write failed. Exit Code: ${writeResult.exitCode}, Stderr: ${writeResult.stderr}');
+          return false;
+        }
       } else {
-        // Add ENABLE_BYPASS if it doesn't exist
-        content += '\nENABLE_BYPASS=$value\n';
+        print('ENABLE_BYPASS line not found in config file. Skipping update.');
+        return false;
       }
-
-      // Write updated config back to file
-      final base64Content = base64Encode(utf8.encode(content));
-      final writeResult = await _runRootCommandAndWait(
-        'echo "$base64Content" | base64 -d > $_configFilePath && chmod 644 $_configFilePath',
-      );
-
-      return writeResult.exitCode == 0;
     } catch (e) {
       print('Error updating bypass config: $e');
       return false;
