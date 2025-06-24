@@ -16,18 +16,15 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
   // --- File Paths & Commands ---
   final String _serviceFilePath = '/data/adb/modules/EnCorinVest/service.sh';
   final String _gameTxtPath = '/data/EnCorinVest/game.txt';
-  // --- Path to the config file ---
   final String _configFilePath = '/data/adb/modules/EnCorinVest/encorin.txt';
-  final String _hamadaMarker = '# Start HamadaAI (Default is Disabled)';
   final String _hamadaProcessName =
       'HamadaAI'; // Process name for start/kill/check
   final String _hamadaStartCommand = 'HamadaAI'; // Command to start
   final String _hamadaStopCommand = 'killall HamadaAI'; // Command to stop
   final String _hamadaCheckCommand =
       'pgrep -x HamadaAI'; // Command to check if running
-
-  // Add this line:
-  final String MODULE_PATH = '/data/adb/modules/EnCorinVest'; //
+  final String MODULE_PATH =
+      '/data/adb/modules/EnCorinVest'; // Module path for EnCorinVest
 
   // --- UI state ---
   bool _isCopyingLogs = false;
@@ -75,8 +72,10 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     _checkHamadaStartOnBoot();
     _loadGameTxt();
     _loadInitialBypassState(); // Load initial bypass state on page load
+    _checkBypassSupport(); // Check bypass support on page load
   }
 
+  /// Runs a root command and waits for its completion, returning the ProcessResult.
   Future<ProcessResult> _runRootCommandAndWait(String command) async {
     print('Executing root command (and waiting): $command');
     try {
@@ -87,6 +86,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     }
   }
 
+  /// Runs a root command without waiting for its completion (fire and forget).
   Future<void> _runRootCommandFireAndForget(String command) async {
     print('Executing root command (fire and forget): $command');
     try {
@@ -97,6 +97,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     }
   }
 
+  /// Checks if the application has root access.
   Future<bool> _checkRootAccess() async {
     try {
       final result = await _runRootCommandAndWait('id');
@@ -113,6 +114,8 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
   }
 
   // --- Log Copying Logic ---
+
+  /// Copies the EnCorinVest.log file to the Downloads directory.
   Future<void> _copyLogs() async {
     if (!await _checkRootAccess() || !mounted) return;
     setState(() => _isCopyingLogs = true);
@@ -154,7 +157,9 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     }
   }
 
-  // --- Updated DND Logic ---
+  // --- DND Logic ---
+
+  /// Reads the DND setting from the config file.
   Future<bool?> _readDndConfig() async {
     if (!await _checkRootAccess()) return null;
     print("Reading DND config from $_configFilePath");
@@ -173,6 +178,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     return false;
   }
 
+  /// Writes the DND setting to the config file.
   Future<bool> _writeDndConfig(bool enabled) async {
     if (!await _checkRootAccess() || !mounted) return false;
 
@@ -225,6 +231,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     }
   }
 
+  /// Reads and applies the initial DND configuration.
   Future<void> _readAndApplyDndConfig() async {
     bool? configState = await _readDndConfig();
 
@@ -236,6 +243,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     }
   }
 
+  /// Toggles the DND setting.
   Future<void> _toggleDnd(bool enable) async {
     if (!await _checkRootAccess() || !mounted) return;
     if (_isDndConfigUpdating) return;
@@ -248,7 +256,9 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     }
   }
 
-  // --- Updated Hamada AI Logic ---
+  // --- Hamada AI Logic ---
+
+  /// Checks the current running status of the HamadaAI process.
   Future<void> _checkHamadaProcessStatus() async {
     if (!await _checkRootAccess()) return;
 
@@ -263,6 +273,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     }
   }
 
+  /// Toggles the HamadaAI process (start/stop).
   Future<void> _toggleHamadaAI(bool enable) async {
     if (!await _checkRootAccess() || !mounted) return;
     if (_isHamadaCommandRunning) return;
@@ -294,7 +305,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     }
   }
 
-  // Keep the existing boot logic unchanged
+  /// Checks if HamadaAI is set to start on boot by inspecting the service file.
   Future<void> _checkHamadaStartOnBoot() async {
     if (!await _checkRootAccess()) return;
     final result = await _runRootCommandAndWait('cat $_serviceFilePath');
@@ -307,6 +318,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     }
   }
 
+  /// Sets whether HamadaAI should start on boot by modifying the service file.
   Future<void> _setHamadaStartOnBoot(bool enable) async {
     if (!await _checkRootAccess() || !mounted) return;
 
@@ -359,26 +371,33 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     }
   }
 
+  // --- Resolution Logic ---
+
+  /// Checks if the resolution modification service is available.
   Future<void> _checkResolutionServiceAvailability() async {
     bool canGetSize = false;
     bool canGetDensity = false;
     try {
       final sr = await _runRootCommandAndWait('wm size');
-      if (sr.exitCode == 0 && sr.stdout.toString().contains('Physical size:'))
+      if (sr.exitCode == 0 && sr.stdout.toString().contains('Physical size:')) {
         canGetSize = true;
+      }
       final dr = await _runRootCommandAndWait('wm density');
       if (dr.exitCode == 0 &&
           (dr.stdout.toString().contains('Physical density:') ||
-              dr.stdout.toString().contains('Override density:')))
+              dr.stdout.toString().contains('Override density:'))) {
         canGetDensity = true;
-      if (mounted)
+      }
+      if (mounted) {
         setState(
             () => _resolutionServiceAvailable = canGetSize && canGetDensity);
+      }
       if (_resolutionServiceAvailable) {
         await _saveOriginalResolution();
-        if (mounted)
+        if (mounted) {
           setState(() => _resolutionValue =
               (_resolutionPercentages.length - 1).toDouble());
+        }
       }
     } catch (e) {
       print('Error checking resolution service availability: $e');
@@ -386,15 +405,16 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     }
   }
 
+  /// Saves the original screen resolution and density.
   Future<void> _saveOriginalResolution() async {
     if (!_resolutionServiceAvailable) return;
     try {
       final sr = await _runRootCommandAndWait('wm size');
       final sm = RegExp(r'Physical size:\s*([0-9]+x[0-9]+)')
           .firstMatch(sr.stdout.toString());
-      if (sm != null && sm.group(1) != null)
+      if (sm != null && sm.group(1) != null) {
         _originalSize = sm.group(1)!;
-      else {
+      } else {
         print("Failed to parse original screen size.");
         if (mounted) setState(() => _resolutionServiceAvailable = false);
         return;
@@ -420,21 +440,24 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     }
   }
 
+  /// Returns the current resolution percentage label for the slider.
   String _getCurrentPercentageLabel() {
     int idx =
         _resolutionValue.round().clamp(0, _resolutionPercentages.length - 1);
     return '${_resolutionPercentages[idx]}%';
   }
 
+  /// Applies the selected resolution percentage to the device.
   Future<void> _applyResolution(double value) async {
     if (!_resolutionServiceAvailable ||
         _originalSize.isEmpty ||
         _originalDensity <= 0) {
       print(
           'Resolution change unavailable. Service not available or original values missing.');
-      if (mounted)
+      if (mounted) {
         setState(() =>
             _resolutionValue = (_resolutionPercentages.length - 1).toDouble());
+      }
       return;
     }
     if (mounted) setState(() => _isResolutionChanging = true);
@@ -449,14 +472,16 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
           origW == null ||
           origH == null ||
           origW <= 0 ||
-          origH <= 0)
+          origH <= 0) {
         throw FormatException('Invalid original size format: $_originalSize');
+      }
       final newW = (origW * pct / 100).floor();
       final newH = (origH * pct / 100).floor();
       final newD = (_originalDensity * pct / 100).floor();
-      if (newW <= 0 || newH <= 0 || newD <= 0)
+      if (newW <= 0 || newH <= 0 || newD <= 0) {
         throw FormatException(
             'Calculated zero/negative dimensions or density. W:$newW, H:$newH, D:$newD');
+      }
 
       print("Calculated new resolution: ${newW}x${newH} @ ${newD}dpi");
 
@@ -474,14 +499,16 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     } catch (e) {
       print('Error changing resolution: ${e.toString()}');
       await _resetResolution(showSnackbar: false); // Attempt reset on error
-      if (mounted)
+      if (mounted) {
         setState(() => _resolutionValue =
             (_resolutionPercentages.length - 1).toDouble()); // Reset slider
+      }
     } finally {
       if (mounted) setState(() => _isResolutionChanging = false);
     }
   }
 
+  /// Resets the screen resolution to original values.
   Future<void> _resetResolution({bool showSnackbar = true}) async {
     if (!_resolutionServiceAvailable) return;
     if (mounted) setState(() => _isResolutionChanging = true);
@@ -494,9 +521,10 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
             "Resolution reset command failed. Size exit: ${sr.exitCode}, Density exit: ${dr.exitCode}");
         throw Exception('Reset failed');
       }
-      if (mounted)
+      if (mounted) {
         setState(() =>
             _resolutionValue = (_resolutionPercentages.length - 1).toDouble());
+      }
       if (showSnackbar) {
         print("Resolution reset to original.");
       }
@@ -507,6 +535,9 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     }
   }
 
+  // --- game.txt Editor Logic ---
+
+  /// Loads the content of `game.txt`.
   Future<void> _loadGameTxt() async {
     if (!await _checkRootAccess() || !mounted) return;
     setState(() => _isGameTxtLoading = true);
@@ -526,8 +557,9 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
             _gameTxtContent = '';
             _gameTxtController.text = '';
           });
-          if (result.stderr.toString().toLowerCase().contains('no such file'))
+          if (result.stderr.toString().toLowerCase().contains('no such file')) {
             print("game.txt not found.");
+          }
         }
       }
     } catch (e) {
@@ -543,6 +575,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     }
   }
 
+  /// Saves the content of the `game.txt` file.
   Future<void> _saveGameTxt() async {
     if (!await _checkRootAccess() || !mounted) return;
     setState(() => _isGameTxtSaving = true);
@@ -569,8 +602,9 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     }
   }
 
-// --- Updated Bypass Charging Logic ---
+  // --- Bypass Charging Logic ---
 
+  /// Loads the initial bypass charging state from the config file.
   Future<void> _loadInitialBypassState() async {
     if (!await _checkRootAccess() || !mounted) return;
 
@@ -602,6 +636,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     }
   }
 
+  /// Checks if bypass charging is supported on the device.
   Future<void> _checkBypassSupport() async {
     if (!await _checkRootAccess() || !mounted) return;
     setState(() {
@@ -672,6 +707,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     }
   }
 
+  /// Updates the ENABLE_BYPASS setting in the config file.
   Future<bool> _updateBypassConfig(bool enabled) async {
     try {
       final value = enabled ? 'Yes' : 'No';
@@ -716,6 +752,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     }
   }
 
+  /// Toggles bypass charging on or off.
   Future<void> _toggleBypassCharging(bool enable) async {
     if (!await _checkRootAccess() || !mounted) return;
     setState(() => _isTogglingBypass = true);
@@ -923,15 +960,6 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                           fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 8),
-                    // If you want a description for resolution, add 'downscale_resolution_description' to languages.dart
-                    // Text(
-                    //   _localization.translate('downscale_resolution_description'), // New key needed in languages.dart
-                    //   style: textTheme.bodySmall?.copyWith(
-                    //     color: colorScheme.onSurfaceVariant,
-                    //     fontStyle: FontStyle.italic,
-                    //   ),
-                    // ),
-                    // const SizedBox(height: 16),
                     if (!_resolutionServiceAvailable)
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -1030,15 +1058,6 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                           fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 8),
-                    // If you want a description for game.txt editor, add 'edit_game_txt_description' to languages.dart
-                    // Text(
-                    //   _localization.translate('edit_game_txt_description'), // New key needed in languages.dart
-                    //   style: textTheme.bodySmall?.copyWith(
-                    //     color: colorScheme.onSurfaceVariant,
-                    //     fontStyle: FontStyle.italic,
-                    //   ),
-                    // ),
-                    // const SizedBox(height: 16),
                     TextField(
                       controller: _gameTxtController,
                       maxLines: 10,
@@ -1072,7 +1091,6 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        // Removed the "Reading File" button
                         Expanded(
                           child: ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
