@@ -12,6 +12,9 @@ If your module is not listed here, you can try to combine it (Ex: SkiaVK / GL Mo
 - Disable Thermal (Gaming & Phoenix variant)
 - Render Tweaks
 - Fast Charge (Gaming & Ubur-ubur variant)
-- Hamada AI Next Gen (Auto switch to performance when enter game)
+- Hamada AI (Auto switch to performance when enter game)
 - Downscale Resolution
 - Bastion Battery Included (Reduce battery usage without reducing performance)
+- Disable Frame Rate Limit 
+- Disable Lock Frame Rate When Low Battery
+- Bypass Charging on Supported Devices
