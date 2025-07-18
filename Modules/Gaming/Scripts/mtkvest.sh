@@ -80,9 +80,9 @@ mtkvest_normal() {
 
 # Reset GPU to auto frequency
 if [[ -d "/proc/gpufreq" && -f "/proc/gpufreq/gpufreq_opp_freq" ]]; then
-    write "0" "/proc/gpufreq/gpufreq_opp_freq"
+    tweak "0" "/proc/gpufreq/gpufreq_opp_freq"
 elif [[ -d "/proc/gpufreqv2" && -f "/proc/gpufreqv2/fix_target_opp_index" ]]; then
-    write "-1" "/proc/gpufreqv2/fix_target_opp_index"
+    tweak "-1" "/proc/gpufreqv2/fix_target_opp_index"
 fi
 
 # Reset GPU power limits to normal
@@ -97,12 +97,12 @@ fi
 # Reset GPU frequency limits to normal
 if [[ -f "/proc/gpufreq/gpufreq_limit_table" ]]; then
     for id in {0..8}; do
-        write "$id 1 1" "/proc/gpufreq/gpufreq_limit_table"
+        tweak "$id 1 1" "/proc/gpufreq/gpufreq_limit_table"
     done
 fi
 
 # Performance manager settings for balanced operation
-write "0" "/proc/perfmgr/syslimiter/syslimiter_force_disable"
+tweak "0" "/proc/perfmgr/syslimiter/syslimiter_force_disable"
 
 # Configure GED HAL settings
 if [ -d /sys/kernel/ged/hal ]; then
