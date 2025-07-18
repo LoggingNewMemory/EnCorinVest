@@ -45,9 +45,10 @@ done
 
 tweak 100  /sys/module/mtk_fpsgo/parameters/uboost_enhance_f
 tweak 0  /sys/module/mtk_fpsgo/parameters/isolation_limit_cap
-tweak "1"  /sys/pnpmgr/fpsgo_boost/boost_enable
+tweak 1  /sys/pnpmgr/fpsgo_boost/boost_enable
 tweak 1  /sys/pnpmgr/fpsgo_boost/boost_mode
 tweak 1  /sys/pnpmgr/install
+tweak 100 /sys/kernel/ged/hal/gpu_boost_level
 }
 
 mtkvest_normal() {
@@ -93,7 +94,8 @@ tweak "$ged_params" | while read -r param value; do
 done
 tweak 25  /sys/module/mtk_fpsgo/parameters/uboost_enhance_f
 tweak 1  /sys/module/mtk_fpsgo/parameters/isolation_limit_cap
-tweak "0"  /sys/pnpmgr/fpsgo_boost/boost_enable
+tweak 0  /sys/pnpmgr/fpsgo_boost/boost_enable
 tweak 0  /sys/pnpmgr/fpsgo_boost/boost_mode
 tweak 0  /sys/pnpmgr/install
+tweak -1 /sys/kernel/ged/hal/gpu_boost_level
 }

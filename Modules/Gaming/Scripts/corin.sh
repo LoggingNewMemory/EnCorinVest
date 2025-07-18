@@ -1,5 +1,6 @@
 MODULE_PATH="/data/adb/modules/EnCorinVest"
 source "$MODULE_PATH/Scripts/encorinFunctions.sh"
+
 corin_perf() {
 # Supposed Only Availabe in Transsion Devices 
 if [ -e /proc/trans_scheduler/enable ]; then
@@ -216,13 +217,6 @@ done
 # To Do: Make CPU Universal
 
 for cpuset_tweak in /dev/cpuset;do
-        tweak 0-7 $cpuset_tweak/cpus
-        tweak 0-3 $cpuset_tweak/background/cpus
-        tweak 0-3 $cpuset_tweak/system-background/cpus
-        tweak 0-7 $cpuset_tweak/foreground/cpus
-        tweak 0-7 $cpuset_tweak/top-app/cpus
-        tweak 0-3 $cpuset_tweak/restricted/cpus
-        tweak 0-3 $cpuset_tweak/camera-daemon/cpus
         tweak 1 $cpuset_tweak/memory_pressure_enabled
         tweak 1 $cpuset_tweak/sched_load_balance
         tweak 1 $cpuset_tweak/foreground/sched_load_balance
@@ -395,13 +389,6 @@ done
 # To Do: Make CPU Universal
 
 for cpuset_tweak in /dev/cpuset;do
-        tweak 0-7 $cpuset_tweak/cpus
-        tweak 0-3 $cpuset_tweak/background/cpus
-        tweak 0-3 $cpuset_tweak/system-background/cpus
-        tweak 0-7 $cpuset_tweak/foreground/cpus
-        tweak 0-7 $cpuset_tweak/top-app/cpus
-        tweak 0-3 $cpuset_tweak/restricted/cpus
-        tweak 0-3 $cpuset_tweak/camera-daemon/cpus
         tweak 1 $cpuset_tweak/memory_pressure_enabled
         tweak 1 $cpuset_tweak/sched_load_balance
         tweak 1 $cpuset_tweak/foreground/sched_load_balance
