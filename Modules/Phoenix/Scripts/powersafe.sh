@@ -12,6 +12,8 @@ mediatek() {
     log_execution "corin_powersave_common"
 	encore_mediatek_powersave
     log_execution "encore_mediatek_powersave"
+    mtkvest_normal
+	log_execution "mtkvest_normal"
 	corin_powersave_extra
     log_execution "corin_powersave_extra"
 }

@@ -85,6 +85,22 @@ elif [[ -d "/proc/gpufreqv2" && -f "/proc/gpufreqv2/fix_target_opp_index" ]]; th
     tweak -1 /proc/gpufreqv2/fix_target_opp_index
 fi
 
+# Handle If Reset Failed
+# Try to extract lowest GPU frequency from available sources
+LOWEST_FREQ=""
+if [[ -f "/proc/gpufreqv2/gpu_working_opp_table" ]]; then
+    LOWEST_FREQ=$(awk -F '[: ]+' '/freq/ {gsub(",", "", $3); print $3}' /proc/gpufreqv2/gpu_working_opp_table 2>/dev/null | sort -n | head -n 1)
+elif [[ -f "/proc/gpufreq/gpufreq_opp_dump" ]]; then
+    LOWEST_FREQ=$(awk -F '[: ]+' '/freq/ {gsub(",", "", $3); print $3}' /proc/gpufreq/gpufreq_opp_dump 2>/dev/null | sort -n | head -n 1)
+fi
+
+# Apply lowest frequency if found
+if [[ -n "$LOWEST_FREQ" ]]; then
+    tweak $LOWEST_FREQ /sys/module/ged/parameters/gpu_bottom_freq
+    tweak $LOWEST_FREQ /sys/module/ged/parameters/gpu_cust_boost_freq
+    tweak $LOWEST_FREQ /sys/module/ged/parameters/gpu_cust_upbound_freq
+fi
+
 # Reset GPU power limits to normal
 if [[ -f "/proc/gpufreq/gpufreq_power_limited" ]]; then
     chmod 644 "/proc/gpufreq/gpufreq_power_limited" 2>/dev/null
