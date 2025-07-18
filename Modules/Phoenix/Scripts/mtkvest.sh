@@ -14,9 +14,9 @@ fi
 
 # Apply highest frequency if found
 if [[ -n "$HIGHEST_FREQ" ]]; then
-    tweak "$HIGHEST_FREQ" "/sys/module/ged/parameters/gpu_bottom_freq"
-    tweak "$HIGHEST_FREQ" "/sys/module/ged/parameters/gpu_cust_boost_freq"
-    tweak "$HIGHEST_FREQ" "/sys/module/ged/parameters/gpu_cust_upbound_freq"
+    tweak $HIGHEST_FREQ /sys/module/ged/parameters/gpu_bottom_freq
+    tweak $HIGHEST_FREQ /sys/module/ged/parameters/gpu_cust_boost_freq
+    tweak $HIGHEST_FREQ /sys/module/ged/parameters/gpu_cust_upbound_freq
 fi
 
 # Disable GPUFREQ Limit
@@ -31,14 +31,14 @@ tweak 1 /proc/perfmgr/syslimiter/syslimiter_force_disable
 
 # Configure GED HAL settings
 if [ -d /sys/kernel/ged/hal ]; then
-    tweak 2  "/sys/kernel/ged/hal/loading_base_dvfs_step"
-    tweak 1  "/sys/kernel/ged/hal/loading_stride_size"
-    tweak 16  "/sys/kernel/ged/hal/loading_window_size"
+    tweak 2 /sys/kernel/ged/hal/loading_base_dvfs_step
+    tweak 1 /sys/kernel/ged/hal/loading_stride_size
+    tweak 16 /sys/kernel/ged/hal/loading_window_size
 fi
 
 # MTK FPSGo advanced parameters
 for param in adjust_loading boost_affinity boost_LR gcc_hwui_hint; do
-    tweak "1"  "/sys/module/mtk_fpsgo/parameters/$param"
+    tweak 1 /sys/module/mtk_fpsgo/parameters/$param
 done
 
 ged_params="ged_smart_boost 1
@@ -65,7 +65,7 @@ force_fence_timeout_dump_enable 0
 gpu_idle 0"
 
 tweak "$ged_params" | while read -r param value; do
-    tweak "$value"  "/sys/module/ged/parameters/$param"
+    tweak $value /sys/module/ged/parameters/$param
 done
 
 tweak 100  /sys/module/mtk_fpsgo/parameters/uboost_enhance_f
@@ -80,9 +80,9 @@ mtkvest_normal() {
 
 # Reset GPU to auto frequency
 if [[ -d "/proc/gpufreq" && -f "/proc/gpufreq/gpufreq_opp_freq" ]]; then
-    tweak "0" "/proc/gpufreq/gpufreq_opp_freq"
+    tweak 0 /proc/gpufreq/gpufreq_opp_freq
 elif [[ -d "/proc/gpufreqv2" && -f "/proc/gpufreqv2/fix_target_opp_index" ]]; then
-    tweak "-1" "/proc/gpufreqv2/fix_target_opp_index"
+    tweak -1 /proc/gpufreqv2/fix_target_opp_index
 fi
 
 # Reset GPU power limits to normal
@@ -97,23 +97,23 @@ fi
 # Reset GPU frequency limits to normal
 if [[ -f "/proc/gpufreq/gpufreq_limit_table" ]]; then
     for id in {0..8}; do
-        tweak "$id 1 1" "/proc/gpufreq/gpufreq_limit_table"
+        tweak $id 1 1 /proc/gpufreq/gpufreq_limit_table
     done
 fi
 
 # Performance manager settings for balanced operation
-tweak "0" "/proc/perfmgr/syslimiter/syslimiter_force_disable"
+tweak 0 /proc/perfmgr/syslimiter/syslimiter_force_disable
 
 # Configure GED HAL settings
 if [ -d /sys/kernel/ged/hal ]; then
-    tweak 4  "/sys/kernel/ged/hal/loading_base_dvfs_step"
-    tweak 2  "/sys/kernel/ged/hal/loading_stride_size"
-    tweak 8  "/sys/kernel/ged/hal/loading_window_size"
+    tweak 4 /sys/kernel/ged/hal/loading_base_dvfs_step
+    tweak 2 /sys/kernel/ged/hal/loading_stride_size
+    tweak 8 /sys/kernel/ged/hal/loading_window_size
 fi
 
 # MTK FPSGo advanced parameters
 for param in boost_affinity boost_LR gcc_hwui_hint; do
-    tweak "0"  "/sys/module/mtk_fpsgo/parameters/$param"
+    tweak 0 /sys/module/mtk_fpsgo/parameters/$param
 done
 
 # GED parameters
@@ -140,9 +140,10 @@ ged_force_mdp_enable 0
 force_fence_timeout_dump_enable 0
 gpu_idle 0"
 
-tweak "$ged_params" | while read -r param value; do
-    tweak "$value"  "/sys/module/ged/parameters/$param"
+tweak $ged_params | while read -r param value; do
+    tweak $value /sys/module/ged/parameters/$param
 done
+
 tweak 25  /sys/module/mtk_fpsgo/parameters/uboost_enhance_f
 tweak 1  /sys/module/mtk_fpsgo/parameters/isolation_limit_cap
 tweak 0  /sys/pnpmgr/fpsgo_boost/boost_enable
