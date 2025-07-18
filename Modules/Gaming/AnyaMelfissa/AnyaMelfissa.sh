@@ -49,16 +49,4 @@ done
 sleep 10
 find /sys/devices/virtual/thermal -type f -exec chmod 000 {} +
 
-resetprop -n dalvik.vm.dexopt.thermal-cutoff 0
-resetprop -n ro.boottime.thermal 0
-resetprop -n ro.boottime.thermald 0
-resetprop -n ro.boottime.thermal_manager 0 
-resetprop -n ro.boottime.thermald 0 
-resetprop -n ro.boottime.thermalloadalgod 0
-resetprop -n ro.dar.thermal_core.support 0
-resetprop -n ro.vendor.mtk_thermal_2_0 0
-resetprop -n ro.vendor.tran.hbm.thermal.temp.clr 99999
-resetprop -n ro.vendor.tran.hbm.thermal.temp.trig 99999
-resetprop -n debug.thermal.throttle.support "no"
-
 su -lp 2000 -c "cmd notification post -S bigtext -t 'Anya Melfissa' -i file:///data/local/tmp/Anya.png -I file:///data/local/tmp/Anya.png TagAnya 'Good Day! Thermal Is Dead BTW'"
