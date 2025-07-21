@@ -78,14 +78,7 @@ tweak 100 /sys/kernel/ged/hal/gpu_boost_level
 
 mtkvest_normal() {
 
-# Reset GPU to auto frequency
-if [[ -d "/proc/gpufreq" && -f "/proc/gpufreq/gpufreq_opp_freq" ]]; then
-    tweak 0 /proc/gpufreq/gpufreq_opp_freq
-elif [[ -d "/proc/gpufreqv2" && -f "/proc/gpufreqv2/fix_target_opp_index" ]]; then
-    tweak -1 /proc/gpufreqv2/fix_target_opp_index
-fi
-
-# Handle If Reset Failed
+# Attempt to set GPU Freq to min. Workaround for now
 # Try to extract lowest GPU frequency from available sources
 LOWEST_FREQ=""
 if [[ -f "/proc/gpufreqv2/gpu_working_opp_table" ]]; then
@@ -99,6 +92,13 @@ if [[ -n "$LOWEST_FREQ" ]]; then
     tweak $LOWEST_FREQ /sys/module/ged/parameters/gpu_bottom_freq
     tweak $LOWEST_FREQ /sys/module/ged/parameters/gpu_cust_boost_freq
     tweak $LOWEST_FREQ /sys/module/ged/parameters/gpu_cust_upbound_freq
+fi
+
+# Reset GPU to auto frequency
+if [[ -d "/proc/gpufreq" && -f "/proc/gpufreq/gpufreq_opp_freq" ]]; then
+    tweak 0 /proc/gpufreq/gpufreq_opp_freq
+elif [[ -d "/proc/gpufreqv2" && -f "/proc/gpufreqv2/fix_target_opp_index" ]]; then
+    tweak -1 /proc/gpufreqv2/fix_target_opp_index
 fi
 
 # Reset GPU power limits to normal

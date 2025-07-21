@@ -16,8 +16,9 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
   // --- File Paths & Commands ---
   final String _serviceFilePath = '/data/adb/modules/EnCorinVest/service.sh';
   final String _gameTxtPath = '/data/EnCorinVest/game.txt';
-  // --- Path to the config file ---
   final String _configFilePath = '/data/adb/modules/EnCorinVest/encorin.txt';
+  final String _encoreTweaksFilePath =
+      '/data/adb/modules/EnCorinVest/Scripts/encoreTweaks.sh';
   final String _hamadaMarker = '# Start HamadaAI (Default is Disabled)';
   final String _hamadaProcessName =
       'HamadaAI'; // Process name for start/kill/check
@@ -47,6 +48,11 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
   bool _dndEnabled = false;
   bool _isDndConfigUpdating = false;
 
+  // --- Encore Switch State ---
+  bool _deviceMitigationEnabled = false;
+  bool _liteModeEnabled = false;
+  bool _isEncoreConfigUpdating = false;
+
   // --- Bypass Charging State ---
   bool _isBypassSupported = false;
   bool _bypassEnabled = false;
@@ -68,13 +74,13 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     super.initState();
     _localization =
         AppLocalizations(widget.selectedLanguage); // Instantiate localization
-    // --- UPDATED: Read config first, then check process ---
-    _checkHamadaProcessStatus(); // Check initial process status
+    _loadEncoreSwitchState(); // Load Encore switch states first
+    _checkHamadaProcessStatus();
     _readAndApplyDndConfig();
     _checkResolutionServiceAvailability();
     _checkHamadaStartOnBoot();
     _loadGameTxt();
-    _loadInitialBypassState(); // Load initial bypass state on page load
+    _loadInitialBypassState();
   }
 
   Future<ProcessResult> _runRootCommandAndWait(String command) async {
@@ -109,6 +115,94 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     } catch (e) {
       print('Error checking root access: $e');
       return false;
+    }
+  }
+
+  // --- Encore Switch Logic ---
+  Future<void> _loadEncoreSwitchState() async {
+    if (!await _checkRootAccess() || !mounted) return;
+    print("Reading Encore tweaks from $_encoreTweaksFilePath");
+
+    final result = await _runRootCommandAndWait('cat $_encoreTweaksFilePath');
+    if (result.exitCode == 0) {
+      final content = result.stdout.toString();
+      final mitigationMatch =
+          RegExp(r'^DEVICE_MITIGATION=(\d)', multiLine: true)
+              .firstMatch(content);
+      final liteMatch =
+          RegExp(r'^LITE_MODE=(\d)', multiLine: true).firstMatch(content);
+
+      if (mounted) {
+        setState(() {
+          _deviceMitigationEnabled = mitigationMatch?.group(1) == '1';
+          _liteModeEnabled = liteMatch?.group(1) == '1';
+          print(
+              "Encore state loaded: Mitigation=$_deviceMitigationEnabled, Lite=$_liteModeEnabled");
+        });
+      }
+    } else {
+      print("Failed to read encoreTweaks.sh: ${result.stderr}");
+    }
+  }
+
+  Future<void> _updateEncoreTweak(String key, bool enable) async {
+    if (!await _checkRootAccess() || !mounted) return;
+
+    setState(() => _isEncoreConfigUpdating = true);
+    print("Updating Encore tweak: $key = ${enable ? 1 : 0}");
+
+    try {
+      final readResult =
+          await _runRootCommandAndWait('cat $_encoreTweaksFilePath');
+      if (readResult.exitCode != 0) {
+        throw Exception('Failed to read encoreTweaks.sh: ${readResult.stderr}');
+      }
+
+      String content = readResult.stdout.toString();
+      final value = enable ? '1' : '0';
+
+      // Use RegExp to replace the line, ensuring it matches the whole line
+      content = content.replaceAll(
+        RegExp('^$key=.*\$', multiLine: true),
+        '$key=$value',
+      );
+
+      String base64Content = base64Encode(utf8.encode(content));
+      final writeCmd =
+          '''echo '$base64Content' | base64 -d > $_encoreTweaksFilePath''';
+
+      final writeResult = await _runRootCommandAndWait(writeCmd);
+
+      if (writeResult.exitCode != 0) {
+        throw Exception(
+            'Failed to write encoreTweaks.sh: ${writeResult.stderr}');
+      }
+
+      // Update the local state to match the new file content
+      if (mounted) {
+        setState(() {
+          if (key == 'DEVICE_MITIGATION') {
+            _deviceMitigationEnabled = enable;
+          } else if (key == 'LITE_MODE') {
+            _liteModeEnabled = enable;
+          }
+        });
+        print("Successfully updated $key in encoreTweaks.sh");
+      }
+    } catch (e) {
+      print('Error updating encore tweak: $e');
+      // Optionally revert the switch in the UI on failure
+      if (mounted) {
+        setState(() {
+          if (key == 'DEVICE_MITIGATION') {
+            _deviceMitigationEnabled = !enable;
+          } else if (key == 'LITE_MODE') {
+            _liteModeEnabled = !enable;
+          }
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _isEncoreConfigUpdating = false);
     }
   }
 
@@ -771,6 +865,73 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // --- NEW: Encore Switch Card ---
+            Card(
+              elevation: cardElevation,
+              margin: cardMargin,
+              shape: cardShape,
+              color: colorScheme.surfaceContainerHighest,
+              child: Padding(
+                padding: cardPadding,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _localization.translate('encore_switch_title'),
+                      style: textTheme.titleLarge?.copyWith(
+                          color: colorScheme.onSurface,
+                          fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _localization.translate('encore_switch_description'),
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SwitchListTile(
+                      title: Text(
+                          _localization.translate('device_mitigation_title')),
+                      subtitle: Text(_localization
+                          .translate('device_mitigation_description')),
+                      value: _deviceMitigationEnabled,
+                      onChanged: _isEncoreConfigUpdating
+                          ? null
+                          : (bool value) =>
+                              _updateEncoreTweak('DEVICE_MITIGATION', value),
+                      secondary: _isEncoreConfigUpdating
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2))
+                          : Icon(Icons.security_update_warning),
+                      activeColor: colorScheme.primary,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    SwitchListTile(
+                      title: Text(_localization.translate('lite_mode_title')),
+                      subtitle: Text(
+                          _localization.translate('lite_mode_description')),
+                      value: _liteModeEnabled,
+                      onChanged: _isEncoreConfigUpdating
+                          ? null
+                          : (bool value) =>
+                              _updateEncoreTweak('LITE_MODE', value),
+                      secondary: _isEncoreConfigUpdating
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2))
+                          : Icon(Icons.flourescent),
+                      activeColor: colorScheme.primary,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ],
+                ),
+              ),
+            ),
             // --- 1. DND Card ---
             Card(
               elevation: cardElevation,

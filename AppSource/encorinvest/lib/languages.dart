@@ -47,6 +47,12 @@ class LangEN {
     'utilities': 'Utilities',
     // --- Utilities Page ---
     'utilities_title': 'Utilities',
+    'encore_switch_title': 'Encore Switch',
+    'encore_switch_description': 'Controls How Encore Works',
+    'device_mitigation_title': 'Device Mitigation',
+    'device_mitigation_description': 'Turn on if you experience screen freeze',
+    'lite_mode_title': 'LITE Mode',
+    'lite_mode_description': 'Using Lite mode (Requested by Fans)',
     'hamada_ai': 'HAMADA AI', // Keep existing for the card title if needed
     'hamada_ai_description':
         'Automatically Switch to Performance When Entering Game',
@@ -138,6 +144,12 @@ class LangID {
     'utilities': 'Utilitas',
     // --- Utilities Page ---
     'utilities_title': 'Utilitas',
+    'encore_switch_title': 'Saklar Encore',
+    'encore_switch_description': 'Mengontrol Cara Kerja Encore',
+    'device_mitigation_title': 'Mitigasi Perangkat',
+    'device_mitigation_description': 'Nyalakan jika Anda mengalami layar beku',
+    'lite_mode_title': 'Mode LITE',
+    'lite_mode_description': 'Menggunakan mode Lite (Diminta oleh Penggemar)',
     'hamada_ai': 'HAMADA AI',
     'hamada_ai_description': 'Otomatis Beralih ke Performa Saat Memasuki Game',
     'downscale_resolution': 'Turunkan Resolusi',
@@ -224,6 +236,12 @@ class LangJP {
     'utilities': 'ユーティリティ',
     // --- Utilities Page ---
     'utilities_title': 'ユーティリティ',
+    'encore_switch_title': 'アンコールスイッチ',
+    'encore_switch_description': 'アンコールの動作を制御します',
+    'device_mitigation_title': 'デバイスの緩和',
+    'device_mitigation_description': '画面のフリーズが発生した場合にオンにします',
+    'lite_mode_title': 'ライトモード',
+    'lite_mode_description': 'ライトモードを使用する（ファンによるリクエスト）',
     'hamada_ai': 'HAMADA AI',
     'hamada_ai_description': 'ゲーム開始時に自動でパフォーマンスモードに切り替え',
     'downscale_resolution': '解像度を下げる',
@@ -311,6 +329,12 @@ class LangJV {
     'utilities': 'Utilitas',
     // --- Utilities Page ---
     'utilities_title': 'Utilitas',
+    'encore_switch_title': 'Saklar Encore',
+    'encore_switch_description': 'Nguwasani Carane Encore Mlakune',
+    'device_mitigation_title': 'Mitigasi Piranti',
+    'device_mitigation_description': 'Uripke yen layar mandheg',
+    'lite_mode_title': 'Mode LITE',
+    'lite_mode_description': 'Nganggo mode Lite (Dijaluk dening Fans)',
     'hamada_ai': 'HAMADA AI',
     'hamada_ai_description': 'Otomatis Ganti menyang Performa pas Mlebu Game',
     'downscale_resolution': 'Mudhunake Resolusi',
