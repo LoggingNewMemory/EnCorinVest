@@ -490,9 +490,9 @@ sync_files() {
             exit 1
         fi
 
-        # Sync banner.png
+        # Sync Banner.png
         if [ -f "$SOURCE_DIR/Banner.png" ]; then
-            cp -f "$SOURCE_DIR/Banner.png" "$TARGET_DIR/banner.png"
+            cp -f "$SOURCE_DIR/Banner.png" "$TARGET_DIR/Banner.png"
         else
             echo "Error: Banner.png not found in $SOURCE_DIR!"
             exit 1

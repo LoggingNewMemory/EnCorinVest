@@ -292,3 +292,4 @@ com.netease.g78na.gb
 com.pubg.imobile
 com.bandainamcoent.opbrww
 com.proximabeta.mf.uamo
+com.linegames.sl

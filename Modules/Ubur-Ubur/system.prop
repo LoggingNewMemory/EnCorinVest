@@ -1,7 +1,85 @@
-# EnCorinVest prop
-PERF_RES_NET_BT_AUDIO_LOW_LATENCY 1
-PERF_RES_NET_WIFI_LOW_LATENCY 1
-PERF_RES_NET_MD_WEAK_SIG_OPT 1
-PERF_RES_NET_NETD_BOOST_UID 1
-PERF_RES_NET_MD_HSR_MODE 1
-PERF_RES_THERMAL_POLICY -1
+# EnCorinVest Prop (Thanks to many GSIs)
+# Memory optimize
+persist.vendor.sys.memplus.enable=true
+
+# Touch Improve
+windowsmgr.max_events_per_sec=90
+view.scroll_friction=0
+ro.min_pointer_dur=8
+debug.egl.hw=1
+video.accelerate.hw=1
+
+#Dalvik Hyperthread
+persist.sys.dalvik.multithread=true
+
+#Dalvik
+dalvik.vm.heapstartsize=16m
+dalvik.vm.heapgrowthlimit=320m
+dalvik.vm.heapsize=640m
+dalvik.vm.heapmaxfree=8m
+
+#Dexopt
+persist.bg.dexopt.enable=true
+pm.dexopt.bg-dexopt=everything
+dalvik.vm.dexopt-flags=v=n,o=a,u=y,m=y
+
+# IORap
+iorapd.readahead.enable=true
+ro.iorapd.enable=true
+
+# Render
+debug.composition.type=mdp
+persist.sys.composition.type=mdp
+debug.egl.force_msaa=0
+debug.egl.buffcount=4
+
+# LMK
+ro.lmk.kill_timeout_ms=0
+ro.lmk.low=1001
+ro.lmk.psi_complete_stall_ms=700
+ro.lmk.psi_partial_stall_ms=70
+ro.lmk.thrashing_limit=100
+ro.lmk.thrashing_limit_decay=10
+ro.config.low_ram=false
+ro.lmk.use_minfree_levels=false
+ro.lmk.medium=900
+ro.lmk.critical_upgrade=false
+ro.lmk.enhance_batch_kill=false
+ro.lmk.enable_adaptive_lmk=false
+ro.lmk.use_minfree_levels=false
+ro.lmk.kill_heaviest_task=false
+ro.lmk.downgrade_pressure=100
+
+#########################
+# Supposed this to work
+#########################
+debug.renderengine.backend=skiaglthreaded
+
+###############################
+# Thank you: Kazuyoo
+###############################
+debug.rs.profile=0
+debug.rs.script=1
+debug.rs.shader=1
+debug.rs.shader.attributes=0
+debug.rs.shader.uniforms=0
+debug.rs.visual=0
+debug.rs.reduce=0
+debug.rs.reduce-split-accum=0
+debug.rs.max-threads=$(nproc)
+debug.rs.forcecompat=0
+debug.rs.forcerecompile=0
+debug.rs.precision=0
+debug.rs.reduce=0
+debug.rs.rsov=1
+debug.rs.arm-no-hwdiv=0
+debug.rs.arm-no-tune-for-cpu=0
+debug.rs.debug=0
+debug.rs.reduce-split-accum=0
+debug.rs.shader.attributes=1
+debug.rs.shader.uniforms=1
+#####################################
+debug.composition.type=mdp
+persist.sys.composition.type=mdp
+debug.egl.force_msaa=0
+debug.egl.buffcount=4

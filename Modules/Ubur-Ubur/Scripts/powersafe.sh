@@ -9,40 +9,27 @@ source "$MODULE_PATH/Scripts/corin.sh"
 
 mediatek() {
 	corin_powersave_common
-    log_execution "corin_powersave_common"
 	encore_mediatek_powersave
-    log_execution "encore_mediatek_powersave"
     mtkvest_normal
-	log_execution "mtkvest_normal"
 	corin_powersave_extra
-    log_execution "corin_powersave_extra"
 }
 
 snapdragon() {
 	corin_powersave_common
-    log_execution "corin_powersave_common"
 	encore_snapdragon_powersave
-    log_execution "encore_snapdragon_powersave"
 	corin_powersave_extra
-    log_execution "corin_powersave_extra"
 }
 
 unisoc() {
 	corin_powersave_common
-    log_execution "corin_powersave_common"
 	encore_unisoc_powersave
-    log_execution "encore_unisoc_powersave"
 	corin_powersave_extra
-    log_execution "corin_powersave_extra"
 }
 
 exynos() {
 	corin_powersave_common
-    log_execution "corin_powersave_common"
 	encore_exynos_powersave
-    log_execution "encore_exynos_powersave"
 	corin_powersave_extra
-    log_execution "corin_powersave_extra"
 }
 
 ambatusoc
