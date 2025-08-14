@@ -31,7 +31,6 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
   final String MODULE_PATH = '/data/adb/modules/EnCorinVest'; //
 
   // --- UI state ---
-  bool _isCopyingLogs = false;
   bool _hamadaAiEnabled = false; // State reflecting actual process status
   bool _hamadaStartOnBoot = false; // State for the boot toggle
   bool _isHamadaCommandRunning = false; // Loading indicator for start/stop
@@ -203,48 +202,6 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
       }
     } finally {
       if (mounted) setState(() => _isEncoreConfigUpdating = false);
-    }
-  }
-
-  // --- Log Copying Logic ---
-  Future<void> _copyLogs() async {
-    if (!await _checkRootAccess() || !mounted) return;
-    setState(() => _isCopyingLogs = true);
-
-    final sourceLogPath = '/data/EnCorinVest/EnCorinVest.log';
-    final destinationLogPath = '/sdcard/Download/EnCorinVest.log';
-    print("Copying EnCorinVest.log to $destinationLogPath...");
-
-    try {
-      // Copy the EnCorinVest.log file
-      final command = 'cp $sourceLogPath $destinationLogPath';
-      final result = await _runRootCommandAndWait(command);
-
-      if (mounted) {
-        if (result.exitCode == 0) {
-          print("EnCorinVest.log copied successfully.");
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text(_localization.translate('logs_copied_success',
-                    args: {'path': destinationLogPath}))),
-          );
-        } else {
-          print('Failed to copy EnCorinVest.log: ${result.stderr}');
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text(_localization.translate('logs_copied_failed'))),
-          );
-        }
-      }
-    } catch (e) {
-      print('Error copying EnCorinVest.log: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_localization.translate('logs_copied_error'))),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isCopyingLogs = false);
     }
   }
 
@@ -749,39 +706,28 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
   Future<bool> _updateBypassConfig(bool enabled) async {
     try {
       final value = enabled ? 'Yes' : 'No';
+      final configPath = _configFilePath;
 
-      // Read current config
-      final readResult = await _runRootCommandAndWait('cat $_configFilePath');
-      if (readResult.exitCode != 0) {
-        print('Failed to read config file: ${readResult.stderr}');
-        return false;
+      // Use grep to check if the setting exists to avoid errors.
+      final checkResult =
+          await _runRootCommandAndWait("grep -q '^ENABLE_BYPASS=' $configPath");
+      if (checkResult.exitCode != 0) {
+        print('ENABLE_BYPASS line not found in $configPath. Skipping update.');
+        return false; // Not an error, just nothing to update.
       }
 
-      String content = readResult.stdout.toString();
+      // Use sed to perform an in-place replacement of the entire line.
+      // This is more direct and "exact" than the read/modify/write pattern.
+      final sedCommand =
+          "sed -i 's|^ENABLE_BYPASS=.*|ENABLE_BYPASS=$value|' $configPath";
+      final sedResult = await _runRootCommandAndWait(sedCommand);
 
-      // Only update if ENABLE_BYPASS line exists
-      if (content.contains(RegExp(r'^ENABLE_BYPASS=', multiLine: true))) {
-        content = content.replaceAll(
-          RegExp(r'^ENABLE_BYPASS=.*$', multiLine: true),
-          'ENABLE_BYPASS=$value',
-        );
-
-        // Write updated config back to file
-        final base64Content = base64Encode(utf8.encode(content));
-        final writeResult = await _runRootCommandAndWait(
-          'echo "$base64Content" | base64 -d > $_configFilePath',
-        );
-
-        if (writeResult.exitCode == 0) {
-          print("ENABLE_BYPASS config update successful.");
-          return true;
-        } else {
-          print(
-              'ENABLE_BYPASS config write failed. Exit Code: ${writeResult.exitCode}, Stderr: ${writeResult.stderr}');
-          return false;
-        }
+      if (sedResult.exitCode == 0) {
+        print("ENABLE_BYPASS config update successful via sed.");
+        return true;
       } else {
-        print('ENABLE_BYPASS line not found in config file. Skipping update.');
+        print(
+            'ENABLE_BYPASS config write failed. Exit Code: ${sedResult.exitCode}, Stderr: ${sedResult.stderr}');
         return false;
       }
     } catch (e) {
@@ -799,7 +745,9 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
       final configUpdated = await _updateBypassConfig(enable);
       if (!configUpdated) {
         print('Failed to update bypass config');
-        return;
+        // Do not return here; allow UI to update even if sed fails,
+        // as the toggle should reflect the intended state. The config
+        // might be fixed on next module run.
       }
 
       // If supported, execute controller script
@@ -811,11 +759,10 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
 
         if (result.exitCode != 0) {
           print('Bypass controller failed: ${result.stderr}');
-          // Still update the UI state since config was updated successfully
         }
       }
 
-      // Update UI state to match the config
+      // Update UI state to match the intended state
       if (mounted) {
         setState(() => _bypassEnabled = enable);
         print("Bypass charging toggled to: $enable");
@@ -1299,62 +1246,6 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                           : Icon(Icons.battery_charging_full),
                       activeColor: colorScheme.primary,
                       contentPadding: EdgeInsets.zero,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // --- 6. Copy Logs Card ---
-            Card(
-              elevation: cardElevation,
-              margin: cardMargin,
-              shape: cardShape,
-              color: colorScheme.surfaceContainerHighest,
-              child: Padding(
-                padding: cardPadding,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _localization.translate('copy_logs_title'),
-                      style: textTheme.titleLarge?.copyWith(
-                          color: colorScheme.onSurface,
-                          fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _localization.translate('copy_logs_description'),
-                      style: textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          backgroundColor: colorScheme.secondaryContainer,
-                          foregroundColor: colorScheme.onSecondaryContainer,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8)),
-                        ),
-                        onPressed: _isCopyingLogs ? null : _copyLogs,
-                        icon: _isCopyingLogs
-                            ? SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: colorScheme.onSecondaryContainer,
-                                ),
-                              )
-                            : Icon(Icons.description_outlined),
-                        label:
-                            Text(_localization.translate('copy_logs_button')),
-                      ),
                     ),
                   ],
                 ),
