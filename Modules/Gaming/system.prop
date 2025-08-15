@@ -89,4 +89,3 @@ debug.rs.shader.uniforms=1
 debug.composition.type=mdp
 persist.sys.composition.type=mdp
 debug.egl.force_msaa=0
-debug.egl.buffcount=4
