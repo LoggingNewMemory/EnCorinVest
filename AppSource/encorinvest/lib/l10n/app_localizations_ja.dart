@@ -1,0 +1,241 @@
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
+import 'app_localizations.dart';
+
+// ignore_for_file: type=lint
+
+/// The translations for Japanese (`ja`).
+class AppLocalizationsJa extends AppLocalizations {
+  AppLocalizationsJa([String locale = 'ja']) : super(locale);
+
+  @override
+  String get app_title => 'エンコリンベスト';
+
+  @override
+  String get by => '作成者: 神奈川山田';
+
+  @override
+  String get root_access => 'ルートアクセス:';
+
+  @override
+  String get module_installed => 'モジュール:';
+
+  @override
+  String get module_version => 'モジュールバージョン:';
+
+  @override
+  String get current_mode => '現在のモード:';
+
+  @override
+  String get select_language => '言語を選択:';
+
+  @override
+  String get power_save_desc => 'バッテリーを優先（パフォーマンス最小）';
+
+  @override
+  String get balanced_desc => 'バッテリーとパフォーマンスのバランス';
+
+  @override
+  String get performance_desc => 'パフォーマンスを優先（バッテリー最小）';
+
+  @override
+  String get clear_desc => 'すべてのアプリを終了してRAMをクリア';
+
+  @override
+  String get cooldown_desc => 'デバイスを冷却\n(2分間休ませる)';
+
+  @override
+  String get gaming_desc => 'パフォーマンスモードですべてのアプリを終了';
+
+  @override
+  String get power_save => '省電力';
+
+  @override
+  String get balanced => 'バランス';
+
+  @override
+  String get performance => 'パフォーマンス';
+
+  @override
+  String get clear => 'クリア';
+
+  @override
+  String get cooldown => '冷却';
+
+  @override
+  String get gaming_pro => 'ゲーミングプロ';
+
+  @override
+  String get about_title => 'エンコリンベストの改善に協力してくれた素晴らしい人々に感謝します:';
+
+  @override
+  String get about_quote => '\"偉大なコラボレーションは偉大なイノベーションにつながる\"\n~ 神奈川山田 (メイン開発者)';
+
+  @override
+  String get about_note => 'エンコリンベストは常に無料、オープンソース、そして改善に開かれています';
+
+  @override
+  String get credits_1 => 'Rem01 Gaming';
+
+  @override
+  String get credits_2 => 'VelocityFox22';
+
+  @override
+  String get credits_3 => 'MiAzami';
+
+  @override
+  String get credits_4 => 'カズヨオ';
+
+  @override
+  String get credits_5 => 'RiProG';
+
+  @override
+  String get credits_6 => 'リエドラブラジャル';
+
+  @override
+  String get credits_7 => 'KanaDev_IS';
+
+  @override
+  String get credits_8 => '名前を挙げられなかったすべてのテスター';
+
+  @override
+  String get yes => 'はい';
+
+  @override
+  String get no => 'いいえ';
+
+  @override
+  String get device => 'デバイス:';
+
+  @override
+  String get cpu => 'CPU:';
+
+  @override
+  String get os => 'OS:';
+
+  @override
+  String get utilities => 'ユーティリティ';
+
+  @override
+  String get utilities_title => 'ユーティリティ';
+
+  @override
+  String get encore_switch_title => 'アンコールスイッチ';
+
+  @override
+  String get encore_switch_description => 'アンコールの動作を制御します';
+
+  @override
+  String get device_mitigation_title => 'デバイスの緩和';
+
+  @override
+  String get device_mitigation_description => '画面のフリーズが発生した場合にオンにします';
+
+  @override
+  String get lite_mode_title => 'ライトモード';
+
+  @override
+  String get lite_mode_description => 'ライトモードを使用する（ファンによるリクエスト）';
+
+  @override
+  String get hamada_ai => 'HAMADA AI';
+
+  @override
+  String get hamada_ai_description => 'ゲーム開始時に自動でパフォーマンスモードに切り替え';
+
+  @override
+  String get downscale_resolution => '解像度を下げる';
+
+  @override
+  String selected_resolution(String resolution) {
+    return '選択済み: $resolution';
+  }
+
+  @override
+  String get reset_resolution => 'オリジナルに戻す';
+
+  @override
+  String get hamada_ai_toggle_title => 'HAMADA AI を有効にする';
+
+  @override
+  String get hamada_ai_start_on_boot => '起動時に開始';
+
+  @override
+  String get edit_game_txt_title => 'game.txt を編集';
+
+  @override
+  String get save_button => '保存';
+
+  @override
+  String get executing_command => '実行中...';
+
+  @override
+  String get command_executed => 'コマンドが実行されました。';
+
+  @override
+  String get command_failed => 'コマンドが失敗しました。';
+
+  @override
+  String get saving_file => '保存中...';
+
+  @override
+  String get file_saved => 'ファイルが保存されました。';
+
+  @override
+  String get file_save_failed => 'ファイルの保存に失敗しました。';
+
+  @override
+  String get reading_file => 'ファイルを読み込み中...';
+
+  @override
+  String get file_read_failed => 'ファイルの読み込みに失敗しました。';
+
+  @override
+  String get writing_service_file => 'ブートスクリプトを更新中...';
+
+  @override
+  String get service_file_updated => 'ブートスクリプトが更新されました。';
+
+  @override
+  String get service_file_update_failed => 'ブートスクリプトの更新に失敗しました。';
+
+  @override
+  String get error_no_root => 'ルートアクセスが必要です。';
+
+  @override
+  String get error_file_not_found => 'ファイルが見つかりません。';
+
+  @override
+  String get game_txt_hint => 'ゲームパッケージ名を1行に1つずつ入力...';
+
+  @override
+  String get resolution_unavailable_message => 'このデバイスでは解像度制御は利用できません。';
+
+  @override
+  String get applying_changes => '変更を適用中...';
+
+  @override
+  String get dnd_title => 'DND スイッチ';
+
+  @override
+  String get dnd_description => 'DND の自動オン/オフ切り替え';
+
+  @override
+  String get dnd_toggle_title => 'DND 自動スイッチを有効にする';
+
+  @override
+  String get bypass_charging_title => 'バイパス充電';
+
+  @override
+  String get bypass_charging_description =>
+      'サポートされているデバイスでパフォーマンス＆ゲーミングプロ中にバイパス充電を有効にする';
+
+  @override
+  String get bypass_charging_toggle => 'バイパス充電を有効にする';
+
+  @override
+  String get bypass_charging_unsupported => 'お使いのデバイスではバイパス充電はサポートされていません';
+
+  @override
+  String get bypass_charging_supported => 'お使いのデバイスではバイパス充電がサポートされています';
+}

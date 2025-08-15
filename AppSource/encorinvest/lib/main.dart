@@ -4,18 +4,19 @@ import 'dart:async';
 import 'languages.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'about_page.dart'; // Import the about page
+import 'about_page.dart';
 import 'utilities_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 /// Manages reading and writing configuration settings from/to the encorin.txt file.
 class ConfigManager {
   static const String _configFilePath =
       '/data/adb/modules/EnCorinVest/encorin.txt';
-  static const String _defaultLanguage = 'EN';
-  static const String _defaultMode = 'None';
+  // Use a consistent, non-localized key
+  static const String _defaultMode = 'NONE';
 
   static Future<Map<String, String>> readConfig() async {
-    String language = _defaultLanguage;
     String currentMode = _defaultMode;
 
     try {
@@ -25,10 +26,7 @@ class ConfigManager {
         String content = result.stdout.toString();
         List<String> lines = content.split('\n');
         for (String line in lines) {
-          if (line.startsWith('language=')) {
-            String value = line.substring('language='.length).trim();
-            if (value.isNotEmpty) language = value.toUpperCase();
-          } else if (line.startsWith('current_mode=')) {
+          if (line.startsWith('current_mode=')) {
             String value = line.substring('current_mode='.length).trim();
             if (value.isNotEmpty) currentMode = value.toUpperCase();
           }
@@ -38,13 +36,12 @@ class ConfigManager {
       print('Error reading config file: $e');
     }
 
-    return {'language': language, 'current_mode': currentMode};
+    return {'current_mode': currentMode};
   }
 
   /// Updates a specific field in the config file without clearing other content
   static Future<void> _updateConfigField(String fieldName, String value) async {
     try {
-      // First, check if the config file exists and has content
       var readResult = await run(
           'su', ['-c', 'cat $_configFilePath 2>/dev/null || echo ""'],
           verbose: false);
@@ -54,11 +51,9 @@ class ConfigManager {
 
       if (readResult.exitCode == 0 &&
           readResult.stdout.toString().trim().isNotEmpty) {
-        // File exists and has content
         String content = readResult.stdout.toString();
         lines = content.split('\n');
 
-        // Update existing field or mark that it wasn't found
         for (int i = 0; i < lines.length; i++) {
           if (lines[i].startsWith('$fieldName=')) {
             lines[i] = '$fieldName=${value.toUpperCase()}';
@@ -67,47 +62,23 @@ class ConfigManager {
           }
         }
       } else {
-        // File doesn't exist or is empty, create basic structure
         lines = ['[EnCorinVest config]'];
       }
 
-      // If field wasn't found, add it
       if (!fieldFound) {
         lines.add('$fieldName=${value.toUpperCase()}');
       }
 
-      // Remove empty lines at the end
       while (lines.isNotEmpty && lines.last.trim().isEmpty) {
         lines.removeLast();
       }
 
-      // Write the updated content back
       String updatedContent = lines.join('\n') + '\n';
       await run('su', ['-c', 'echo "$updatedContent" > $_configFilePath'],
           verbose: false);
     } catch (e) {
       print('Error updating config field $fieldName: $e');
     }
-  }
-
-  /// Legacy method for writing entire config (kept for compatibility)
-  static Future<void> writeConfig(
-      {required String language, required String currentMode}) async {
-    String content = '[EnCorinVest config]\n'
-        'language=${language.toUpperCase()}\n'
-        'current_mode=${currentMode.toUpperCase()}\n';
-
-    try {
-      await run('su', ['-c', 'echo "$content" > $_configFilePath'],
-          verbose: false);
-    } catch (e) {
-      print('Error writing config file: $e');
-    }
-  }
-
-  /// Saves only the language field, preserving other config values
-  static Future<void> saveLanguage(String languageCode) async {
-    await _updateConfigField('language', languageCode);
   }
 
   /// Saves only the current_mode field, preserving other config values
@@ -120,11 +91,40 @@ void main() {
   runApp(MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
+  @override
+  _MyAppState createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  Locale? _locale;
+
   static final _defaultLightColorScheme =
       ColorScheme.fromSeed(seedColor: Colors.blue);
   static final _defaultDarkColorScheme =
       ColorScheme.fromSeed(seedColor: Colors.blue, brightness: Brightness.dark);
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLocale();
+  }
+
+  void _loadLocale() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String languageCode = prefs.getString('language_code') ?? 'en';
+    setState(() {
+      _locale = Locale(languageCode);
+    });
+  }
+
+  void setLocale(Locale locale) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('language_code', locale.languageCode);
+    setState(() {
+      _locale = locale;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -137,7 +137,19 @@ class MyApp extends StatelessWidget {
 
       return MaterialApp(
         debugShowCheckedModeBanner: false,
-        home: MainScreen(),
+        locale: _locale,
+        supportedLocales: [
+          Locale('en'),
+          Locale('id'),
+          Locale('ja'),
+          Locale('jv'),
+        ],
+        localizationsDelegates: [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        home: MainScreen(onLocaleChange: setLocale),
         theme: ThemeData(useMaterial3: true, colorScheme: lightColorScheme),
         darkTheme: ThemeData(useMaterial3: true, colorScheme: darkColorScheme),
         themeMode: ThemeMode.system,
@@ -147,6 +159,10 @@ class MyApp extends StatelessWidget {
 }
 
 class MainScreen extends StatefulWidget {
+  final Function(Locale) onLocaleChange;
+
+  MainScreen({required this.onLocaleChange});
+
   @override
   _MainScreenState createState() => _MainScreenState();
 }
@@ -155,7 +171,7 @@ class _MainScreenState extends State<MainScreen> {
   bool _hasRootAccess = false;
   bool _moduleInstalled = false;
   String _moduleVersion = 'Unknown';
-  String _currentMode = 'None';
+  String _currentMode = 'NONE';
   String _selectedLanguage = 'EN';
   String _executingScript = '';
   bool _isLoading = true;
@@ -163,7 +179,24 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
+    _loadSelectedLanguage();
     _initializeState();
+  }
+
+  void _loadSelectedLanguage() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String languageCode = prefs.getString('language_code') ?? 'en';
+    Map<String, String> codeMap = {
+      'en': 'EN',
+      'id': 'ID',
+      'ja': 'JP',
+      'jv': 'JV'
+    };
+    if (mounted) {
+      setState(() {
+        _selectedLanguage = codeMap[languageCode] ?? 'EN';
+      });
+    }
   }
 
   Future<void> _initializeState() async {
@@ -175,9 +208,7 @@ class _MainScreenState extends State<MainScreen> {
       var config = await ConfigManager.readConfig();
       if (mounted) {
         setState(() {
-          _selectedLanguage =
-              config['language'] ?? ConfigManager._defaultLanguage;
-          _currentMode = config['current_mode'] ?? ConfigManager._defaultMode;
+          _currentMode = config['current_mode'] ?? 'NONE';
         });
       }
       await _checkModuleInstalled();
@@ -188,7 +219,6 @@ class _MainScreenState extends State<MainScreen> {
           _moduleInstalled = false;
           _moduleVersion = 'Root Required';
           _currentMode = 'Root Required';
-          _selectedLanguage = ConfigManager._defaultLanguage;
         });
       }
     }
@@ -237,29 +267,22 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
-  Future<void> executeScript(String scriptName, String buttonText) async {
+  Future<void> executeScript(String scriptName, String modeKey) async {
     if (!_hasRootAccess || !_moduleInstalled || _executingScript.isNotEmpty)
       return;
-    String targetMode = buttonText.toUpperCase() ==
-            localization.translate('clear').toUpperCase()
-        ? 'None'
-        : buttonText.toUpperCase();
+
+    String targetMode =
+        (modeKey == 'CLEAR' || modeKey == 'COOLDOWN') ? 'NONE' : modeKey;
 
     if (mounted) {
       setState(() {
         _executingScript = scriptName;
-        if (buttonText.toUpperCase() !=
-            localization.translate('clear').toUpperCase()) {
-          _currentMode = buttonText.toUpperCase();
-        }
+        _currentMode = targetMode;
       });
     }
 
     try {
-      if (buttonText.toUpperCase() !=
-          localization.translate('clear').toUpperCase()) {
-        await ConfigManager.saveMode(buttonText.toUpperCase());
-      }
+      await ConfigManager.saveMode(targetMode);
 
       var result = await run(
           'su', ['-c', '/data/adb/modules/EnCorinVest/Scripts/$scriptName'],
@@ -267,10 +290,6 @@ class _MainScreenState extends State<MainScreen> {
 
       if (result.exitCode != 0) {
         await _refreshStateFromConfig();
-      } else if (buttonText.toUpperCase() ==
-          localization.translate('clear').toUpperCase()) {
-        await ConfigManager.saveMode('None');
-        if (mounted) setState(() => _currentMode = 'None');
       }
     } catch (e) {
       await _refreshStateFromConfig();
@@ -284,17 +303,25 @@ class _MainScreenState extends State<MainScreen> {
     var config = await ConfigManager.readConfig();
     if (mounted) {
       setState(() {
-        _selectedLanguage =
-            config['language'] ?? ConfigManager._defaultLanguage;
-        _currentMode = config['current_mode'] ?? ConfigManager._defaultMode;
+        _currentMode = config['current_mode'] ?? 'NONE';
       });
     }
   }
 
-  void _changeLanguage(String language) {
+  void _changeLanguage(String language) async {
     if (language == _selectedLanguage) return;
+
+    Map<String, String> localeMap = {
+      'EN': 'en',
+      'ID': 'id',
+      'JP': 'ja',
+      'JV': 'jv'
+    };
+
+    String localeCode = localeMap[language.toUpperCase()] ?? 'en';
+    widget.onLocaleChange(Locale(localeCode));
+
     if (mounted) setState(() => _selectedLanguage = language.toUpperCase());
-    ConfigManager.saveLanguage(language.toUpperCase());
   }
 
   Future<void> _launchURL(String url) async {
@@ -355,42 +382,48 @@ class _MainScreenState extends State<MainScreen> {
                           localization.translate('power_save'),
                           Icons.battery_saver,
                           colorScheme.primaryContainer,
-                          colorScheme.onPrimaryContainer),
+                          colorScheme.onPrimaryContainer,
+                          'POWER_SAVE'),
                       _buildControlRow(
                           localization.translate('balanced_desc'),
                           'balanced.sh',
                           localization.translate('balanced'),
                           Icons.balance,
                           colorScheme.secondaryContainer,
-                          colorScheme.onSecondaryContainer),
+                          colorScheme.onSecondaryContainer,
+                          'BALANCED'),
                       _buildControlRow(
                           localization.translate('performance_desc'),
                           'performance.sh',
                           localization.translate('performance'),
                           Icons.speed,
                           colorScheme.tertiaryContainer,
-                          colorScheme.onTertiaryContainer),
+                          colorScheme.onTertiaryContainer,
+                          'PERFORMANCE'),
                       _buildControlRow(
                           localization.translate('gaming_desc'),
                           'game.sh',
                           localization.translate('gaming_pro'),
                           Icons.sports_esports,
                           colorScheme.errorContainer,
-                          colorScheme.onErrorContainer),
+                          colorScheme.onErrorContainer,
+                          'GAMING_PRO'),
                       _buildControlRow(
                           localization.translate('cooldown_desc'),
                           'cool.sh',
                           localization.translate('cooldown'),
                           Icons.ac_unit,
                           colorScheme.surfaceVariant,
-                          colorScheme.onSurfaceVariant),
+                          colorScheme.onSurfaceVariant,
+                          'COOLDOWN'),
                       _buildControlRow(
                           localization.translate('clear_desc'),
                           'kill.sh',
                           localization.translate('clear'),
                           Icons.clear_all,
                           colorScheme.error,
-                          colorScheme.onError),
+                          colorScheme.onError,
+                          'CLEAR'),
                       SizedBox(height: 25),
                       _buildLanguageSelector(localization),
                       SizedBox(height: 20),
@@ -609,8 +642,9 @@ class _MainScreenState extends State<MainScreen> {
       String buttonText,
       IconData modeIcon,
       Color backgroundColor,
-      Color foregroundColor) {
-    bool isCurrentMode = _currentMode == buttonText.toUpperCase();
+      Color foregroundColor,
+      String modeKey) {
+    bool isCurrentMode = _currentMode == modeKey;
     bool isExecutingThis = _executingScript == scriptName;
     bool canExecute =
         _hasRootAccess && _moduleInstalled && _executingScript.isEmpty;
@@ -624,7 +658,7 @@ class _MainScreenState extends State<MainScreen> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       margin: EdgeInsets.only(bottom: 10),
       child: InkWell(
-        onTap: canExecute ? () => executeScript(scriptName, buttonText) : null,
+        onTap: canExecute ? () => executeScript(scriptName, modeKey) : null,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
