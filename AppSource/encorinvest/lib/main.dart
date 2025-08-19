@@ -542,14 +542,16 @@ class _MainScreenState extends State<MainScreen> {
             _buildStatusRow(
                 localization.root_access,
                 _hasRootAccess ? localization.yes : localization.no,
+                isBold: true,
                 _hasRootAccess ? Colors.green : colorScheme.error),
             _buildStatusRow(
                 localization.module_installed,
                 _moduleInstalled ? localization.yes : localization.no,
+                isBold: true,
                 _moduleInstalled ? Colors.green : colorScheme.error),
             _buildStatusRow(localization.module_version, _moduleVersion,
-                colorScheme.onSurfaceVariant,
-                isVersion: true),
+                colorScheme.primary,
+                isBold: true, isVersion: true),
             _buildStatusRow(
                 localization.mode_status_label,
                 _isHamadaAiRunning
