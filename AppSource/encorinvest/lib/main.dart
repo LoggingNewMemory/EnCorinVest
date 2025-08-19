@@ -9,81 +9,32 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import '/l10n/app_localizations.dart';
 
-/// Manages reading and writing configuration settings from/to the encorin.txt file.
+/// Manages reading and writing configuration settings using SharedPreferences.
+/// The app will remember the last selected mode locally.
 class ConfigManager {
-  static const String _configFilePath =
-      '/data/adb/modules/EnCorinVest/encorin.txt';
-  // Use a consistent, non-localized key
+  static const String _modeKey = 'current_mode';
   static const String _defaultMode = 'NONE';
 
+  /// Reads the current mode from SharedPreferences.
   static Future<Map<String, String>> readConfig() async {
-    String currentMode = _defaultMode;
-
     try {
-      var result =
-          await run('su', ['-c', 'cat $_configFilePath'], verbose: false);
-      if (result.exitCode == 0) {
-        String content = result.stdout.toString();
-        List<String> lines = content.split('\n');
-        for (String line in lines) {
-          if (line.startsWith('current_mode=')) {
-            String value = line.substring('current_mode='.length).trim();
-            if (value.isNotEmpty) currentMode = value.toUpperCase();
-          }
-        }
-      }
+      final prefs = await SharedPreferences.getInstance();
+      String currentMode = prefs.getString(_modeKey) ?? _defaultMode;
+      return {'current_mode': currentMode};
     } catch (e) {
-      print('Error reading config file: $e');
-    }
-
-    return {'current_mode': currentMode};
-  }
-
-  /// Updates a specific field in the config file without clearing other content
-  static Future<void> _updateConfigField(String fieldName, String value) async {
-    try {
-      var readResult = await run(
-          'su', ['-c', 'cat $_configFilePath 2>/dev/null || echo ""'],
-          verbose: false);
-
-      List<String> lines = [];
-      bool fieldFound = false;
-
-      if (readResult.exitCode == 0 &&
-          readResult.stdout.toString().trim().isNotEmpty) {
-        String content = readResult.stdout.toString();
-        lines = content.split('\n');
-
-        for (int i = 0; i < lines.length; i++) {
-          if (lines[i].startsWith('$fieldName=')) {
-            lines[i] = '$fieldName=${value.toUpperCase()}';
-            fieldFound = true;
-            break;
-          }
-        }
-      } else {
-        lines = ['[EnCorinVest config]'];
-      }
-
-      if (!fieldFound) {
-        lines.add('$fieldName=${value.toUpperCase()}');
-      }
-
-      while (lines.isNotEmpty && lines.last.trim().isEmpty) {
-        lines.removeLast();
-      }
-
-      String updatedContent = lines.join('\n') + '\n';
-      await run('su', ['-c', 'echo "$updatedContent" > $_configFilePath'],
-          verbose: false);
-    } catch (e) {
-      print('Error updating config field $fieldName: $e');
+      print('Error reading config from SharedPreferences: $e');
+      return {'current_mode': _defaultMode};
     }
   }
 
-  /// Saves only the current_mode field, preserving other config values
+  /// Saves the current mode to SharedPreferences.
   static Future<void> saveMode(String mode) async {
-    await _updateConfigField('current_mode', mode);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_modeKey, mode.toUpperCase());
+    } catch (e) {
+      print('Error saving mode to SharedPreferences: $e');
+    }
   }
 }
 
@@ -212,15 +163,17 @@ class _MainScreenState extends State<MainScreen> {
     if (!mounted) return;
     setState(() => _isLoading = true);
 
+    // Load the last saved mode from SharedPreferences at the beginning.
+    var config = await ConfigManager.readConfig();
+    if (mounted) {
+      setState(() {
+        _currentMode = config['current_mode'] ?? 'NONE';
+      });
+    }
+
     bool rootGranted = await _checkRootAccess();
     if (rootGranted) {
       await _checkHamadaProcessStatus();
-      var config = await ConfigManager.readConfig();
-      if (mounted) {
-        setState(() {
-          _currentMode = config['current_mode'] ?? 'NONE';
-        });
-      }
       await _checkModuleInstalled();
       if (_moduleInstalled) await _getModuleVersion();
     } else {
@@ -228,6 +181,7 @@ class _MainScreenState extends State<MainScreen> {
         setState(() {
           _moduleInstalled = false;
           _moduleVersion = 'Root Required';
+          // Overwrites the mode loaded from prefs to show root status
           _currentMode = 'Root Required';
         });
       }
@@ -313,6 +267,7 @@ class _MainScreenState extends State<MainScreen> {
     }
 
     try {
+      // Save the new mode to SharedPreferences
       await ConfigManager.saveMode(targetMode);
 
       var result = await run(
@@ -320,6 +275,7 @@ class _MainScreenState extends State<MainScreen> {
           verbose: false);
 
       if (result.exitCode != 0) {
+        // If script fails, refresh UI from the saved state in SharedPreferences
         await _refreshStateFromConfig();
       }
     } catch (e) {
