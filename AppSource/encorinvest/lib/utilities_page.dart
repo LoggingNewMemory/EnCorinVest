@@ -4,6 +4,7 @@ import 'dart:convert';
 import '/l10n/app_localizations.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+// import 'package:process_run/process_run.dart'; // Ensure this import is present
 
 class UtilitiesPage extends StatefulWidget {
   const UtilitiesPage({Key? key}) : super(key: key);
@@ -866,509 +867,549 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
         _isDndConfigUpdating;
 
     return Scaffold(
+      // --- MODIFIED: Make background transparent ---
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: Text(localization.utilities_title),
-        backgroundColor: colorScheme.surfaceVariant,
-        foregroundColor: colorScheme.onSurfaceVariant,
+        // --- MODIFIED: Make AppBar transparent ---
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        // --- END MODIFIED ---
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // --- NEW: Encore Switch Card ---
-            Card(
-              elevation: cardElevation,
-              margin: cardMargin,
-              shape: cardShape,
-              color: colorScheme.surfaceContainerHighest,
-              child: Padding(
-                padding: cardPadding,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      localization.encore_switch_title,
-                      style: textTheme.titleLarge?.copyWith(
-                          color: colorScheme.onSurface,
-                          fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      localization.encore_switch_description,
-                      style: textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    SwitchListTile(
-                      title: Text(localization.device_mitigation_title),
-                      subtitle:
-                          Text(localization.device_mitigation_description),
-                      value: _deviceMitigationEnabled,
-                      onChanged: _isEncoreConfigUpdating
-                          ? null
-                          : (bool value) =>
-                              _updateEncoreTweak('DEVICE_MITIGATION', value),
-                      secondary: _isEncoreConfigUpdating
-                          ? SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2))
-                          : Icon(Icons.security_update_warning),
-                      activeColor: colorScheme.primary,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                    SwitchListTile(
-                      title: Text(localization.lite_mode_title),
-                      subtitle: Text(localization.lite_mode_description),
-                      value: _liteModeEnabled,
-                      onChanged: _isEncoreConfigUpdating
-                          ? null
-                          : (bool value) =>
-                              _updateEncoreTweak('LITE_MODE', value),
-                      secondary: _isEncoreConfigUpdating
-                          ? SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2))
-                          : Icon(Icons.flourescent),
-                      activeColor: colorScheme.primary,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ],
-                ),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // --- NEW: Background Image Layer ---
+          if (_backgroundImagePath != null && _backgroundImagePath!.isNotEmpty)
+            Opacity(
+              opacity: _backgroundOpacity,
+              child: Image.file(
+                File(_backgroundImagePath!),
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  print(
+                      "Error loading background image in utilities_page: $error");
+                  return Container(color: Colors.transparent);
+                },
               ),
             ),
-            // --- 1. DND Card ---
-            Card(
-              elevation: cardElevation,
-              margin: cardMargin,
-              shape: cardShape,
-              color: colorScheme.surfaceContainerHighest,
-              child: Padding(
-                padding: cardPadding,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      localization.dnd_title,
-                      style: textTheme.titleLarge?.copyWith(
-                          color: colorScheme.onSurface,
-                          fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      localization.dnd_description,
-                      style: textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    SwitchListTile(
-                      title: Text(localization.dnd_toggle_title),
-                      value: _dndEnabled,
-                      onChanged: _isDndConfigUpdating
-                          ? null
-                          : (bool value) {
-                              _toggleDnd(value);
-                            },
-                      secondary: _isDndConfigUpdating
-                          ? SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2))
-                          : Icon(Icons.bedtime),
-                      activeColor: colorScheme.primary,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            // --- 2. HAMADA AI Card ---
-            Card(
-              elevation: cardElevation,
-              margin: cardMargin,
-              shape: cardShape,
-              color: colorScheme.surfaceContainerHighest,
-              child: Padding(
-                padding: cardPadding,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      localization.hamada_ai,
-                      style: textTheme.titleLarge?.copyWith(
-                          color: colorScheme.onSurface,
-                          fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      localization.hamada_ai_description,
-                      style: textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    SwitchListTile(
-                      title: Text(localization.hamada_ai_toggle_title),
-                      value: _hamadaAiEnabled,
-                      onChanged: isHamadaBusy
-                          ? null
-                          : (bool value) {
-                              _toggleHamadaAI(value);
-                            },
-                      secondary: _isHamadaCommandRunning
-                          ? SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2))
-                          : Icon(Icons.psychology_alt),
-                      activeColor: colorScheme.primary,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                    SwitchListTile(
-                      title: Text(localization.hamada_ai_start_on_boot),
-                      value: _hamadaStartOnBoot,
-                      onChanged: _isServiceFileUpdating
-                          ? null
-                          : (bool value) {
-                              _setHamadaStartOnBoot(value);
-                            },
-                      secondary: _isServiceFileUpdating
-                          ? SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2))
-                          : Icon(Icons.rocket_launch),
-                      activeColor: colorScheme.primary,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            // --- 3. Resolution Card ---
-            Card(
-              elevation: cardElevation,
-              margin: cardMargin,
-              shape: cardShape,
-              color: colorScheme.surfaceContainerHighest,
-              child: Padding(
-                padding: cardPadding,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      localization.downscale_resolution,
-                      style: textTheme.titleLarge?.copyWith(
-                          color: colorScheme.onSurface,
-                          fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 8),
-                    if (!_resolutionServiceAvailable)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0),
-                        child: Text(
-                          localization.resolution_unavailable_message,
-                          style: textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.error,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
+          // --- END NEW ---
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // --- NEW: Encore Switch Card ---
+                Card(
+                  elevation: cardElevation,
+                  margin: cardMargin,
+                  shape: cardShape,
+                  color: colorScheme.surfaceContainerHighest,
+                  child: Padding(
+                    padding: cardPadding,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          localization.encore_switch_title,
+                          style: textTheme.titleLarge?.copyWith(
+                              color: colorScheme.onSurface,
+                              fontWeight: FontWeight.w600),
                         ),
-                      )
-                    else ...[
-                      Row(
-                        children: [
-                          Icon(Icons.screen_rotation,
-                              color: colorScheme.onSurfaceVariant),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Slider(
-                              value: _resolutionValue,
-                              min: 0,
-                              max: (_resolutionPercentages.length - 1)
-                                  .toDouble(),
-                              divisions: _resolutionPercentages.length - 1,
-                              label: _getCurrentPercentageLabel(),
-                              onChanged: _isResolutionChanging
-                                  ? null
-                                  : (double value) {
-                                      setState(() {
-                                        _resolutionValue = value;
-                                      });
-                                    },
-                              onChangeEnd: _isResolutionChanging
-                                  ? null
-                                  : (double value) {
-                                      _applyResolution(value);
-                                    },
-                              activeColor: colorScheme.primary,
-                              inactiveColor:
-                                  colorScheme.onSurfaceVariant.withOpacity(0.3),
-                            ),
+                        const SizedBox(height: 8),
+                        Text(
+                          localization.encore_switch_description,
+                          style: textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                            fontStyle: FontStyle.italic,
                           ),
-                          Text(_getCurrentPercentageLabel(),
-                              style: textTheme.bodyLarge
-                                  ?.copyWith(color: colorScheme.onSurface)),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            backgroundColor: colorScheme.secondaryContainer,
-                            foregroundColor: colorScheme.onSecondaryContainer,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8)),
-                          ),
-                          onPressed: _isResolutionChanging
+                        ),
+                        const SizedBox(height: 8),
+                        SwitchListTile(
+                          title: Text(localization.device_mitigation_title),
+                          subtitle:
+                              Text(localization.device_mitigation_description),
+                          value: _deviceMitigationEnabled,
+                          onChanged: _isEncoreConfigUpdating
                               ? null
-                              : () => _resetResolution(),
-                          icon: _isResolutionChanging
+                              : (bool value) => _updateEncoreTweak(
+                                  'DEVICE_MITIGATION', value),
+                          secondary: _isEncoreConfigUpdating
                               ? SizedBox(
                                   width: 20,
                                   height: 20,
                                   child:
                                       CircularProgressIndicator(strokeWidth: 2))
-                              : Icon(Icons.refresh),
-                          label: Text(localization.reset_resolution),
+                              : Icon(Icons.security_update_warning),
+                          activeColor: colorScheme.primary,
+                          contentPadding: EdgeInsets.zero,
                         ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-            // --- 4. game.txt Editor Card ---
-            Card(
-              elevation: cardElevation,
-              margin: cardMargin,
-              shape: cardShape,
-              color: colorScheme.surfaceContainerHighest,
-              child: Padding(
-                padding: cardPadding,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      localization.edit_game_txt_title,
-                      style: textTheme.titleLarge?.copyWith(
-                          color: colorScheme.onSurface,
-                          fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _gameTxtController,
-                      maxLines: 10,
-                      minLines: 5,
-                      enabled: !_isGameTxtLoading && !_isGameTxtSaving,
-                      decoration: InputDecoration(
-                        hintText: localization.game_txt_hint,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(
-                              color: colorScheme.outline, width: 1.0),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(
-                              color: colorScheme.outline, width: 1.0),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(
-                              color: colorScheme.primary, width: 2.0),
-                        ),
-                        filled: true,
-                        fillColor: colorScheme.surfaceContainerLow,
-                        contentPadding: const EdgeInsets.all(12),
-                      ),
-                      style: textTheme.bodyMedium
-                          ?.copyWith(color: colorScheme.onSurface),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        // Removed the "Reading File" button
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              backgroundColor: colorScheme.primaryContainer,
-                              foregroundColor: colorScheme.onPrimaryContainer,
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8)),
-                            ),
-                            onPressed:
-                                _isGameTxtSaving ? null : () => _saveGameTxt(),
-                            icon: _isGameTxtSaving
-                                ? SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2))
-                                : Icon(Icons.save),
-                            label: Text(localization.save_button),
-                          ),
+                        SwitchListTile(
+                          title: Text(localization.lite_mode_title),
+                          subtitle: Text(localization.lite_mode_description),
+                          value: _liteModeEnabled,
+                          onChanged: _isEncoreConfigUpdating
+                              ? null
+                              : (bool value) =>
+                                  _updateEncoreTweak('LITE_MODE', value),
+                          secondary: _isEncoreConfigUpdating
+                              ? SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2))
+                              : Icon(Icons.flourescent),
+                          activeColor: colorScheme.primary,
+                          contentPadding: EdgeInsets.zero,
                         ),
                       ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-            // --- 5. Bypass Charging Card ---
-            Card(
-              elevation: cardElevation,
-              margin: cardMargin,
-              shape: cardShape,
-              color: colorScheme.surfaceContainerHighest,
-              child: Padding(
-                padding: cardPadding,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      localization.bypass_charging_title,
-                      style: textTheme.titleLarge?.copyWith(
-                          color: colorScheme.onSurface,
-                          fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      localization.bypass_charging_description,
-                      style: textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    if (_bypassSupportStatus.isNotEmpty) ...[
-                      Center(
-                        child: Text(
-                          _bypassSupportStatus,
-                          style: textTheme.bodyMedium?.copyWith(
-                            color: _isBypassSupported
-                                ? Colors.green
-                                : colorScheme.error,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
+                // --- 1. DND Card ---
+                Card(
+                  elevation: cardElevation,
+                  margin: cardMargin,
+                  shape: cardShape,
+                  color: colorScheme.surfaceContainerHighest,
+                  child: Padding(
+                    padding: cardPadding,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          localization.dnd_title,
+                          style: textTheme.titleLarge?.copyWith(
+                              color: colorScheme.onSurface,
+                              fontWeight: FontWeight.w600),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-                    SwitchListTile(
-                      title: Text(localization.bypass_charging_toggle),
-                      value: _bypassEnabled,
-                      onChanged: (_isTogglingBypass || !_isBypassSupported)
-                          ? null
-                          : (bool value) {
-                              _toggleBypassCharging(value);
-                            },
-                      secondary: _isTogglingBypass
-                          ? SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2))
-                          : Icon(Icons.battery_charging_full),
-                      activeColor: colorScheme.primary,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Card(
-              elevation: cardElevation,
-              margin: cardMargin,
-              shape: cardShape,
-              color: colorScheme.surfaceContainerHighest,
-              child: Padding(
-                padding: cardPadding,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      localization.background_settings_title,
-                      style: textTheme.titleLarge?.copyWith(
-                          color: colorScheme.onSurface,
-                          fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      localization.background_settings_description,
-                      style: textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    if (_isBackgroundSettingsLoading)
-                      Center(child: CircularProgressIndicator())
-                    else ...[
-                      // Opacity Slider
-                      Text(localization.opacity_slider_label,
-                          style: textTheme.bodyMedium),
-                      Slider(
-                        value: _backgroundOpacity,
-                        min: 0.0,
-                        max: 1.0,
-                        divisions: 20,
-                        label:
-                            (_backgroundOpacity * 100).toStringAsFixed(0) + '%',
-                        onChanged: (value) {
-                          setState(() => _backgroundOpacity = value);
-                        },
-                        onChangeEnd: (value) {
-                          _updateOpacity(value);
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      // Action Buttons
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: _pickAndSetImage,
-                              icon: Icon(Icons.image),
-                              label: Text(localization.select_image_button),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: colorScheme.primaryContainer,
-                                foregroundColor: colorScheme.onPrimaryContainer,
-                              ),
-                            ),
+                        const SizedBox(height: 8),
+                        Text(
+                          localization.dnd_description,
+                          style: textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                            fontStyle: FontStyle.italic,
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: _resetBackground,
-                              icon: Icon(Icons.refresh),
-                              label: Text(localization.reset_background_button),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: colorScheme.errorContainer,
-                                foregroundColor: colorScheme.onErrorContainer,
+                        ),
+                        const SizedBox(height: 8),
+                        SwitchListTile(
+                          title: Text(localization.dnd_toggle_title),
+                          value: _dndEnabled,
+                          onChanged: _isDndConfigUpdating
+                              ? null
+                              : (bool value) {
+                                  _toggleDnd(value);
+                                },
+                          secondary: _isDndConfigUpdating
+                              ? SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2))
+                              : Icon(Icons.bedtime),
+                          activeColor: colorScheme.primary,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // --- 2. HAMADA AI Card ---
+                Card(
+                  elevation: cardElevation,
+                  margin: cardMargin,
+                  shape: cardShape,
+                  color: colorScheme.surfaceContainerHighest,
+                  child: Padding(
+                    padding: cardPadding,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          localization.hamada_ai,
+                          style: textTheme.titleLarge?.copyWith(
+                              color: colorScheme.onSurface,
+                              fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          localization.hamada_ai_description,
+                          style: textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        SwitchListTile(
+                          title: Text(localization.hamada_ai_toggle_title),
+                          value: _hamadaAiEnabled,
+                          onChanged: isHamadaBusy
+                              ? null
+                              : (bool value) {
+                                  _toggleHamadaAI(value);
+                                },
+                          secondary: _isHamadaCommandRunning
+                              ? SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2))
+                              : Icon(Icons.psychology_alt),
+                          activeColor: colorScheme.primary,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        SwitchListTile(
+                          title: Text(localization.hamada_ai_start_on_boot),
+                          value: _hamadaStartOnBoot,
+                          onChanged: _isServiceFileUpdating
+                              ? null
+                              : (bool value) {
+                                  _setHamadaStartOnBoot(value);
+                                },
+                          secondary: _isServiceFileUpdating
+                              ? SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2))
+                              : Icon(Icons.rocket_launch),
+                          activeColor: colorScheme.primary,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // --- 3. Resolution Card ---
+                Card(
+                  elevation: cardElevation,
+                  margin: cardMargin,
+                  shape: cardShape,
+                  color: colorScheme.surfaceContainerHighest,
+                  child: Padding(
+                    padding: cardPadding,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          localization.downscale_resolution,
+                          style: textTheme.titleLarge?.copyWith(
+                              color: colorScheme.onSurface,
+                              fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 8),
+                        if (!_resolutionServiceAvailable)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8.0),
+                            child: Text(
+                              localization.resolution_unavailable_message,
+                              style: textTheme.bodyMedium?.copyWith(
+                                color: colorScheme.error,
+                                fontWeight: FontWeight.bold,
                               ),
+                              textAlign: TextAlign.center,
+                            ),
+                          )
+                        else ...[
+                          Row(
+                            children: [
+                              Icon(Icons.screen_rotation,
+                                  color: colorScheme.onSurfaceVariant),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Slider(
+                                  value: _resolutionValue,
+                                  min: 0,
+                                  max: (_resolutionPercentages.length - 1)
+                                      .toDouble(),
+                                  divisions: _resolutionPercentages.length - 1,
+                                  label: _getCurrentPercentageLabel(),
+                                  onChanged: _isResolutionChanging
+                                      ? null
+                                      : (double value) {
+                                          setState(() {
+                                            _resolutionValue = value;
+                                          });
+                                        },
+                                  onChangeEnd: _isResolutionChanging
+                                      ? null
+                                      : (double value) {
+                                          _applyResolution(value);
+                                        },
+                                  activeColor: colorScheme.primary,
+                                  inactiveColor: colorScheme.onSurfaceVariant
+                                      .withOpacity(0.3),
+                                ),
+                              ),
+                              Text(_getCurrentPercentageLabel(),
+                                  style: textTheme.bodyLarge
+                                      ?.copyWith(color: colorScheme.onSurface)),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 12),
+                                backgroundColor: colorScheme.secondaryContainer,
+                                foregroundColor:
+                                    colorScheme.onSecondaryContainer,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8)),
+                              ),
+                              onPressed: _isResolutionChanging
+                                  ? null
+                                  : () => _resetResolution(),
+                              icon: _isResolutionChanging
+                                  ? SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2))
+                                  : Icon(Icons.refresh),
+                              label: Text(localization.reset_resolution),
                             ),
                           ),
                         ],
-                      ),
-                    ],
-                  ],
+                      ],
+                    ),
+                  ),
                 ),
-              ),
+                // --- 4. game.txt Editor Card ---
+                Card(
+                  elevation: cardElevation,
+                  margin: cardMargin,
+                  shape: cardShape,
+                  color: colorScheme.surfaceContainerHighest,
+                  child: Padding(
+                    padding: cardPadding,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          localization.edit_game_txt_title,
+                          style: textTheme.titleLarge?.copyWith(
+                              color: colorScheme.onSurface,
+                              fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _gameTxtController,
+                          maxLines: 10,
+                          minLines: 5,
+                          enabled: !_isGameTxtLoading && !_isGameTxtSaving,
+                          decoration: InputDecoration(
+                            hintText: localization.game_txt_hint,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                  color: colorScheme.outline, width: 1.0),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                  color: colorScheme.outline, width: 1.0),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                  color: colorScheme.primary, width: 2.0),
+                            ),
+                            filled: true,
+                            fillColor: colorScheme.surfaceContainerLow,
+                            contentPadding: const EdgeInsets.all(12),
+                          ),
+                          style: textTheme.bodyMedium
+                              ?.copyWith(color: colorScheme.onSurface),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            // Removed the "Reading File" button
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 12),
+                                  backgroundColor: colorScheme.primaryContainer,
+                                  foregroundColor:
+                                      colorScheme.onPrimaryContainer,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8)),
+                                ),
+                                onPressed: _isGameTxtSaving
+                                    ? null
+                                    : () => _saveGameTxt(),
+                                icon: _isGameTxtSaving
+                                    ? SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2))
+                                    : Icon(Icons.save),
+                                label: Text(localization.save_button),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // --- 5. Bypass Charging Card ---
+                Card(
+                  elevation: cardElevation,
+                  margin: cardMargin,
+                  shape: cardShape,
+                  color: colorScheme.surfaceContainerHighest,
+                  child: Padding(
+                    padding: cardPadding,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          localization.bypass_charging_title,
+                          style: textTheme.titleLarge?.copyWith(
+                              color: colorScheme.onSurface,
+                              fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          localization.bypass_charging_description,
+                          style: textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        if (_bypassSupportStatus.isNotEmpty) ...[
+                          Center(
+                            child: Text(
+                              _bypassSupportStatus,
+                              style: textTheme.bodyMedium?.copyWith(
+                                color: _isBypassSupported
+                                    ? Colors.green
+                                    : colorScheme.error,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                        SwitchListTile(
+                          title: Text(localization.bypass_charging_toggle),
+                          value: _bypassEnabled,
+                          onChanged: (_isTogglingBypass || !_isBypassSupported)
+                              ? null
+                              : (bool value) {
+                                  _toggleBypassCharging(value);
+                                },
+                          secondary: _isTogglingBypass
+                              ? SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2))
+                              : Icon(Icons.battery_charging_full),
+                          activeColor: colorScheme.primary,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Card(
+                  elevation: cardElevation,
+                  margin: cardMargin,
+                  shape: cardShape,
+                  color: colorScheme.surfaceContainerHighest,
+                  child: Padding(
+                    padding: cardPadding,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          localization.background_settings_title,
+                          style: textTheme.titleLarge?.copyWith(
+                              color: colorScheme.onSurface,
+                              fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          localization.background_settings_description,
+                          style: textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        if (_isBackgroundSettingsLoading)
+                          Center(child: CircularProgressIndicator())
+                        else ...[
+                          // Opacity Slider
+                          Text(localization.opacity_slider_label,
+                              style: textTheme.bodyMedium),
+                          Slider(
+                            value: _backgroundOpacity,
+                            min: 0.0,
+                            max: 1.0,
+                            divisions: 20,
+                            label:
+                                (_backgroundOpacity * 100).toStringAsFixed(0) +
+                                    '%',
+                            onChanged: (value) {
+                              setState(() => _backgroundOpacity = value);
+                            },
+                            onChangeEnd: (value) {
+                              _updateOpacity(value);
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          // Action Buttons
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: _pickAndSetImage,
+                                  icon: Icon(Icons.image),
+                                  label: Text(localization.select_image_button),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor:
+                                        colorScheme.primaryContainer,
+                                    foregroundColor:
+                                        colorScheme.onPrimaryContainer,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: _resetBackground,
+                                  icon: Icon(Icons.refresh),
+                                  label: Text(
+                                      localization.reset_background_button),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: colorScheme.errorContainer,
+                                    foregroundColor:
+                                        colorScheme.onErrorContainer,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

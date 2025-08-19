@@ -170,7 +170,9 @@ class _AboutPageState extends State<AboutPage> {
                       children: [
                         Card(
                           elevation: 0,
-                          color: Theme.of(context).colorScheme.surfaceVariant,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12)),
                           child: Padding(

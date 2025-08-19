@@ -549,7 +549,7 @@ class _MainScreenState extends State<MainScreen> {
     ColorScheme colorScheme = Theme.of(context).colorScheme;
     return Card(
       elevation: 0,
-      color: colorScheme.surfaceVariant,
+      color: colorScheme.surfaceContainerHighest,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: EdgeInsets.all(12),
@@ -618,7 +618,7 @@ class _MainScreenState extends State<MainScreen> {
     ColorScheme colorScheme = Theme.of(context).colorScheme;
     return Card(
       elevation: 0,
-      color: colorScheme.surfaceVariant,
+      color: colorScheme.surfaceContainerHighest,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Center(
         child: Padding(
@@ -701,7 +701,7 @@ class _MainScreenState extends State<MainScreen> {
         elevation: 0,
         color: isCurrentMode && !isHamadaMode
             ? colorScheme.primaryContainer
-            : colorScheme.surfaceVariant,
+            : colorScheme.surfaceContainerHighest,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: EdgeInsets.only(bottom: 10),
         child: InkWell(
@@ -726,7 +726,7 @@ class _MainScreenState extends State<MainScreen> {
                   size: 24,
                   color: isCurrentMode && !isHamadaMode
                       ? colorScheme.onPrimaryContainer
-                      : colorScheme.onSurfaceVariant,
+                      : colorScheme.onSurface,
                 ),
                 SizedBox(width: 16),
                 Expanded(
@@ -745,7 +745,7 @@ class _MainScreenState extends State<MainScreen> {
                                       : FontStyle.normal,
                                   color: isCurrentMode && !isHamadaMode
                                       ? colorScheme.onPrimaryContainer
-                                      : colorScheme.onSurfaceVariant,
+                                      : colorScheme.onSurface,
                                 ),
                       ),
                       SizedBox(height: 4),
@@ -782,7 +782,7 @@ class _MainScreenState extends State<MainScreen> {
                       color: colorScheme.onPrimaryContainer, size: 20)
                 else
                   Icon(Icons.arrow_forward_ios,
-                      color: colorScheme.onSurfaceVariant, size: 16),
+                      color: colorScheme.onSurface, size: 16),
               ],
             ),
           ),
