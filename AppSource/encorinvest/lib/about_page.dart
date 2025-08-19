@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:process_run/process_run.dart';
-import 'languages.dart';
+import '/l10n/app_localizations.dart';
 
 class AboutPage extends StatefulWidget {
-  final String selectedLanguage;
-
-  AboutPage({required this.selectedLanguage});
+  AboutPage({Key? key}) : super(key: key);
 
   @override
   _AboutPageState createState() => _AboutPageState();
@@ -89,19 +87,24 @@ class _AboutPageState extends State<AboutPage> {
     }
   }
 
+  // Helper to get credit strings dynamically
+  List<String> _getCredits(AppLocalizations localization) {
+    return [
+      localization.credits_1,
+      localization.credits_2,
+      localization.credits_3,
+      localization.credits_4,
+      localization.credits_5,
+      localization.credits_6,
+      localization.credits_7,
+      localization.credits_8,
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
-    final localization = AppLocalizations(widget.selectedLanguage);
-    final List<String> credits = [
-      'credits_1',
-      'credits_2',
-      'credits_3',
-      'credits_4',
-      'credits_5',
-      'credits_6',
-      'credits_7',
-      'credits_8'
-    ];
+    final localization = AppLocalizations.of(context)!;
+    final List<String> credits = _getCredits(localization);
 
     return Scaffold(
       appBar: AppBar(),
@@ -123,34 +126,31 @@ class _AboutPageState extends State<AboutPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildInfoRow(
-                                localization.translate('device'), _deviceModel),
-                            _buildInfoRow(
-                                localization.translate('cpu'), _cpuInfo),
-                            _buildInfoRow(
-                                localization.translate('os'), _osVersion),
+                            _buildInfoRow(localization.device, _deviceModel),
+                            _buildInfoRow(localization.cpu, _cpuInfo),
+                            _buildInfoRow(localization.os, _osVersion),
                           ],
                         ),
                       ),
                     ),
                     SizedBox(height: 20),
                     Text(
-                      localization.translate('about_title'),
+                      localization.about_title,
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                           decoration: TextDecoration.underline),
                     ),
                     SizedBox(height: 15),
-                    ...credits.map((creditKey) => Padding(
+                    ...credits.map((creditText) => Padding(
                           padding: EdgeInsets.symmetric(vertical: 3),
                           child: Text(
-                            '• ${localization.translate(creditKey)}',
+                            '• $creditText',
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                         )),
                     SizedBox(height: 20),
                     Text(
-                      localization.translate('about_note'),
+                      localization.about_note,
                       style: Theme.of(context)
                           .textTheme
                           .bodyMedium
@@ -159,7 +159,7 @@ class _AboutPageState extends State<AboutPage> {
                     SizedBox(height: 20),
                     Center(
                       child: Text(
-                        localization.translate('about_quote'),
+                        localization.about_quote,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontStyle: FontStyle.italic,
                               color: Theme.of(context).colorScheme.primary,

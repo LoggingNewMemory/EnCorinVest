@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:process_run/process_run.dart';
 import 'dart:async';
-import 'languages.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'about_page.dart';
 import 'utilities_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import '/l10n/app_localizations.dart';
 
 /// Manages reading and writing configuration settings from/to the encorin.txt file.
 class ConfigManager {
@@ -138,13 +138,9 @@ class _MyAppState extends State<MyApp> {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
         locale: _locale,
-        supportedLocales: [
-          Locale('en'),
-          Locale('id'),
-          Locale('ja'),
-          Locale('jv'),
-        ],
+        supportedLocales: AppLocalizations.supportedLocales,
         localizationsDelegates: [
+          AppLocalizations.delegate,
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
@@ -190,7 +186,6 @@ class _MainScreenState extends State<MainScreen> {
       'en': 'EN',
       'id': 'ID',
       'ja': 'JP',
-      'jv': 'JV'
     };
     if (mounted) {
       setState(() {
@@ -315,7 +310,6 @@ class _MainScreenState extends State<MainScreen> {
       'EN': 'en',
       'ID': 'id',
       'JP': 'ja',
-      'JV': 'jv'
     };
 
     String localeCode = localeMap[language.toUpperCase()] ?? 'en';
@@ -341,26 +335,18 @@ class _MainScreenState extends State<MainScreen> {
 
   void _navigateToAboutPage() {
     Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (context) =>
-                AboutPage(selectedLanguage: _selectedLanguage)));
+        context, MaterialPageRoute(builder: (context) => AboutPage()));
   }
 
   void _navigateToUtilitiesPage() {
     Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (context) =>
-                UtilitiesPage(selectedLanguage: _selectedLanguage)));
+        context, MaterialPageRoute(builder: (context) => UtilitiesPage()));
   }
-
-  late AppLocalizations localization;
 
   @override
   Widget build(BuildContext context) {
-    localization = AppLocalizations(_selectedLanguage);
-    ColorScheme colorScheme = Theme.of(context).colorScheme;
+    final localization = AppLocalizations.of(context)!;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       body: SafeArea(
@@ -377,49 +363,49 @@ class _MainScreenState extends State<MainScreen> {
                       _buildHeaderRow(localization),
                       SizedBox(height: 10),
                       _buildControlRow(
-                          localization.translate('power_save_desc'),
+                          localization.power_save_desc,
                           'powersafe.sh',
-                          localization.translate('power_save'),
+                          localization.power_save,
                           Icons.battery_saver,
                           colorScheme.primaryContainer,
                           colorScheme.onPrimaryContainer,
                           'POWER_SAVE'),
                       _buildControlRow(
-                          localization.translate('balanced_desc'),
+                          localization.balanced_desc,
                           'balanced.sh',
-                          localization.translate('balanced'),
+                          localization.balanced,
                           Icons.balance,
                           colorScheme.secondaryContainer,
                           colorScheme.onSecondaryContainer,
                           'BALANCED'),
                       _buildControlRow(
-                          localization.translate('performance_desc'),
+                          localization.performance_desc,
                           'performance.sh',
-                          localization.translate('performance'),
+                          localization.performance,
                           Icons.speed,
                           colorScheme.tertiaryContainer,
                           colorScheme.onTertiaryContainer,
                           'PERFORMANCE'),
                       _buildControlRow(
-                          localization.translate('gaming_desc'),
+                          localization.gaming_desc,
                           'game.sh',
-                          localization.translate('gaming_pro'),
+                          localization.gaming_pro,
                           Icons.sports_esports,
                           colorScheme.errorContainer,
                           colorScheme.onErrorContainer,
                           'GAMING_PRO'),
                       _buildControlRow(
-                          localization.translate('cooldown_desc'),
+                          localization.cooldown_desc,
                           'cool.sh',
-                          localization.translate('cooldown'),
+                          localization.cooldown,
                           Icons.ac_unit,
                           colorScheme.surfaceVariant,
                           colorScheme.onSurfaceVariant,
                           'COOLDOWN'),
                       _buildControlRow(
-                          localization.translate('clear_desc'),
+                          localization.clear_desc,
                           'kill.sh',
-                          localization.translate('clear'),
+                          localization.clear,
                           Icons.clear_all,
                           colorScheme.error,
                           colorScheme.onError,
@@ -447,7 +433,7 @@ class _MainScreenState extends State<MainScreen> {
               InkWell(
                 onTap: _navigateToAboutPage,
                 child: Text(
-                  localization.translate('app_title'),
+                  localization.app_title,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: colorScheme.primary,
@@ -455,7 +441,7 @@ class _MainScreenState extends State<MainScreen> {
                 ),
               ),
               Text(
-                localization.translate('by'),
+                localization.by,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: colorScheme.onSurfaceVariant,
                     ),
@@ -516,21 +502,17 @@ class _MainScreenState extends State<MainScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             _buildStatusRow(
-                localization.translate('root_access'),
-                _hasRootAccess
-                    ? localization.translate('yes')
-                    : localization.translate('no'),
+                localization.root_access,
+                _hasRootAccess ? localization.yes : localization.no,
                 _hasRootAccess ? Colors.green : colorScheme.error),
             _buildStatusRow(
-                localization.translate('module_installed'),
-                _moduleInstalled
-                    ? localization.translate('yes')
-                    : localization.translate('no'),
+                localization.module_installed,
+                _moduleInstalled ? localization.yes : localization.no,
                 _moduleInstalled ? Colors.green : colorScheme.error),
-            _buildStatusRow(localization.translate('module_version'),
-                _moduleVersion, colorScheme.onSurfaceVariant,
+            _buildStatusRow(localization.module_version, _moduleVersion,
+                colorScheme.onSurfaceVariant,
                 isVersion: true),
-            _buildStatusRow(localization.translate('current_mode'),
+            _buildStatusRow(localization.current_mode,
                 _currentMode.toUpperCase(), colorScheme.primary,
                 isBold: true),
           ],
@@ -585,7 +567,7 @@ class _MainScreenState extends State<MainScreen> {
               Icon(Icons.construction, size: 30, color: colorScheme.primary),
               SizedBox(height: 10),
               Text(
-                localization.translate('app_title'),
+                localization.app_title,
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
@@ -593,7 +575,7 @@ class _MainScreenState extends State<MainScreen> {
               ),
               SizedBox(height: 4),
               Text(
-                localization.translate('utilities'),
+                localization.utilities,
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
@@ -610,11 +592,11 @@ class _MainScreenState extends State<MainScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(localization.translate('select_language'),
+        Text(localization.select_language,
             style: Theme.of(context).textTheme.bodyMedium),
         DropdownButton<String>(
           value: _selectedLanguage,
-          items: <String>['EN', 'ID', 'JP', 'JV'].map((String value) {
+          items: <String>['EN', 'ID', 'JP'].map((String value) {
             return DropdownMenuItem<String>(
               value: value,
               child: Text(value),

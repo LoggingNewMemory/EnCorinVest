@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'dart:convert';
-import 'languages.dart';
+import '/l10n/app_localizations.dart';
 
 class UtilitiesPage extends StatefulWidget {
-  final String selectedLanguage;
-  const UtilitiesPage({Key? key, required this.selectedLanguage})
-      : super(key: key);
+  const UtilitiesPage({Key? key}) : super(key: key);
 
   @override
   _UtilitiesPageState createState() => _UtilitiesPageState();
@@ -66,13 +64,9 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
   // --- Resolution percentages mapped to slider values (0 to 5) ---
   final List<int> _resolutionPercentages = [50, 60, 70, 80, 90, 100];
 
-  late AppLocalizations _localization; // Initialize localization here
-
   @override
   void initState() {
     super.initState();
-    _localization =
-        AppLocalizations(widget.selectedLanguage); // Instantiate localization
     _loadEncoreSwitchState(); // Load Encore switch states first
     _checkHamadaProcessStatus();
     _readAndApplyDndConfig();
@@ -667,24 +661,22 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
       final result = await _runRootCommandAndWait('$controllerPath test');
 
       if (mounted) {
+        final localization = AppLocalizations.of(context)!;
         setState(() {
           final output = result.stdout.toString().toLowerCase().trim();
 
           if (output.contains('supported')) {
             _isBypassSupported = true;
-            _bypassSupportStatus =
-                _localization.translate('bypass_charging_supported');
+            _bypassSupportStatus = localization.bypass_charging_supported;
             print("Bypass support: SUPPORTED");
           } else if (output.contains('unsupported')) {
             _isBypassSupported = false;
-            _bypassSupportStatus =
-                _localization.translate('bypass_charging_unsupported');
+            _bypassSupportStatus = localization.bypass_charging_unsupported;
             print("Bypass support: UNSUPPORTED");
           } else {
             // Default to unsupported if output is unclear
             _isBypassSupported = false;
-            _bypassSupportStatus =
-                _localization.translate('bypass_charging_unsupported');
+            _bypassSupportStatus = localization.bypass_charging_unsupported;
             print("Bypass support: UNSUPPORTED (unclear output: $output)");
           }
         });
@@ -692,10 +684,10 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     } catch (e) {
       print('Error checking bypass support: $e');
       if (mounted) {
+        final localization = AppLocalizations.of(context)!;
         setState(() {
           _isBypassSupported = false;
-          _bypassSupportStatus =
-              _localization.translate('bypass_charging_unsupported');
+          _bypassSupportStatus = localization.bypass_charging_unsupported;
         });
       }
     } finally {
@@ -787,6 +779,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
 
   @override
   Widget build(BuildContext context) {
+    final localization = AppLocalizations.of(context)!;
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final cardShape =
@@ -803,7 +796,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_localization.translate('utilities_title')),
+        title: Text(localization.utilities_title),
         backgroundColor: colorScheme.surfaceVariant,
         foregroundColor: colorScheme.onSurfaceVariant,
       ),
@@ -824,14 +817,14 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _localization.translate('encore_switch_title'),
+                      localization.encore_switch_title,
                       style: textTheme.titleLarge?.copyWith(
                           color: colorScheme.onSurface,
                           fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      _localization.translate('encore_switch_description'),
+                      localization.encore_switch_description,
                       style: textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                         fontStyle: FontStyle.italic,
@@ -839,10 +832,9 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                     ),
                     const SizedBox(height: 8),
                     SwitchListTile(
-                      title: Text(
-                          _localization.translate('device_mitigation_title')),
-                      subtitle: Text(_localization
-                          .translate('device_mitigation_description')),
+                      title: Text(localization.device_mitigation_title),
+                      subtitle:
+                          Text(localization.device_mitigation_description),
                       value: _deviceMitigationEnabled,
                       onChanged: _isEncoreConfigUpdating
                           ? null
@@ -858,9 +850,8 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                       contentPadding: EdgeInsets.zero,
                     ),
                     SwitchListTile(
-                      title: Text(_localization.translate('lite_mode_title')),
-                      subtitle: Text(
-                          _localization.translate('lite_mode_description')),
+                      title: Text(localization.lite_mode_title),
+                      subtitle: Text(localization.lite_mode_description),
                       value: _liteModeEnabled,
                       onChanged: _isEncoreConfigUpdating
                           ? null
@@ -891,14 +882,14 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _localization.translate('dnd_title'),
+                      localization.dnd_title,
                       style: textTheme.titleLarge?.copyWith(
                           color: colorScheme.onSurface,
                           fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      _localization.translate('dnd_description'),
+                      localization.dnd_description,
                       style: textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                         fontStyle: FontStyle.italic,
@@ -906,7 +897,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                     ),
                     const SizedBox(height: 8),
                     SwitchListTile(
-                      title: Text(_localization.translate('dnd_toggle_title')),
+                      title: Text(localization.dnd_toggle_title),
                       value: _dndEnabled,
                       onChanged: _isDndConfigUpdating
                           ? null
@@ -938,14 +929,14 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _localization.translate('hamada_ai'),
+                      localization.hamada_ai,
                       style: textTheme.titleLarge?.copyWith(
                           color: colorScheme.onSurface,
                           fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      _localization.translate('hamada_ai_description'),
+                      localization.hamada_ai_description,
                       style: textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                         fontStyle: FontStyle.italic,
@@ -953,8 +944,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                     ),
                     const SizedBox(height: 8),
                     SwitchListTile(
-                      title: Text(
-                          _localization.translate('hamada_ai_toggle_title')),
+                      title: Text(localization.hamada_ai_toggle_title),
                       value: _hamadaAiEnabled,
                       onChanged: isHamadaBusy
                           ? null
@@ -971,8 +961,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                       contentPadding: EdgeInsets.zero,
                     ),
                     SwitchListTile(
-                      title: Text(_localization.translate(
-                          'hamada_ai_start_on_boot')), // Corrected key
+                      title: Text(localization.hamada_ai_start_on_boot),
                       value: _hamadaStartOnBoot,
                       onChanged: _isServiceFileUpdating
                           ? null
@@ -1004,28 +993,17 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _localization
-                          .translate('downscale_resolution'), // Renamed key
+                      localization.downscale_resolution,
                       style: textTheme.titleLarge?.copyWith(
                           color: colorScheme.onSurface,
                           fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 8),
-                    // If you want a description for resolution, add 'downscale_resolution_description' to languages.dart
-                    // Text(
-                    //   _localization.translate('downscale_resolution_description'), // New key needed in languages.dart
-                    //   style: textTheme.bodySmall?.copyWith(
-                    //     color: colorScheme.onSurfaceVariant,
-                    //     fontStyle: FontStyle.italic,
-                    //   ),
-                    // ),
-                    // const SizedBox(height: 16),
                     if (!_resolutionServiceAvailable)
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8.0),
                         child: Text(
-                          _localization.translate(
-                              'resolution_unavailable_message'), // Renamed key
+                          localization.resolution_unavailable_message,
                           style: textTheme.bodyMedium?.copyWith(
                             color: colorScheme.error,
                             fontWeight: FontWeight.bold,
@@ -1090,8 +1068,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                                   child:
                                       CircularProgressIndicator(strokeWidth: 2))
                               : Icon(Icons.refresh),
-                          label:
-                              Text(_localization.translate('reset_resolution')),
+                          label: Text(localization.reset_resolution),
                         ),
                       ),
                     ],
@@ -1111,29 +1088,19 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _localization
-                          .translate('edit_game_txt_title'), // Renamed key
+                      localization.edit_game_txt_title,
                       style: textTheme.titleLarge?.copyWith(
                           color: colorScheme.onSurface,
                           fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 8),
-                    // If you want a description for game.txt editor, add 'edit_game_txt_description' to languages.dart
-                    // Text(
-                    //   _localization.translate('edit_game_txt_description'), // New key needed in languages.dart
-                    //   style: textTheme.bodySmall?.copyWith(
-                    //     color: colorScheme.onSurfaceVariant,
-                    //     fontStyle: FontStyle.italic,
-                    //   ),
-                    // ),
-                    // const SizedBox(height: 16),
                     TextField(
                       controller: _gameTxtController,
                       maxLines: 10,
                       minLines: 5,
                       enabled: !_isGameTxtLoading && !_isGameTxtSaving,
                       decoration: InputDecoration(
-                        hintText: _localization.translate('game_txt_hint'),
+                        hintText: localization.game_txt_hint,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide(
@@ -1179,7 +1146,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                                     child: CircularProgressIndicator(
                                         strokeWidth: 2))
                                 : Icon(Icons.save),
-                            label: Text(_localization.translate('save_button')),
+                            label: Text(localization.save_button),
                           ),
                         ),
                       ],
@@ -1200,14 +1167,14 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _localization.translate('bypass_charging_title'),
+                      localization.bypass_charging_title,
                       style: textTheme.titleLarge?.copyWith(
                           color: colorScheme.onSurface,
                           fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      _localization.translate('bypass_charging_description'),
+                      localization.bypass_charging_description,
                       style: textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                         fontStyle: FontStyle.italic,
@@ -1230,8 +1197,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                       const SizedBox(height: 16),
                     ],
                     SwitchListTile(
-                      title: Text(
-                          _localization.translate('bypass_charging_toggle')),
+                      title: Text(localization.bypass_charging_toggle),
                       value: _bypassEnabled,
                       onChanged: (_isTogglingBypass || !_isBypassSupported)
                           ? null
