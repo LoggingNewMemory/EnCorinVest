@@ -262,4 +262,20 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get please_disable_hamada_ai_first =>
       'Harap Nonaktifkan HamadaAI Terlebih Dahulu';
+
+  @override
+  String get background_settings_title => 'Pengaturan Latar Belakang';
+
+  @override
+  String get background_settings_description =>
+      'Sesuaikan gambar latar belakang dan opasitas aplikasi.';
+
+  @override
+  String get select_image_button => 'Pilih Gambar';
+
+  @override
+  String get opacity_slider_label => 'Opasitas Latar Belakang';
+
+  @override
+  String get reset_background_button => 'Atur Ulang Latar Belakang';
 }

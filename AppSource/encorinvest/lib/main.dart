@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:process_run/process_run.dart';
 import 'dart:async';
+import 'dart:io'; // Added for file operations
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'about_page.dart';
@@ -49,6 +50,10 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   Locale? _locale;
+  // --- NEW: State for background image ---
+  String? _backgroundImagePath;
+  double _backgroundOpacity = 0.2;
+  // --- END NEW ---
 
   static final _defaultLightColorScheme =
       ColorScheme.fromSeed(seedColor: Colors.blue);
@@ -59,6 +64,7 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     _loadLocale();
+    _loadBackgroundSettings(); // --- NEW: Load background settings on start ---
   }
 
   void _loadLocale() async {
@@ -68,6 +74,24 @@ class _MyAppState extends State<MyApp> {
       _locale = Locale(languageCode);
     });
   }
+
+  // --- NEW: Method to load background settings from SharedPreferences ---
+  Future<void> _loadBackgroundSettings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final path = prefs.getString('background_image_path');
+      final opacity = prefs.getDouble('background_opacity') ?? 0.2;
+      if (mounted) {
+        setState(() {
+          _backgroundImagePath = path;
+          _backgroundOpacity = opacity;
+        });
+      }
+    } catch (e) {
+      print("Error loading background settings in main: $e");
+    }
+  }
+  // --- END NEW ---
 
   void setLocale(Locale locale) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -96,7 +120,36 @@ class _MyAppState extends State<MyApp> {
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
-        home: MainScreen(onLocaleChange: setLocale),
+        // --- NEW: Wrapped home in a Scaffold and Stack for the background ---
+        home: Scaffold(
+          body: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Background Image Layer
+              if (_backgroundImagePath != null &&
+                  _backgroundImagePath!.isNotEmpty)
+                Opacity(
+                  opacity: _backgroundOpacity,
+                  child: Image.file(
+                    File(_backgroundImagePath!),
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      // This prevents a crash if the image file is deleted
+                      print("Error loading background image: $error");
+                      return Container(color: Colors.transparent);
+                    },
+                  ),
+                ),
+              // Main App Content Layer
+              MainScreen(
+                onLocaleChange: setLocale,
+                // Pass a callback to reload settings when returning from utilities
+                onUtilitiesClosed: _loadBackgroundSettings,
+              ),
+            ],
+          ),
+        ),
+        // --- END NEW ---
         theme: ThemeData(useMaterial3: true, colorScheme: lightColorScheme),
         darkTheme: ThemeData(useMaterial3: true, colorScheme: darkColorScheme),
         themeMode: ThemeMode.system,
@@ -107,8 +160,11 @@ class _MyAppState extends State<MyApp> {
 
 class MainScreen extends StatefulWidget {
   final Function(Locale) onLocaleChange;
+  // --- NEW: Callback to notify parent when utilities page is closed ---
+  final VoidCallback onUtilitiesClosed;
 
-  MainScreen({required this.onLocaleChange});
+  MainScreen({required this.onLocaleChange, required this.onUtilitiesClosed});
+  // --- END NEW ---
 
   @override
   _MainScreenState createState() => _MainScreenState();
@@ -330,12 +386,16 @@ class _MainScreenState extends State<MainScreen> {
         context, MaterialPageRoute(builder: (context) => AboutPage()));
   }
 
+  // --- MODIFIED: This function now calls the parent callback on completion ---
   void _navigateToUtilitiesPage() async {
     await Navigator.push(
         context, MaterialPageRoute(builder: (context) => UtilitiesPage()));
     // Refresh state when returning from utilities
     _initializeState();
+    // Notify the parent (MyApp) to reload background settings
+    widget.onUtilitiesClosed();
   }
+  // --- END MODIFIED ---
 
   @override
   Widget build(BuildContext context) {
@@ -343,6 +403,9 @@ class _MainScreenState extends State<MainScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
+      // --- MODIFIED: Make background transparent to see the image from the Stack ---
+      backgroundColor: Colors.transparent,
+      // --- END MODIFIED ---
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16.0),

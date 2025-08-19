@@ -250,4 +250,19 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get please_disable_hamada_ai_first => '最初にHamadaAIを無効にしてください';
+
+  @override
+  String get background_settings_title => '背景設定';
+
+  @override
+  String get background_settings_description => 'アプリの背景画像と不透明度をカスタマイズします。';
+
+  @override
+  String get select_image_button => '画像を選択';
+
+  @override
+  String get opacity_slider_label => '背景の不透明度';
+
+  @override
+  String get reset_background_button => '背景をリセット';
 }

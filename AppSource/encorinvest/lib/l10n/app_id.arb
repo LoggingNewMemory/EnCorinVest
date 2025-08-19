@@ -85,5 +85,10 @@
     "mode_status_label": "Mode:",
     "mode_manual": "Manual",
     "mode_hamada_ai": "HamadaAI",
-    "please_disable_hamada_ai_first": "Harap Nonaktifkan HamadaAI Terlebih Dahulu"
+    "please_disable_hamada_ai_first": "Harap Nonaktifkan HamadaAI Terlebih Dahulu",
+    "background_settings_title": "Pengaturan Latar Belakang",
+    "background_settings_description": "Sesuaikan gambar latar belakang dan opasitas aplikasi.",
+    "select_image_button": "Pilih Gambar",
+    "opacity_slider_label": "Opasitas Latar Belakang",
+    "reset_background_button": "Atur Ulang Latar Belakang"
 }

@@ -579,6 +579,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Please Disable HamadaAI First'**
   String get please_disable_hamada_ai_first;
+
+  /// No description provided for @background_settings_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Background Settings'**
+  String get background_settings_title;
+
+  /// No description provided for @background_settings_description.
+  ///
+  /// In en, this message translates to:
+  /// **'Customize the app\'s background image and opacity.'**
+  String get background_settings_description;
+
+  /// No description provided for @select_image_button.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Image'**
+  String get select_image_button;
+
+  /// No description provided for @opacity_slider_label.
+  ///
+  /// In en, this message translates to:
+  /// **'Background Opacity'**
+  String get opacity_slider_label;
+
+  /// No description provided for @reset_background_button.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset Background'**
+  String get reset_background_button;
 }
 
 class _AppLocalizationsDelegate

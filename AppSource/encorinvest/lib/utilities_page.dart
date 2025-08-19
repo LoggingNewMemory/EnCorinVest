@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import 'dart:convert';
 import '/l10n/app_localizations.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class UtilitiesPage extends StatefulWidget {
   const UtilitiesPage({Key? key}) : super(key: key);
@@ -57,6 +59,10 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
   bool _isTogglingBypass = false;
   String _bypassSupportStatus = '';
 
+  String? _backgroundImagePath;
+  double _backgroundOpacity = 0.2;
+  bool _isBackgroundSettingsLoading = true;
+
   // --- Original values (fetched once if service is available) ---
   String _originalSize = '';
   int _originalDensity = 0;
@@ -67,6 +73,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
   @override
   void initState() {
     super.initState();
+    _loadBackgroundSettings(); // --- NEW: Load background settings ---
     _loadEncoreSwitchState(); // Load Encore switch states first
     _checkHamadaProcessStatus();
     _readAndApplyDndConfig();
@@ -74,6 +81,66 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     _checkHamadaStartOnBoot();
     _loadGameTxt();
     _loadInitialBypassState();
+  }
+
+  Future<void> _loadBackgroundSettings() async {
+    if (!mounted) return;
+    setState(() => _isBackgroundSettingsLoading = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final path = prefs.getString('background_image_path');
+      final opacity = prefs.getDouble('background_opacity') ?? 0.2;
+      if (mounted) {
+        setState(() {
+          _backgroundImagePath = path;
+          _backgroundOpacity = opacity;
+        });
+      }
+    } catch (e) {
+      print("Error loading background settings: $e");
+    } finally {
+      if (mounted) setState(() => _isBackgroundSettingsLoading = false);
+    }
+  }
+
+  Future<void> _pickAndSetImage() async {
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+      if (pickedFile != null && mounted) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('background_image_path', pickedFile.path);
+        setState(() {
+          _backgroundImagePath = pickedFile.path;
+        });
+      }
+    } catch (e) {
+      print("Error picking image: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to pick image: ${e.toString()}')));
+      }
+    }
+  }
+
+  Future<void> _updateOpacity(double opacity) async {
+    if (!mounted) return;
+    // We update the state visually during sliding, so this just saves the final value.
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('background_opacity', opacity);
+  }
+
+  Future<void> _resetBackground() async {
+    if (!mounted) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('background_image_path');
+    await prefs.setDouble('background_opacity', 0.2); // Reset to default
+    if (mounted) {
+      setState(() {
+        _backgroundImagePath = null;
+        _backgroundOpacity = 0.2;
+      });
+    }
   }
 
   Future<ProcessResult> _runRootCommandAndWait(String command) async {
@@ -1217,6 +1284,87 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                 ),
               ),
             ),
+            // --- NEW: 6. Background Settings Card ---
+            Card(
+              elevation: cardElevation,
+              margin: cardMargin,
+              shape: cardShape,
+              color: colorScheme.surfaceContainerHighest,
+              child: Padding(
+                padding: cardPadding,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      localization.background_settings_title,
+                      style: textTheme.titleLarge?.copyWith(
+                          color: colorScheme.onSurface,
+                          fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      localization.background_settings_description,
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    if (_isBackgroundSettingsLoading)
+                      Center(child: CircularProgressIndicator())
+                    else ...[
+                      // Opacity Slider
+                      Text(localization.opacity_slider_label,
+                          style: textTheme.bodyMedium),
+                      Slider(
+                        value: _backgroundOpacity,
+                        min: 0.0,
+                        max: 1.0,
+                        divisions: 20,
+                        label:
+                            (_backgroundOpacity * 100).toStringAsFixed(0) + '%',
+                        onChanged: (value) {
+                          setState(() => _backgroundOpacity = value);
+                        },
+                        onChangeEnd: (value) {
+                          _updateOpacity(value);
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      // Action Buttons
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: _pickAndSetImage,
+                              icon: Icon(Icons.image),
+                              label: Text(localization.select_image_button),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: colorScheme.primaryContainer,
+                                foregroundColor: colorScheme.onPrimaryContainer,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: _resetBackground,
+                              icon: Icon(Icons.refresh),
+                              label: Text(localization.reset_background_button),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: colorScheme.errorContainer,
+                                foregroundColor: colorScheme.onErrorContainer,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            // --- END NEW ---
           ],
         ),
       ),

@@ -85,5 +85,10 @@
     "mode_status_label": "モード:",
     "mode_manual": "手動",
     "mode_hamada_ai": "HamadaAI",
-    "please_disable_hamada_ai_first": "最初にHamadaAIを無効にしてください"
+    "please_disable_hamada_ai_first": "最初にHamadaAIを無効にしてください",
+    "background_settings_title": "背景設定",
+    "background_settings_description": "アプリの背景画像と不透明度をカスタマイズします。",
+    "select_image_button": "画像を選択",
+    "opacity_slider_label": "背景の不透明度",
+    "reset_background_button": "背景をリセット"
 }

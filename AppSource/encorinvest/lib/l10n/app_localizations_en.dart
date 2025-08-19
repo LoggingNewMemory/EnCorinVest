@@ -259,4 +259,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get please_disable_hamada_ai_first => 'Please Disable HamadaAI First';
+
+  @override
+  String get background_settings_title => 'Background Settings';
+
+  @override
+  String get background_settings_description =>
+      'Customize the app\'s background image and opacity.';
+
+  @override
+  String get select_image_button => 'Select Image';
+
+  @override
+  String get opacity_slider_label => 'Background Opacity';
+
+  @override
+  String get reset_background_button => 'Reset Background';
 }
