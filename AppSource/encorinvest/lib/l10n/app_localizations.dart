@@ -592,23 +592,11 @@ abstract class AppLocalizations {
   /// **'Customize the app\'s background image and opacity.'**
   String get background_settings_description;
 
-  /// No description provided for @select_image_button.
-  ///
-  /// In en, this message translates to:
-  /// **'Select Image'**
-  String get select_image_button;
-
   /// No description provided for @opacity_slider_label.
   ///
   /// In en, this message translates to:
   /// **'Background Opacity'**
   String get opacity_slider_label;
-
-  /// No description provided for @reset_background_button.
-  ///
-  /// In en, this message translates to:
-  /// **'Reset Background'**
-  String get reset_background_button;
 }
 
 class _AppLocalizationsDelegate

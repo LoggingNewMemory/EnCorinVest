@@ -258,11 +258,5 @@ class AppLocalizationsJa extends AppLocalizations {
   String get background_settings_description => 'アプリの背景画像と不透明度をカスタマイズします。';
 
   @override
-  String get select_image_button => '画像を選択';
-
-  @override
   String get opacity_slider_label => '背景の不透明度';
-
-  @override
-  String get reset_background_button => '背景をリセット';
 }

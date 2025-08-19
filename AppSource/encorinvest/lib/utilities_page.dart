@@ -1189,11 +1189,9 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                             Row(
                               children: [
                                 Expanded(
-                                  child: ElevatedButton.icon(
+                                  child: ElevatedButton(
                                     onPressed: _pickAndSetImage,
-                                    icon: Icon(Icons.image),
-                                    label:
-                                        Text(localization.select_image_button),
+                                    child: Icon(Icons.image),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor:
                                           colorScheme.primaryContainer,
@@ -1204,11 +1202,9 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                                 ),
                                 const SizedBox(width: 8),
                                 Expanded(
-                                  child: ElevatedButton.icon(
+                                  child: ElevatedButton(
                                     onPressed: _resetBackground,
-                                    icon: Icon(Icons.refresh),
-                                    label: Text(
-                                        localization.reset_background_button),
+                                    child: Icon(Icons.refresh),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor:
                                           colorScheme.errorContainer,

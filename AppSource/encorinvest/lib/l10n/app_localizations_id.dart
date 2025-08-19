@@ -271,11 +271,5 @@ class AppLocalizationsId extends AppLocalizations {
       'Sesuaikan gambar latar belakang dan opasitas aplikasi.';
 
   @override
-  String get select_image_button => 'Pilih Gambar';
-
-  @override
   String get opacity_slider_label => 'Opasitas Latar Belakang';
-
-  @override
-  String get reset_background_button => 'Atur Ulang Latar Belakang';
 }

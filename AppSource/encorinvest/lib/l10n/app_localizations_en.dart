@@ -268,11 +268,5 @@ class AppLocalizationsEn extends AppLocalizations {
       'Customize the app\'s background image and opacity.';
 
   @override
-  String get select_image_button => 'Select Image';
-
-  @override
   String get opacity_slider_label => 'Background Opacity';
-
-  @override
-  String get reset_background_button => 'Reset Background';
 }
