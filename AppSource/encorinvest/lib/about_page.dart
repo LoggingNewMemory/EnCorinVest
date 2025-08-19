@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:process_run/process_run.dart';
 import '/l10n/app_localizations.dart';
+import 'dart:io'; // Added for file operations
+import 'package:shared_preferences/shared_preferences.dart'; // Added for local storage
 
 class AboutPage extends StatefulWidget {
   AboutPage({Key? key}) : super(key: key);
@@ -15,11 +17,35 @@ class _AboutPageState extends State<AboutPage> {
   String _osVersion = 'Loading...';
   bool _isLoading = true;
 
+  // --- NEW: State for background image ---
+  String? _backgroundImagePath;
+  double _backgroundOpacity = 0.2;
+  // --- END NEW ---
+
   @override
   void initState() {
     super.initState();
     _loadDeviceInfo();
+    _loadBackgroundSettings(); // --- NEW: Load background settings on start ---
   }
+
+  // --- NEW: Method to load background settings from SharedPreferences ---
+  Future<void> _loadBackgroundSettings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final path = prefs.getString('background_image_path');
+      final opacity = prefs.getDouble('background_opacity') ?? 0.2;
+      if (mounted) {
+        setState(() {
+          _backgroundImagePath = path;
+          _backgroundOpacity = opacity;
+        });
+      }
+    } catch (e) {
+      print("Error loading background settings in about_page: $e");
+    }
+  }
+  // --- END NEW ---
 
   Future<bool> _checkRootAccessInAbout() async {
     try {
@@ -107,70 +133,105 @@ class _AboutPageState extends State<AboutPage> {
     final List<String> credits = _getCredits(localization);
 
     return Scaffold(
-      appBar: AppBar(),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-        child: _isLoading
-            ? Center(child: CircularProgressIndicator())
-            : SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Card(
-                      elevation: 0,
-                      color: Theme.of(context).colorScheme.surfaceVariant,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildInfoRow(localization.device, _deviceModel),
-                            _buildInfoRow(localization.cpu, _cpuInfo),
-                            _buildInfoRow(localization.os, _osVersion),
-                          ],
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 20),
-                    Text(
-                      localization.about_title,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          decoration: TextDecoration.underline),
-                    ),
-                    SizedBox(height: 15),
-                    ...credits.map((creditText) => Padding(
-                          padding: EdgeInsets.symmetric(vertical: 3),
-                          child: Text(
-                            '• $creditText',
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                        )),
-                    SizedBox(height: 20),
-                    Text(
-                      localization.about_note,
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodyMedium
-                          ?.copyWith(fontStyle: FontStyle.italic),
-                    ),
-                    SizedBox(height: 20),
-                    Center(
-                      child: Text(
-                        localization.about_quote,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontStyle: FontStyle.italic,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                    SizedBox(height: 20),
-                  ],
-                ),
+      // --- MODIFIED: Make background transparent ---
+      backgroundColor: Colors.transparent,
+      // --- END MODIFIED ---
+      appBar: AppBar(
+        // --- MODIFIED: Make AppBar transparent ---
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        // --- END MODIFIED ---
+      ),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // --- NEW: Background Image Layer ---
+          if (_backgroundImagePath != null && _backgroundImagePath!.isNotEmpty)
+            Opacity(
+              opacity: _backgroundOpacity,
+              child: Image.file(
+                File(_backgroundImagePath!),
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  print("Error loading background image in about_page: $error");
+                  return Container(color: Colors.transparent);
+                },
               ),
+            ),
+          // --- END NEW ---
+          Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+            child: _isLoading
+                ? Center(child: CircularProgressIndicator())
+                : SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Card(
+                          elevation: 0,
+                          color: Theme.of(context).colorScheme.surfaceVariant,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildInfoRow(
+                                    localization.device, _deviceModel),
+                                _buildInfoRow(localization.cpu, _cpuInfo),
+                                _buildInfoRow(localization.os, _osVersion),
+                              ],
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 20),
+                        Text(
+                          localization.about_title,
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleLarge
+                              ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  decoration: TextDecoration.underline),
+                        ),
+                        SizedBox(height: 15),
+                        ...credits.map((creditText) => Padding(
+                              padding: EdgeInsets.symmetric(vertical: 3),
+                              child: Text(
+                                '• $creditText',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            )),
+                        SizedBox(height: 20),
+                        Text(
+                          localization.about_note,
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(fontStyle: FontStyle.italic),
+                        ),
+                        SizedBox(height: 20),
+                        Center(
+                          child: Text(
+                            localization.about_quote,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  fontStyle: FontStyle.italic,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        SizedBox(height: 20),
+                      ],
+                    ),
+                  ),
+          ),
+        ],
       ),
     );
   }

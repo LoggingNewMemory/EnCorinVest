@@ -59,9 +59,11 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
   bool _isTogglingBypass = false;
   String _bypassSupportStatus = '';
 
+  // --- NEW: Background Image State ---
   String? _backgroundImagePath;
   double _backgroundOpacity = 0.2;
   bool _isBackgroundSettingsLoading = true;
+  // --- END NEW ---
 
   // --- Original values (fetched once if service is available) ---
   String _originalSize = '';
@@ -83,6 +85,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     _loadInitialBypassState();
   }
 
+  // --- NEW: Methods for managing background image and opacity ---
   Future<void> _loadBackgroundSettings() async {
     if (!mounted) return;
     setState(() => _isBackgroundSettingsLoading = true);
@@ -142,6 +145,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
       });
     }
   }
+  // --- END NEW ---
 
   Future<ProcessResult> _runRootCommandAndWait(String command) async {
     print('Executing root command (and waiting): $command');
@@ -1284,7 +1288,6 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                 ),
               ),
             ),
-            // --- NEW: 6. Background Settings Card ---
             Card(
               elevation: cardElevation,
               margin: cardMargin,
@@ -1364,7 +1367,6 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                 ),
               ),
             ),
-            // --- END NEW ---
           ],
         ),
       ),
