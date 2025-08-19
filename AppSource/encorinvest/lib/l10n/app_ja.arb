@@ -81,5 +81,9 @@
     "bypass_charging_description": "サポートされているデバイスでパフォーマンス＆ゲーミングプロ中にバイパス充電を有効にする",
     "bypass_charging_toggle": "バイパス充電を有効にする",
     "bypass_charging_unsupported": "お使いのデバイスではバイパス充電はサポートされていません",
-    "bypass_charging_supported": "お使いのデバイスではバイパス充電がサポートされています"
+    "bypass_charging_supported": "お使いのデバイスではバイパス充電がサポートされています",
+    "mode_status_label": "モード:",
+    "mode_manual": "手動",
+    "mode_hamada_ai": "HamadaAI",
+    "please_disable_hamada_ai_first": "最初にHamadaAIを無効にしてください"
 }

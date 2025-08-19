@@ -81,5 +81,9 @@
     "bypass_charging_description": "Aktifkan Bypass Charging Saat Mode Performa & Gaming Pro di Perangkat yang Didukung",
     "bypass_charging_toggle": "Aktifkan Bypass Charging",
     "bypass_charging_unsupported": "Bypass charging tidak didukung di perangkat Anda",
-    "bypass_charging_supported": "Bypass charging didukung di perangkat Anda"
+    "bypass_charging_supported": "Bypass charging didukung di perangkat Anda",
+    "mode_status_label": "Mode:",
+    "mode_manual": "Manual",
+    "mode_hamada_ai": "HamadaAI",
+    "please_disable_hamada_ai_first": "Harap Nonaktifkan HamadaAI Terlebih Dahulu"
 }

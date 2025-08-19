@@ -84,13 +84,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get credits_3 => 'MiAzami';
 
   @override
-  String get credits_4 => 'カズヨオ';
+  String get credits_4 => 'Kazuyoo';
 
   @override
   String get credits_5 => 'RiProG';
 
   @override
-  String get credits_6 => 'リエドラブラジャル';
+  String get credits_6 => 'Lieudahbelajar';
 
   @override
   String get credits_7 => 'KanaDev_IS';
@@ -238,4 +238,16 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get bypass_charging_supported => 'お使いのデバイスではバイパス充電がサポートされています';
+
+  @override
+  String get mode_status_label => 'モード:';
+
+  @override
+  String get mode_manual => '手動';
+
+  @override
+  String get mode_hamada_ai => 'HamadaAI';
+
+  @override
+  String get please_disable_hamada_ai_first => '最初にHamadaAIを無効にしてください';
 }

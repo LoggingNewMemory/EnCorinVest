@@ -81,5 +81,9 @@
     "bypass_charging_description": "Enable Bypass Charging While in Performance & Gaming Pro on Supported Device",
     "bypass_charging_toggle": "Enable Bypass Charging",
     "bypass_charging_unsupported": "Bypass charging is not supported on your device",
-    "bypass_charging_supported": "Bypass charging is supported on your device"
+    "bypass_charging_supported": "Bypass charging is supported on your device",
+    "mode_status_label": "Mode:",
+    "mode_manual": "Manual",
+    "mode_hamada_ai": "HamadaAI",
+    "please_disable_hamada_ai_first": "Please Disable HamadaAI First"
 }

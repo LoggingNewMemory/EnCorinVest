@@ -555,6 +555,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Bypass charging is supported on your device'**
   String get bypass_charging_supported;
+
+  /// No description provided for @mode_status_label.
+  ///
+  /// In en, this message translates to:
+  /// **'Mode:'**
+  String get mode_status_label;
+
+  /// No description provided for @mode_manual.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual'**
+  String get mode_manual;
+
+  /// No description provided for @mode_hamada_ai.
+  ///
+  /// In en, this message translates to:
+  /// **'HamadaAI'**
+  String get mode_hamada_ai;
+
+  /// No description provided for @please_disable_hamada_ai_first.
+  ///
+  /// In en, this message translates to:
+  /// **'Please Disable HamadaAI First'**
+  String get please_disable_hamada_ai_first;
 }
 
 class _AppLocalizationsDelegate

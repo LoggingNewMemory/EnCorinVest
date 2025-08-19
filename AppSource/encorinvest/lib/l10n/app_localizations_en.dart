@@ -247,4 +247,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get bypass_charging_supported =>
       'Bypass charging is supported on your device';
+
+  @override
+  String get mode_status_label => 'Mode:';
+
+  @override
+  String get mode_manual => 'Manual';
+
+  @override
+  String get mode_hamada_ai => 'HamadaAI';
+
+  @override
+  String get please_disable_hamada_ai_first => 'Please Disable HamadaAI First';
 }

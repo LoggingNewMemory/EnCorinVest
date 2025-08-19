@@ -171,12 +171,26 @@ class _MainScreenState extends State<MainScreen> {
   String _selectedLanguage = 'EN';
   String _executingScript = '';
   bool _isLoading = true;
+  bool _isHamadaAiRunning = false;
+  Timer? _hamadaCheckTimer;
 
   @override
   void initState() {
     super.initState();
     _loadSelectedLanguage();
     _initializeState();
+    // Periodically check HamadaAI status
+    _hamadaCheckTimer = Timer.periodic(Duration(seconds: 3), (timer) {
+      if (mounted) {
+        _checkHamadaProcessStatus();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _hamadaCheckTimer?.cancel();
+    super.dispose();
   }
 
   void _loadSelectedLanguage() async {
@@ -200,6 +214,7 @@ class _MainScreenState extends State<MainScreen> {
 
     bool rootGranted = await _checkRootAccess();
     if (rootGranted) {
+      await _checkHamadaProcessStatus();
       var config = await ConfigManager.readConfig();
       if (mounted) {
         setState(() {
@@ -227,7 +242,26 @@ class _MainScreenState extends State<MainScreen> {
       if (mounted) setState(() => _hasRootAccess = hasAccess);
       return hasAccess;
     } catch (e) {
+      if (mounted) setState(() => _hasRootAccess = false);
       return false;
+    }
+  }
+
+  Future<void> _checkHamadaProcessStatus() async {
+    if (!_hasRootAccess) return;
+    try {
+      final result =
+          await run('su', ['-c', 'pgrep -x HamadaAI'], verbose: false);
+      bool isRunning = result.exitCode == 0;
+      if (mounted && _isHamadaAiRunning != isRunning) {
+        setState(() {
+          _isHamadaAiRunning = isRunning;
+        });
+      }
+    } catch (e) {
+      if (mounted && _isHamadaAiRunning) {
+        setState(() => _isHamadaAiRunning = false);
+      }
     }
   }
 
@@ -263,8 +297,10 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   Future<void> executeScript(String scriptName, String modeKey) async {
-    if (!_hasRootAccess || !_moduleInstalled || _executingScript.isNotEmpty)
-      return;
+    if (!_hasRootAccess ||
+        !_moduleInstalled ||
+        _executingScript.isNotEmpty ||
+        _isHamadaAiRunning) return;
 
     String targetMode =
         (modeKey == 'CLEAR' || modeKey == 'COOLDOWN') ? 'NONE' : modeKey;
@@ -338,9 +374,11 @@ class _MainScreenState extends State<MainScreen> {
         context, MaterialPageRoute(builder: (context) => AboutPage()));
   }
 
-  void _navigateToUtilitiesPage() {
-    Navigator.push(
+  void _navigateToUtilitiesPage() async {
+    await Navigator.push(
         context, MaterialPageRoute(builder: (context) => UtilitiesPage()));
+    // Refresh state when returning from utilities
+    _initializeState();
   }
 
   @override
@@ -512,8 +550,12 @@ class _MainScreenState extends State<MainScreen> {
             _buildStatusRow(localization.module_version, _moduleVersion,
                 colorScheme.onSurfaceVariant,
                 isVersion: true),
-            _buildStatusRow(localization.current_mode,
-                _currentMode.toUpperCase(), colorScheme.primary,
+            _buildStatusRow(
+                localization.mode_status_label,
+                _isHamadaAiRunning
+                    ? localization.mode_hamada_ai
+                    : localization.mode_manual,
+                colorScheme.primary,
                 isBold: true),
           ],
         ),
@@ -628,84 +670,100 @@ class _MainScreenState extends State<MainScreen> {
       String modeKey) {
     bool isCurrentMode = _currentMode == modeKey;
     bool isExecutingThis = _executingScript == scriptName;
-    bool canExecute =
-        _hasRootAccess && _moduleInstalled && _executingScript.isEmpty;
+    bool isHamadaMode = _isHamadaAiRunning;
+    bool isInteractable = _hasRootAccess && _moduleInstalled;
     ColorScheme colorScheme = Theme.of(context).colorScheme;
 
-    return Card(
-      elevation: 0,
-      color: isCurrentMode
-          ? colorScheme.primaryContainer
-          : colorScheme.surfaceVariant,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      margin: EdgeInsets.only(bottom: 10),
-      child: InkWell(
-        onTap: canExecute ? () => executeScript(scriptName, modeKey) : null,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            children: [
-              Icon(
-                modeIcon,
-                size: 24,
-                color: isCurrentMode
-                    ? colorScheme.onPrimaryContainer
-                    : colorScheme.onSurfaceVariant,
-              ),
-              SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      buttonText,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: isCurrentMode
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                            fontStyle: isCurrentMode
-                                ? FontStyle.italic
-                                : FontStyle.normal,
-                            color: isCurrentMode
-                                ? colorScheme.onPrimaryContainer
-                                : colorScheme.onSurfaceVariant,
-                          ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      description,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: isCurrentMode
-                                ? colorScheme.onPrimaryContainer
-                                    .withOpacity(0.8)
-                                : colorScheme.onSurfaceVariant.withOpacity(0.8),
-                          ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+    return Opacity(
+      opacity: isHamadaMode ? 0.6 : 1.0,
+      child: Card(
+        elevation: 0,
+        color: isCurrentMode && !isHamadaMode
+            ? colorScheme.primaryContainer
+            : colorScheme.surfaceVariant,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: EdgeInsets.only(bottom: 10),
+        child: InkWell(
+          onTap: !isInteractable
+              ? null
+              : () {
+                  if (isHamadaMode) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text(AppLocalizations.of(context)!
+                            .please_disable_hamada_ai_first)));
+                  } else if (_executingScript.isEmpty) {
+                    executeScript(scriptName, modeKey);
+                  }
+                },
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                Icon(
+                  modeIcon,
+                  size: 24,
+                  color: isCurrentMode && !isHamadaMode
+                      ? colorScheme.onPrimaryContainer
+                      : colorScheme.onSurfaceVariant,
                 ),
-              ),
-              SizedBox(width: 10),
-              if (isExecutingThis)
-                SizedBox(
-                  height: 20,
-                  width: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(isCurrentMode
-                        ? colorScheme.onPrimaryContainer
-                        : colorScheme.primary),
+                SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        buttonText,
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: isCurrentMode && !isHamadaMode
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                  fontStyle: isCurrentMode && !isHamadaMode
+                                      ? FontStyle.italic
+                                      : FontStyle.normal,
+                                  color: isCurrentMode && !isHamadaMode
+                                      ? colorScheme.onPrimaryContainer
+                                      : colorScheme.onSurfaceVariant,
+                                ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        description,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: isCurrentMode && !isHamadaMode
+                                  ? colorScheme.onPrimaryContainer
+                                      .withOpacity(0.8)
+                                  : colorScheme.onSurfaceVariant
+                                      .withOpacity(0.8),
+                            ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
-                )
-              else if (isCurrentMode)
-                Icon(Icons.check_circle,
-                    color: colorScheme.onPrimaryContainer, size: 20)
-              else
-                Icon(Icons.arrow_forward_ios,
-                    color: colorScheme.onSurfaceVariant, size: 16),
-            ],
+                ),
+                SizedBox(width: 10),
+                if (isExecutingThis)
+                  SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                          isCurrentMode && !isHamadaMode
+                              ? colorScheme.onPrimaryContainer
+                              : colorScheme.primary),
+                    ),
+                  )
+                else if (isCurrentMode && !isHamadaMode)
+                  Icon(Icons.check_circle,
+                      color: colorScheme.onPrimaryContainer, size: 20)
+                else
+                  Icon(Icons.arrow_forward_ios,
+                      color: colorScheme.onSurfaceVariant, size: 16),
+              ],
+            ),
           ),
         ),
       ),
