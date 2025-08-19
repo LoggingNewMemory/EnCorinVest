@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:process_run/process_run.dart';
 import 'dart:async';
-import 'dart:io'; // Added for file operations
+import 'dart:io';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'about_page.dart';

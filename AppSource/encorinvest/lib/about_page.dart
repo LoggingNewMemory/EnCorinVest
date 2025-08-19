@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:process_run/process_run.dart';
 import '/l10n/app_localizations.dart';
-import 'dart:io'; // Added for file operations
-import 'package:shared_preferences/shared_preferences.dart'; // Added for local storage
+import 'dart:io';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AboutPage extends StatefulWidget {
   AboutPage({Key? key}) : super(key: key);
