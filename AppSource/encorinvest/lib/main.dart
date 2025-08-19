@@ -23,7 +23,6 @@ class ConfigManager {
       String currentMode = prefs.getString(_modeKey) ?? _defaultMode;
       return {'current_mode': currentMode};
     } catch (e) {
-      print('Error reading config from SharedPreferences: $e');
       return {'current_mode': _defaultMode};
     }
   }
@@ -34,7 +33,7 @@ class ConfigManager {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_modeKey, mode.toUpperCase());
     } catch (e) {
-      print('Error saving mode to SharedPreferences: $e');
+      // Error saving mode
     }
   }
 }
@@ -50,10 +49,8 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   Locale? _locale;
-  // --- NEW: State for background image ---
   String? _backgroundImagePath;
   double _backgroundOpacity = 0.2;
-  // --- END NEW ---
 
   static final _defaultLightColorScheme =
       ColorScheme.fromSeed(seedColor: Colors.blue);
@@ -64,7 +61,7 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     _loadLocale();
-    _loadBackgroundSettings(); // --- NEW: Load background settings on start ---
+    _loadBackgroundSettings();
   }
 
   void _loadLocale() async {
@@ -75,7 +72,6 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
-  // --- NEW: Method to load background settings from SharedPreferences ---
   Future<void> _loadBackgroundSettings() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -88,10 +84,9 @@ class _MyAppState extends State<MyApp> {
         });
       }
     } catch (e) {
-      print("Error loading background settings in main: $e");
+      // Error loading background settings
     }
   }
-  // --- END NEW ---
 
   void setLocale(Locale locale) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -120,12 +115,10 @@ class _MyAppState extends State<MyApp> {
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
-        // --- NEW: Wrapped home in a Scaffold and Stack for the background ---
         home: Scaffold(
           body: Stack(
             fit: StackFit.expand,
             children: [
-              // Background Image Layer
               if (_backgroundImagePath != null &&
                   _backgroundImagePath!.isNotEmpty)
                 Opacity(
@@ -134,22 +127,17 @@ class _MyAppState extends State<MyApp> {
                     File(_backgroundImagePath!),
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) {
-                      // This prevents a crash if the image file is deleted
-                      print("Error loading background image: $error");
                       return Container(color: Colors.transparent);
                     },
                   ),
                 ),
-              // Main App Content Layer
               MainScreen(
                 onLocaleChange: setLocale,
-                // Pass a callback to reload settings when returning from utilities
                 onUtilitiesClosed: _loadBackgroundSettings,
               ),
             ],
           ),
         ),
-        // --- END NEW ---
         theme: ThemeData(useMaterial3: true, colorScheme: lightColorScheme),
         darkTheme: ThemeData(useMaterial3: true, colorScheme: darkColorScheme),
         themeMode: ThemeMode.system,
@@ -160,11 +148,9 @@ class _MyAppState extends State<MyApp> {
 
 class MainScreen extends StatefulWidget {
   final Function(Locale) onLocaleChange;
-  // --- NEW: Callback to notify parent when utilities page is closed ---
   final VoidCallback onUtilitiesClosed;
 
   MainScreen({required this.onLocaleChange, required this.onUtilitiesClosed});
-  // --- END NEW ---
 
   @override
   _MainScreenState createState() => _MainScreenState();
@@ -180,13 +166,13 @@ class _MainScreenState extends State<MainScreen> {
   bool _isLoading = true;
   bool _isHamadaAiRunning = false;
   Timer? _hamadaCheckTimer;
+  bool _isContentVisible = false;
 
   @override
   void initState() {
     super.initState();
     _loadSelectedLanguage();
     _initializeState();
-    // Periodically check HamadaAI status
     _hamadaCheckTimer = Timer.periodic(Duration(seconds: 3), (timer) {
       if (mounted) {
         _checkHamadaProcessStatus();
@@ -219,7 +205,6 @@ class _MainScreenState extends State<MainScreen> {
     if (!mounted) return;
     setState(() => _isLoading = true);
 
-    // Load the last saved mode from SharedPreferences at the beginning.
     var config = await ConfigManager.readConfig();
     if (mounted) {
       setState(() {
@@ -237,12 +222,16 @@ class _MainScreenState extends State<MainScreen> {
         setState(() {
           _moduleInstalled = false;
           _moduleVersion = 'Root Required';
-          // Overwrites the mode loaded from prefs to show root status
           _currentMode = 'Root Required';
         });
       }
     }
-    if (mounted) setState(() => _isLoading = false);
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+        _isContentVisible = true;
+      });
+    }
   }
 
   Future<bool> _checkRootAccess() async {
@@ -323,7 +312,6 @@ class _MainScreenState extends State<MainScreen> {
     }
 
     try {
-      // Save the new mode to SharedPreferences
       await ConfigManager.saveMode(targetMode);
 
       var result = await run(
@@ -331,7 +319,6 @@ class _MainScreenState extends State<MainScreen> {
           verbose: false);
 
       if (result.exitCode != 0) {
-        // If script fails, refresh UI from the saved state in SharedPreferences
         await _refreshStateFromConfig();
       }
     } catch (e) {
@@ -386,16 +373,12 @@ class _MainScreenState extends State<MainScreen> {
         context, MaterialPageRoute(builder: (context) => AboutPage()));
   }
 
-  // --- MODIFIED: This function now calls the parent callback on completion ---
   void _navigateToUtilitiesPage() async {
     await Navigator.push(
         context, MaterialPageRoute(builder: (context) => UtilitiesPage()));
-    // Refresh state when returning from utilities
     _initializeState();
-    // Notify the parent (MyApp) to reload background settings
     widget.onUtilitiesClosed();
   }
-  // --- END MODIFIED ---
 
   @override
   Widget build(BuildContext context) {
@@ -403,74 +386,76 @@ class _MainScreenState extends State<MainScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      // --- MODIFIED: Make background transparent to see the image from the Stack ---
       backgroundColor: Colors.transparent,
-      // --- END MODIFIED ---
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: _isLoading
               ? Center(child: CircularProgressIndicator())
-              : SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildTitleHeader(colorScheme, localization),
-                      SizedBox(height: 16),
-                      _buildHeaderRow(localization),
-                      SizedBox(height: 10),
-                      _buildControlRow(
-                          localization.power_save_desc,
-                          'powersafe.sh',
-                          localization.power_save,
-                          Icons.battery_saver,
-                          colorScheme.primaryContainer,
-                          colorScheme.onPrimaryContainer,
-                          'POWER_SAVE'),
-                      _buildControlRow(
-                          localization.balanced_desc,
-                          'balanced.sh',
-                          localization.balanced,
-                          Icons.balance,
-                          colorScheme.secondaryContainer,
-                          colorScheme.onSecondaryContainer,
-                          'BALANCED'),
-                      _buildControlRow(
-                          localization.performance_desc,
-                          'performance.sh',
-                          localization.performance,
-                          Icons.speed,
-                          colorScheme.tertiaryContainer,
-                          colorScheme.onTertiaryContainer,
-                          'PERFORMANCE'),
-                      _buildControlRow(
-                          localization.gaming_desc,
-                          'game.sh',
-                          localization.gaming_pro,
-                          Icons.sports_esports,
-                          colorScheme.errorContainer,
-                          colorScheme.onErrorContainer,
-                          'GAMING_PRO'),
-                      _buildControlRow(
-                          localization.cooldown_desc,
-                          'cool.sh',
-                          localization.cooldown,
-                          Icons.ac_unit,
-                          colorScheme.surfaceVariant,
-                          colorScheme.onSurfaceVariant,
-                          'COOLDOWN'),
-                      _buildControlRow(
-                          localization.clear_desc,
-                          'kill.sh',
-                          localization.clear,
-                          Icons.clear_all,
-                          colorScheme.error,
-                          colorScheme.onError,
-                          'CLEAR'),
-                      SizedBox(height: 25),
-                      _buildLanguageSelector(localization),
-                      SizedBox(height: 20),
-                    ],
+              : AnimatedOpacity(
+                  opacity: _isContentVisible ? 1.0 : 0.0,
+                  duration: Duration(milliseconds: 500),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildTitleHeader(colorScheme, localization),
+                        SizedBox(height: 16),
+                        _buildHeaderRow(localization),
+                        SizedBox(height: 10),
+                        _buildControlRow(
+                            localization.power_save_desc,
+                            'powersafe.sh',
+                            localization.power_save,
+                            Icons.battery_saver,
+                            colorScheme.primaryContainer,
+                            colorScheme.onPrimaryContainer,
+                            'POWER_SAVE'),
+                        _buildControlRow(
+                            localization.balanced_desc,
+                            'balanced.sh',
+                            localization.balanced,
+                            Icons.balance,
+                            colorScheme.secondaryContainer,
+                            colorScheme.onSecondaryContainer,
+                            'BALANCED'),
+                        _buildControlRow(
+                            localization.performance_desc,
+                            'performance.sh',
+                            localization.performance,
+                            Icons.speed,
+                            colorScheme.tertiaryContainer,
+                            colorScheme.onTertiaryContainer,
+                            'PERFORMANCE'),
+                        _buildControlRow(
+                            localization.gaming_desc,
+                            'game.sh',
+                            localization.gaming_pro,
+                            Icons.sports_esports,
+                            colorScheme.errorContainer,
+                            colorScheme.onErrorContainer,
+                            'GAMING_PRO'),
+                        _buildControlRow(
+                            localization.cooldown_desc,
+                            'cool.sh',
+                            localization.cooldown,
+                            Icons.ac_unit,
+                            colorScheme.surfaceVariant,
+                            colorScheme.onSurfaceVariant,
+                            'COOLDOWN'),
+                        _buildControlRow(
+                            localization.clear_desc,
+                            'kill.sh',
+                            localization.clear,
+                            Icons.clear_all,
+                            colorScheme.error,
+                            colorScheme.onError,
+                            'CLEAR'),
+                        SizedBox(height: 25),
+                        _buildLanguageSelector(localization),
+                        SizedBox(height: 20),
+                      ],
+                    ),
                   ),
                 ),
         ),

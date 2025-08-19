@@ -13,79 +13,71 @@ class UtilitiesPage extends StatefulWidget {
 }
 
 class _UtilitiesPageState extends State<UtilitiesPage> {
-  // --- File Paths & Commands ---
   final String _serviceFilePath = '/data/adb/modules/EnCorinVest/service.sh';
   final String _gameTxtPath = '/data/EnCorinVest/game.txt';
   final String _configFilePath = '/data/adb/modules/EnCorinVest/encorin.txt';
   final String _encoreTweaksFilePath =
       '/data/adb/modules/EnCorinVest/Scripts/encoreTweaks.sh';
   final String _hamadaMarker = '# Start HamadaAI (Default is Disabled)';
-  final String _hamadaProcessName =
-      'HamadaAI'; // Process name for start/kill/check
-  final String _hamadaStartCommand = 'HamadaAI'; // Command to start
-  final String _hamadaStopCommand = 'killall HamadaAI'; // Command to stop
-  final String _hamadaCheckCommand =
-      'pgrep -x HamadaAI'; // Command to check if running
+  final String _hamadaProcessName = 'HamadaAI';
+  final String _hamadaStartCommand = 'HamadaAI';
+  final String _hamadaStopCommand = 'killall HamadaAI';
+  final String _hamadaCheckCommand = 'pgrep -x HamadaAI';
+  final String MODULE_PATH = '/data/adb/modules/EnCorinVest';
 
-  // Add this line:
-  final String MODULE_PATH = '/data/adb/modules/EnCorinVest'; //
-
-  // --- UI state ---
-  bool _hamadaAiEnabled = false; // State reflecting actual process status
-  bool _hamadaStartOnBoot = false; // State for the boot toggle
-  bool _isHamadaCommandRunning = false; // Loading indicator for start/stop
-  bool _isServiceFileUpdating =
-      false; // Loading indicator for boot toggle update
-  bool _isConfigUpdating = false; // Loading indicator for config update
+  bool _hamadaAiEnabled = false;
+  bool _hamadaStartOnBoot = false;
+  bool _isHamadaCommandRunning = false;
+  bool _isServiceFileUpdating = false;
+  bool _isConfigUpdating = false;
   bool _resolutionServiceAvailable = false;
   bool _isResolutionChanging = false;
-  double _resolutionValue = 5.0; // Default index corresponds to 100%
+  double _resolutionValue = 5.0;
   bool _isGameTxtLoading = false;
   bool _isGameTxtSaving = false;
-  String _gameTxtContent = ''; // Content of game.txt
+  String _gameTxtContent = '';
   final TextEditingController _gameTxtController = TextEditingController();
   bool _dndEnabled = false;
   bool _isDndConfigUpdating = false;
-
-  // --- Encore Switch State ---
   bool _deviceMitigationEnabled = false;
   bool _liteModeEnabled = false;
   bool _isEncoreConfigUpdating = false;
-
-  // --- Bypass Charging State ---
   bool _isBypassSupported = false;
   bool _bypassEnabled = false;
   bool _isCheckingBypass = false;
   bool _isTogglingBypass = false;
   String _bypassSupportStatus = '';
-
-  // --- NEW: Background Image State ---
   String? _backgroundImagePath;
   double _backgroundOpacity = 0.2;
   bool _isBackgroundSettingsLoading = true;
-  // --- END NEW ---
+  bool _isContentVisible = false;
 
-  // --- Original values (fetched once if service is available) ---
   String _originalSize = '';
   int _originalDensity = 0;
-
-  // --- Resolution percentages mapped to slider values (0 to 5) ---
   final List<int> _resolutionPercentages = [50, 60, 70, 80, 90, 100];
 
   @override
   void initState() {
     super.initState();
-    _loadBackgroundSettings(); // --- NEW: Load background settings ---
-    _loadEncoreSwitchState(); // Load Encore switch states first
-    _checkHamadaProcessStatus();
-    _readAndApplyDndConfig();
-    _checkResolutionServiceAvailability();
-    _checkHamadaStartOnBoot();
-    _loadGameTxt();
-    _loadInitialBypassState();
+    _initializeUtilities();
   }
 
-  // --- NEW: Methods for managing background image and opacity ---
+  Future<void> _initializeUtilities() async {
+    await _loadBackgroundSettings();
+    await _loadEncoreSwitchState();
+    await _checkHamadaProcessStatus();
+    await _readAndApplyDndConfig();
+    await _checkResolutionServiceAvailability();
+    await _checkHamadaStartOnBoot();
+    await _loadGameTxt();
+    await _loadInitialBypassState();
+    if (mounted) {
+      setState(() {
+        _isContentVisible = true;
+      });
+    }
+  }
+
   Future<void> _loadBackgroundSettings() async {
     if (!mounted) return;
     setState(() => _isBackgroundSettingsLoading = true);
@@ -100,7 +92,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
         });
       }
     } catch (e) {
-      print("Error loading background settings: $e");
+      // Error loading background settings
     } finally {
       if (mounted) setState(() => _isBackgroundSettingsLoading = false);
     }
@@ -118,7 +110,6 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
         });
       }
     } catch (e) {
-      print("Error picking image: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Failed to pick image: ${e.toString()}')));
@@ -128,7 +119,6 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
 
   Future<void> _updateOpacity(double opacity) async {
     if (!mounted) return;
-    // We update the state visually during sliding, so this just saves the final value.
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble('background_opacity', opacity);
   }
@@ -137,7 +127,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     if (!mounted) return;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('background_image_path');
-    await prefs.setDouble('background_opacity', 0.2); // Reset to default
+    await prefs.setDouble('background_opacity', 0.2);
     if (mounted) {
       setState(() {
         _backgroundImagePath = null;
@@ -145,25 +135,21 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
       });
     }
   }
-  // --- END NEW ---
 
   Future<ProcessResult> _runRootCommandAndWait(String command) async {
-    print('Executing root command (and waiting): $command');
     try {
       return await Process.run('su', ['-c', command]);
     } catch (e) {
-      print('Error running root command "$command": $e');
       return ProcessResult(0, -1, '', 'Execution failed: $e');
     }
   }
 
   Future<void> _runRootCommandFireAndForget(String command) async {
-    print('Executing root command (fire and forget): $command');
     try {
       await Process.start('su', ['-c', '$command &'],
           runInShell: true, mode: ProcessStartMode.detached);
     } catch (e) {
-      print('Error starting root command "$command": $e');
+      // Error starting root command
     }
   }
 
@@ -173,19 +159,15 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
       if (result.exitCode == 0 && result.stdout.toString().contains('uid=0')) {
         return true;
       } else {
-        print('Root access check failed or not granted.');
         return false;
       }
     } catch (e) {
-      print('Error checking root access: $e');
       return false;
     }
   }
 
-  // --- Encore Switch Logic ---
   Future<void> _loadEncoreSwitchState() async {
     if (!await _checkRootAccess() || !mounted) return;
-    print("Reading Encore tweaks from $_encoreTweaksFilePath");
 
     final result = await _runRootCommandAndWait('cat $_encoreTweaksFilePath');
     if (result.exitCode == 0) {
@@ -200,12 +182,8 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
         setState(() {
           _deviceMitigationEnabled = mitigationMatch?.group(1) == '1';
           _liteModeEnabled = liteMatch?.group(1) == '1';
-          print(
-              "Encore state loaded: Mitigation=$_deviceMitigationEnabled, Lite=$_liteModeEnabled");
         });
       }
-    } else {
-      print("Failed to read encoreTweaks.sh: ${result.stderr}");
     }
   }
 
@@ -213,19 +191,17 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     if (!await _checkRootAccess() || !mounted) return;
 
     setState(() => _isEncoreConfigUpdating = true);
-    print("Updating Encore tweak: $key = ${enable ? 1 : 0}");
 
     try {
       final readResult =
           await _runRootCommandAndWait('cat $_encoreTweaksFilePath');
       if (readResult.exitCode != 0) {
-        throw Exception('Failed to read encoreTweaks.sh: ${readResult.stderr}');
+        throw Exception('Failed to read encoreTweaks.sh');
       }
 
       String content = readResult.stdout.toString();
       final value = enable ? '1' : '0';
 
-      // Use RegExp to replace the line, ensuring it matches the whole line
       content = content.replaceAll(
         RegExp('^$key=.*\$', multiLine: true),
         '$key=$value',
@@ -238,11 +214,9 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
       final writeResult = await _runRootCommandAndWait(writeCmd);
 
       if (writeResult.exitCode != 0) {
-        throw Exception(
-            'Failed to write encoreTweaks.sh: ${writeResult.stderr}');
+        throw Exception('Failed to write to encoreTweaks.sh');
       }
 
-      // Update the local state to match the new file content
       if (mounted) {
         setState(() {
           if (key == 'DEVICE_MITIGATION') {
@@ -251,11 +225,8 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
             _liteModeEnabled = enable;
           }
         });
-        print("Successfully updated $key in encoreTweaks.sh");
       }
     } catch (e) {
-      print('Error updating encore tweak: $e');
-      // Optionally revert the switch in the UI on failure
       if (mounted) {
         setState(() {
           if (key == 'DEVICE_MITIGATION') {
@@ -270,22 +241,17 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     }
   }
 
-  // --- Updated DND Logic ---
   Future<bool?> _readDndConfig() async {
     if (!await _checkRootAccess()) return null;
-    print("Reading DND config from $_configFilePath");
 
     final result = await _runRootCommandAndWait('cat $_configFilePath');
     if (result.exitCode == 0) {
       final content = result.stdout.toString();
       final match = RegExp(r'^DND=(.*)$', multiLine: true).firstMatch(content);
       if (match != null) {
-        bool enabled = match.group(1)?.trim().toLowerCase() == 'yes';
-        print("DND config found: $enabled");
-        return enabled;
+        return match.group(1)?.trim().toLowerCase() == 'yes';
       }
     }
-    print("DND config not found, defaulting to false");
     return false;
   }
 
@@ -293,48 +259,37 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     if (!await _checkRootAccess() || !mounted) return false;
 
     setState(() => _isDndConfigUpdating = true);
-    print("Writing DND=$enabled to $_configFilePath");
-
     final valueString = enabled ? 'Yes' : 'No';
 
     try {
-      // Read the current config file
       final readResult = await _runRootCommandAndWait('cat $_configFilePath');
       if (readResult.exitCode != 0) {
-        print('Failed to read config file: ${readResult.stderr}');
         return false;
       }
 
       String content = readResult.stdout.toString();
 
-      // Only update if DND line exists
       if (content.contains(RegExp(r'^DND=', multiLine: true))) {
         content = content.replaceAll(
           RegExp(r'^DND=.*$', multiLine: true),
           'DND=$valueString',
         );
 
-        // Write back to file
         String base64Content = base64Encode(utf8.encode(content));
         final writeCommand =
             '''echo '$base64Content' | base64 -d > $_configFilePath''';
         final writeResult = await _runRootCommandAndWait(writeCommand);
 
         if (writeResult.exitCode == 0) {
-          print("DND config file update successful.");
           if (mounted) setState(() => _dndEnabled = enabled);
           return true;
         } else {
-          print(
-              'DND config file write failed. Exit Code: ${writeResult.exitCode}, Stderr: ${writeResult.stderr}');
           return false;
         }
       } else {
-        print('DND line not found in config file. Skipping update.');
         return false;
       }
     } catch (e) {
-      print('Error updating DND config file: $e');
       return false;
     } finally {
       if (mounted) setState(() => _isDndConfigUpdating = false);
@@ -343,11 +298,9 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
 
   Future<void> _readAndApplyDndConfig() async {
     bool? configState = await _readDndConfig();
-
     if (mounted) {
       setState(() {
         _dndEnabled = configState ?? false;
-        print("Initial DND state from config: $_dndEnabled");
       });
     }
   }
@@ -355,27 +308,16 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
   Future<void> _toggleDnd(bool enable) async {
     if (!await _checkRootAccess() || !mounted) return;
     if (_isDndConfigUpdating) return;
-
-    bool configWritten = await _writeDndConfig(enable);
-    if (!configWritten && mounted) {
-      print("Error: DND config write failed.");
-    } else if (configWritten && mounted) {
-      print("DND state updated to $enable");
-    }
+    await _writeDndConfig(enable);
   }
 
-  // --- Updated Hamada AI Logic ---
   Future<void> _checkHamadaProcessStatus() async {
     if (!await _checkRootAccess()) return;
-
     final result = await _runRootCommandAndWait(_hamadaCheckCommand);
-    bool isRunning = result.exitCode == 0;
-
     if (mounted) {
       setState(() {
-        _hamadaAiEnabled = isRunning;
+        _hamadaAiEnabled = result.exitCode == 0;
       });
-      print("HamadaAI process running: $isRunning");
     }
   }
 
@@ -384,40 +326,31 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     if (_isHamadaCommandRunning) return;
 
     setState(() => _isHamadaCommandRunning = true);
-
     try {
       if (enable) {
-        // Start HamadaAI
         await _runRootCommandFireAndForget(_hamadaStartCommand);
-        print('HamadaAI start command executed');
-
-        // Wait a moment and verify it started
         await Future.delayed(Duration(milliseconds: 500));
         await _checkHamadaProcessStatus();
       } else {
-        // Stop HamadaAI
-        final result = await _runRootCommandAndWait(_hamadaStopCommand);
-        print('HamadaAI stop result: Exit Code ${result.exitCode}');
-
+        await _runRootCommandAndWait(_hamadaStopCommand);
         if (mounted) {
           setState(() => _hamadaAiEnabled = false);
         }
       }
     } catch (e) {
-      print('Error toggling HamadaAI: $e');
+      // Error toggling Hamada AI
     } finally {
       if (mounted) setState(() => _isHamadaCommandRunning = false);
     }
   }
 
-  // Keep the existing boot logic unchanged
   Future<void> _checkHamadaStartOnBoot() async {
     if (!await _checkRootAccess()) return;
     final result = await _runRootCommandAndWait('cat $_serviceFilePath');
     if (result.exitCode == 0) {
-      final content = result.stdout.toString();
-      bool found = content.contains('HamadaAI');
-      if (mounted) setState(() => _hamadaStartOnBoot = found);
+      if (mounted)
+        setState(() =>
+            _hamadaStartOnBoot = result.stdout.toString().contains('HamadaAI'));
     } else {
       if (mounted) setState(() => _hamadaStartOnBoot = false);
     }
@@ -425,28 +358,23 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
 
   Future<void> _setHamadaStartOnBoot(bool enable) async {
     if (!await _checkRootAccess() || !mounted) return;
-
     setState(() => _isServiceFileUpdating = true);
 
     try {
       final readResult = await _runRootCommandAndWait('cat $_serviceFilePath');
       if (readResult.exitCode != 0) {
-        throw Exception('Failed read: ${readResult.stderr}');
+        throw Exception('Failed to read service file');
       }
 
       String content = readResult.stdout.toString();
       List<String> lines = content.replaceAll('\r\n', '\n').split('\n');
-
-      // Remove any existing "HamadaAI" entry
       lines.removeWhere((line) => line.trim() == _hamadaStartCommand);
 
-      // Remove trailing empty lines
       while (lines.isNotEmpty && lines.last.trim().isEmpty) {
         lines.removeLast();
       }
 
       if (enable) {
-        // Add "HamadaAI" at the end
         lines.add(_hamadaStartCommand);
       }
 
@@ -458,17 +386,14 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
       String base64Content = base64Encode(utf8.encode(newContent));
       final writeCmd =
           '''echo '$base64Content' | base64 -d > $_serviceFilePath''';
-
       final writeResult = await _runRootCommandAndWait(writeCmd);
 
       if (writeResult.exitCode != 0) {
-        throw Exception('Failed write: ${writeResult.stderr}');
+        throw Exception('Failed to write to service file');
       }
 
       if (mounted) setState(() => _hamadaStartOnBoot = enable);
-      print("Service file updated successfully.");
     } catch (e) {
-      print('Error updating service file: $e');
       if (mounted) setState(() => _hamadaStartOnBoot = !enable);
     } finally {
       if (mounted) setState(() => _isServiceFileUpdating = false);
@@ -476,28 +401,24 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
   }
 
   Future<void> _checkResolutionServiceAvailability() async {
-    bool canGetSize = false;
-    bool canGetDensity = false;
     try {
       final sr = await _runRootCommandAndWait('wm size');
-      if (sr.exitCode == 0 && sr.stdout.toString().contains('Physical size:'))
-        canGetSize = true;
       final dr = await _runRootCommandAndWait('wm density');
-      if (dr.exitCode == 0 &&
+      bool available = sr.exitCode == 0 &&
+          sr.stdout.toString().contains('Physical size:') &&
+          dr.exitCode == 0 &&
           (dr.stdout.toString().contains('Physical density:') ||
-              dr.stdout.toString().contains('Override density:')))
-        canGetDensity = true;
-      if (mounted)
-        setState(
-            () => _resolutionServiceAvailable = canGetSize && canGetDensity);
-      if (_resolutionServiceAvailable) {
+              dr.stdout.toString().contains('Override density:'));
+
+      if (mounted) setState(() => _resolutionServiceAvailable = available);
+
+      if (available) {
         await _saveOriginalResolution();
         if (mounted)
           setState(() => _resolutionValue =
               (_resolutionPercentages.length - 1).toDouble());
       }
     } catch (e) {
-      print('Error checking resolution service availability: $e');
       if (mounted) setState(() => _resolutionServiceAvailable = false);
     }
   }
@@ -508,30 +429,25 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
       final sr = await _runRootCommandAndWait('wm size');
       final sm = RegExp(r'Physical size:\s*([0-9]+x[0-9]+)')
           .firstMatch(sr.stdout.toString());
-      if (sm != null && sm.group(1) != null)
+      if (sm != null && sm.group(1) != null) {
         _originalSize = sm.group(1)!;
-      else {
-        print("Failed to parse original screen size.");
+      } else {
         if (mounted) setState(() => _resolutionServiceAvailable = false);
         return;
       }
+
       final dr = await _runRootCommandAndWait('wm density');
       final dm = RegExp(r'(?:Physical|Override) density:\s*([0-9]+)')
           .firstMatch(dr.stdout.toString());
       if (dm != null && dm.group(1) != null) {
         _originalDensity = int.tryParse(dm.group(1)!) ?? 0;
         if (_originalDensity == 0) {
-          print("Failed to parse original screen density or density is zero.");
           if (mounted) setState(() => _resolutionServiceAvailable = false);
         }
       } else {
-        print("Failed to parse original screen density.");
         if (mounted) setState(() => _resolutionServiceAvailable = false);
       }
-      print(
-          "Original resolution saved: $_originalSize @ ${_originalDensity}dpi");
     } catch (e) {
-      print("Error saving original resolution: $e");
       if (mounted) setState(() => _resolutionServiceAvailable = false);
     }
   }
@@ -546,53 +462,41 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     if (!_resolutionServiceAvailable ||
         _originalSize.isEmpty ||
         _originalDensity <= 0) {
-      print(
-          'Resolution change unavailable. Service not available or original values missing.');
       if (mounted)
         setState(() =>
             _resolutionValue = (_resolutionPercentages.length - 1).toDouble());
       return;
     }
+
     if (mounted) setState(() => _isResolutionChanging = true);
     final idx = value.round().clamp(0, _resolutionPercentages.length - 1);
     final pct = _resolutionPercentages[idx];
-    print("Applying resolution: $pct%");
+
     try {
       final parts = _originalSize.split('x');
-      final origW = int.tryParse(parts[0]);
-      final origH = int.tryParse(parts[1]);
-      if (parts.length != 2 ||
-          origW == null ||
-          origH == null ||
-          origW <= 0 ||
-          origH <= 0)
-        throw FormatException('Invalid original size format: $_originalSize');
+      final origW = int.parse(parts[0]);
+      final origH = int.parse(parts[1]);
       final newW = (origW * pct / 100).floor();
       final newH = (origH * pct / 100).floor();
       final newD = (_originalDensity * pct / 100).floor();
-      if (newW <= 0 || newH <= 0 || newD <= 0)
-        throw FormatException(
-            'Calculated zero/negative dimensions or density. W:$newW, H:$newH, D:$newD');
 
-      print("Calculated new resolution: ${newW}x${newH} @ ${newD}dpi");
+      if (newW <= 0 || newH <= 0 || newD <= 0)
+        throw FormatException('Calculated invalid dimensions or density');
 
       final sr = await _runRootCommandAndWait('wm size ${newW}x${newH}');
-      if (sr.exitCode != 0) throw Exception('Set size failed: ${sr.stderr}');
+      if (sr.exitCode != 0) throw Exception('Set size failed');
+
       final dr = await _runRootCommandAndWait('wm density $newD');
       if (dr.exitCode != 0) {
-        print("Set density failed, attempting to reset size...");
-        await _runRootCommandAndWait(
-            'wm size reset'); // Attempt to revert size if density fails
-        throw Exception('Set density failed: ${dr.stderr}');
+        await _runRootCommandAndWait('wm size reset');
+        throw Exception('Set density failed');
       }
       if (mounted) setState(() => _resolutionValue = value);
-      print('Resolution successfully set to $pct%');
     } catch (e) {
-      print('Error changing resolution: ${e.toString()}');
-      await _resetResolution(showSnackbar: false); // Attempt reset on error
+      await _resetResolution(showSnackbar: false);
       if (mounted)
-        setState(() => _resolutionValue =
-            (_resolutionPercentages.length - 1).toDouble()); // Reset slider
+        setState(() =>
+            _resolutionValue = (_resolutionPercentages.length - 1).toDouble());
     } finally {
       if (mounted) setState(() => _isResolutionChanging = false);
     }
@@ -601,23 +505,14 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
   Future<void> _resetResolution({bool showSnackbar = true}) async {
     if (!_resolutionServiceAvailable) return;
     if (mounted) setState(() => _isResolutionChanging = true);
-    print("Resetting resolution...");
     try {
-      final sr = await _runRootCommandAndWait('wm size reset');
-      final dr = await _runRootCommandAndWait('wm density reset');
-      if (sr.exitCode != 0 || dr.exitCode != 0) {
-        print(
-            "Resolution reset command failed. Size exit: ${sr.exitCode}, Density exit: ${dr.exitCode}");
-        throw Exception('Reset failed');
-      }
+      await _runRootCommandAndWait('wm size reset');
+      await _runRootCommandAndWait('wm density reset');
       if (mounted)
         setState(() =>
             _resolutionValue = (_resolutionPercentages.length - 1).toDouble());
-      if (showSnackbar) {
-        print("Resolution reset to original.");
-      }
     } catch (e) {
-      print('Error resetting resolution: $e');
+      // Error resetting resolution
     } finally {
       if (mounted) setState(() => _isResolutionChanging = false);
     }
@@ -626,7 +521,6 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
   Future<void> _loadGameTxt() async {
     if (!await _checkRootAccess() || !mounted) return;
     setState(() => _isGameTxtLoading = true);
-    print("Loading game.txt...");
     try {
       final result = await _runRootCommandAndWait('cat $_gameTxtPath');
       if (mounted) {
@@ -635,20 +529,15 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
             _gameTxtContent = result.stdout.toString();
             _gameTxtController.text = _gameTxtContent;
           });
-          print("game.txt loaded successfully.");
         } else {
-          print("Failed to read game.txt: ${result.stderr}");
           setState(() {
             _gameTxtContent = '';
             _gameTxtController.text = '';
           });
-          if (result.stderr.toString().toLowerCase().contains('no such file'))
-            print("game.txt not found.");
         }
       }
     } catch (e) {
       if (mounted) {
-        print("Error loading game.txt: $e");
         setState(() {
           _gameTxtContent = '';
           _gameTxtController.text = '';
@@ -662,7 +551,6 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
   Future<void> _saveGameTxt() async {
     if (!await _checkRootAccess() || !mounted) return;
     setState(() => _isGameTxtSaving = true);
-    print("Saving game.txt...");
     final newContent = _gameTxtController.text;
     try {
       String base64Content = base64Encode(utf8.encode(newContent));
@@ -670,51 +558,33 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
       final result = await _runRootCommandAndWait(writeCmd);
       if (mounted) {
         if (result.exitCode == 0) {
-          setState(() {
-            _gameTxtContent = newContent;
-          });
-          print("game.txt saved successfully.");
-        } else {
-          print('Failed save game.txt: ${result.stderr}');
+          setState(() => _gameTxtContent = newContent);
         }
       }
     } catch (e) {
-      print('Error saving game.txt: $e');
+      // Error saving game.txt
     } finally {
       if (mounted) setState(() => _isGameTxtSaving = false);
     }
   }
 
-// --- Updated Bypass Charging Logic ---
-
   Future<void> _loadInitialBypassState() async {
     if (!await _checkRootAccess() || !mounted) return;
-
     try {
-      // First check if bypass is supported using the test script
       await _checkBypassSupport();
-
-      // Then read the ENABLE_BYPASS value from config
       final result = await _runRootCommandAndWait('cat $_configFilePath');
       if (result.exitCode == 0) {
         final content = result.stdout.toString();
         final enabledMatch = RegExp(r'^ENABLE_BYPASS=(Yes|No)', multiLine: true)
             .firstMatch(content);
-
         if (mounted) {
           setState(() {
             _bypassEnabled = enabledMatch?.group(1)?.toLowerCase() == 'yes';
-            print("Initial bypass state from config: $_bypassEnabled");
           });
         }
       }
     } catch (e) {
-      print('Error loading initial bypass state: $e');
-      if (mounted) {
-        setState(() {
-          _bypassEnabled = false;
-        });
-      }
+      if (mounted) setState(() => _bypassEnabled = false);
     }
   }
 
@@ -726,34 +596,24 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     });
 
     try {
-      // Run test script to check support
       final controllerPath =
           '/data/adb/modules/EnCorinVest/Scripts/encorin_bypass_controller.sh';
       final result = await _runRootCommandAndWait('$controllerPath test');
 
       if (mounted) {
         final localization = AppLocalizations.of(context)!;
+        final output = result.stdout.toString().toLowerCase().trim();
         setState(() {
-          final output = result.stdout.toString().toLowerCase().trim();
-
           if (output.contains('supported')) {
             _isBypassSupported = true;
             _bypassSupportStatus = localization.bypass_charging_supported;
-            print("Bypass support: SUPPORTED");
-          } else if (output.contains('unsupported')) {
-            _isBypassSupported = false;
-            _bypassSupportStatus = localization.bypass_charging_unsupported;
-            print("Bypass support: UNSUPPORTED");
           } else {
-            // Default to unsupported if output is unclear
             _isBypassSupported = false;
             _bypassSupportStatus = localization.bypass_charging_unsupported;
-            print("Bypass support: UNSUPPORTED (unclear output: $output)");
           }
         });
       }
     } catch (e) {
-      print('Error checking bypass support: $e');
       if (mounted) {
         final localization = AppLocalizations.of(context)!;
         setState(() {
@@ -770,31 +630,15 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     try {
       final value = enabled ? 'Yes' : 'No';
       final configPath = _configFilePath;
-
-      // Use grep to check if the setting exists to avoid errors.
       final checkResult =
           await _runRootCommandAndWait("grep -q '^ENABLE_BYPASS=' $configPath");
-      if (checkResult.exitCode != 0) {
-        print('ENABLE_BYPASS line not found in $configPath. Skipping update.');
-        return false; // Not an error, just nothing to update.
-      }
+      if (checkResult.exitCode != 0) return false;
 
-      // Use sed to perform an in-place replacement of the entire line.
-      // This is more direct and "exact" than the read/modify/write pattern.
       final sedCommand =
           "sed -i 's|^ENABLE_BYPASS=.*|ENABLE_BYPASS=$value|' $configPath";
       final sedResult = await _runRootCommandAndWait(sedCommand);
-
-      if (sedResult.exitCode == 0) {
-        print("ENABLE_BYPASS config update successful via sed.");
-        return true;
-      } else {
-        print(
-            'ENABLE_BYPASS config write failed. Exit Code: ${sedResult.exitCode}, Stderr: ${sedResult.stderr}');
-        return false;
-      }
+      return sedResult.exitCode == 0;
     } catch (e) {
-      print('Error updating bypass config: $e');
       return false;
     }
   }
@@ -804,34 +648,16 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     setState(() => _isTogglingBypass = true);
 
     try {
-      // Update config file first
-      final configUpdated = await _updateBypassConfig(enable);
-      if (!configUpdated) {
-        print('Failed to update bypass config');
-        // Do not return here; allow UI to update even if sed fails,
-        // as the toggle should reflect the intended state. The config
-        // might be fixed on next module run.
-      }
-
-      // If supported, execute controller script
+      await _updateBypassConfig(enable);
       if (_isBypassSupported) {
         final controllerPath =
             '/data/adb/modules/EnCorinVest/Scripts/encorin_bypass_controller.sh';
         final action = enable ? 'enable' : 'disable';
-        final result = await _runRootCommandAndWait('$controllerPath $action');
-
-        if (result.exitCode != 0) {
-          print('Bypass controller failed: ${result.stderr}');
-        }
+        await _runRootCommandAndWait('$controllerPath $action');
       }
-
-      // Update UI state to match the intended state
-      if (mounted) {
-        setState(() => _bypassEnabled = enable);
-        print("Bypass charging toggled to: $enable");
-      }
+      if (mounted) setState(() => _bypassEnabled = enable);
     } catch (e) {
-      print('Error toggling bypass charging: $e');
+      // Error toggling bypass charging
     } finally {
       if (mounted) setState(() => _isTogglingBypass = false);
     }
@@ -841,8 +667,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
   void dispose() {
     if (_resolutionServiceAvailable &&
         _resolutionValue != (_resolutionPercentages.length - 1).toDouble()) {
-      _resetResolution(
-          showSnackbar: false); // Keep reset logic, just no snackbar
+      _resetResolution(showSnackbar: false);
     }
     _gameTxtController.dispose();
     super.dispose();
@@ -866,19 +691,15 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
         _isDndConfigUpdating;
 
     return Scaffold(
-      // --- MODIFIED: Make background transparent ---
       backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: Text(localization.utilities_title),
-        // --- MODIFIED: Make AppBar transparent ---
         backgroundColor: Colors.transparent,
         elevation: 0,
-        // --- END MODIFIED ---
       ),
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // --- NEW: Background Image Layer ---
           if (_backgroundImagePath != null && _backgroundImagePath!.isNotEmpty)
             Opacity(
               opacity: _backgroundOpacity,
@@ -886,526 +707,525 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                 File(_backgroundImagePath!),
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) {
-                  print(
-                      "Error loading background image in utilities_page: $error");
                   return Container(color: Colors.transparent);
                 },
               ),
             ),
-          // --- END NEW ---
-          SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // --- NEW: Encore Switch Card ---
-                Card(
-                  elevation: cardElevation,
-                  margin: cardMargin,
-                  shape: cardShape,
-                  color: colorScheme.surfaceContainerHighest,
-                  child: Padding(
-                    padding: cardPadding,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          localization.encore_switch_title,
-                          style: textTheme.titleLarge?.copyWith(
-                              color: colorScheme.onSurface,
-                              fontWeight: FontWeight.w600),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          localization.encore_switch_description,
-                          style: textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        SwitchListTile(
-                          title: Text(localization.device_mitigation_title),
-                          subtitle:
-                              Text(localization.device_mitigation_description),
-                          value: _deviceMitigationEnabled,
-                          onChanged: _isEncoreConfigUpdating
-                              ? null
-                              : (bool value) => _updateEncoreTweak(
-                                  'DEVICE_MITIGATION', value),
-                          secondary: _isEncoreConfigUpdating
-                              ? SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child:
-                                      CircularProgressIndicator(strokeWidth: 2))
-                              : Icon(Icons.security_update_warning),
-                          activeColor: colorScheme.primary,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                        SwitchListTile(
-                          title: Text(localization.lite_mode_title),
-                          subtitle: Text(localization.lite_mode_description),
-                          value: _liteModeEnabled,
-                          onChanged: _isEncoreConfigUpdating
-                              ? null
-                              : (bool value) =>
-                                  _updateEncoreTweak('LITE_MODE', value),
-                          secondary: _isEncoreConfigUpdating
-                              ? SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child:
-                                      CircularProgressIndicator(strokeWidth: 2))
-                              : Icon(Icons.flourescent),
-                          activeColor: colorScheme.primary,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                // --- 1. DND Card ---
-                Card(
-                  elevation: cardElevation,
-                  margin: cardMargin,
-                  shape: cardShape,
-                  color: colorScheme.surfaceContainerHighest,
-                  child: Padding(
-                    padding: cardPadding,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          localization.dnd_title,
-                          style: textTheme.titleLarge?.copyWith(
-                              color: colorScheme.onSurface,
-                              fontWeight: FontWeight.w600),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          localization.dnd_description,
-                          style: textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        SwitchListTile(
-                          title: Text(localization.dnd_toggle_title),
-                          value: _dndEnabled,
-                          onChanged: _isDndConfigUpdating
-                              ? null
-                              : (bool value) {
-                                  _toggleDnd(value);
-                                },
-                          secondary: _isDndConfigUpdating
-                              ? SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child:
-                                      CircularProgressIndicator(strokeWidth: 2))
-                              : Icon(Icons.bedtime),
-                          activeColor: colorScheme.primary,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                // --- 2. HAMADA AI Card ---
-                Card(
-                  elevation: cardElevation,
-                  margin: cardMargin,
-                  shape: cardShape,
-                  color: colorScheme.surfaceContainerHighest,
-                  child: Padding(
-                    padding: cardPadding,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          localization.hamada_ai,
-                          style: textTheme.titleLarge?.copyWith(
-                              color: colorScheme.onSurface,
-                              fontWeight: FontWeight.w600),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          localization.hamada_ai_description,
-                          style: textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        SwitchListTile(
-                          title: Text(localization.hamada_ai_toggle_title),
-                          value: _hamadaAiEnabled,
-                          onChanged: isHamadaBusy
-                              ? null
-                              : (bool value) {
-                                  _toggleHamadaAI(value);
-                                },
-                          secondary: _isHamadaCommandRunning
-                              ? SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child:
-                                      CircularProgressIndicator(strokeWidth: 2))
-                              : Icon(Icons.psychology_alt),
-                          activeColor: colorScheme.primary,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                        SwitchListTile(
-                          title: Text(localization.hamada_ai_start_on_boot),
-                          value: _hamadaStartOnBoot,
-                          onChanged: _isServiceFileUpdating
-                              ? null
-                              : (bool value) {
-                                  _setHamadaStartOnBoot(value);
-                                },
-                          secondary: _isServiceFileUpdating
-                              ? SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child:
-                                      CircularProgressIndicator(strokeWidth: 2))
-                              : Icon(Icons.rocket_launch),
-                          activeColor: colorScheme.primary,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                // --- 3. Resolution Card ---
-                Card(
-                  elevation: cardElevation,
-                  margin: cardMargin,
-                  shape: cardShape,
-                  color: colorScheme.surfaceContainerHighest,
-                  child: Padding(
-                    padding: cardPadding,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          localization.downscale_resolution,
-                          style: textTheme.titleLarge?.copyWith(
-                              color: colorScheme.onSurface,
-                              fontWeight: FontWeight.w600),
-                        ),
-                        const SizedBox(height: 8),
-                        if (!_resolutionServiceAvailable)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8.0),
-                            child: Text(
-                              localization.resolution_unavailable_message,
-                              style: textTheme.bodyMedium?.copyWith(
-                                color: colorScheme.error,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          )
-                        else ...[
-                          Row(
-                            children: [
-                              Icon(Icons.screen_rotation,
-                                  color: colorScheme.onSurfaceVariant),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Slider(
-                                  value: _resolutionValue,
-                                  min: 0,
-                                  max: (_resolutionPercentages.length - 1)
-                                      .toDouble(),
-                                  divisions: _resolutionPercentages.length - 1,
-                                  label: _getCurrentPercentageLabel(),
-                                  onChanged: _isResolutionChanging
-                                      ? null
-                                      : (double value) {
-                                          setState(() {
-                                            _resolutionValue = value;
-                                          });
-                                        },
-                                  onChangeEnd: _isResolutionChanging
-                                      ? null
-                                      : (double value) {
-                                          _applyResolution(value);
-                                        },
-                                  activeColor: colorScheme.primary,
-                                  inactiveColor: colorScheme.onSurfaceVariant
-                                      .withOpacity(0.3),
-                                ),
-                              ),
-                              Text(_getCurrentPercentageLabel(),
-                                  style: textTheme.bodyLarge
-                                      ?.copyWith(color: colorScheme.onSurface)),
-                            ],
+          AnimatedOpacity(
+            opacity: _isContentVisible ? 1.0 : 0.0,
+            duration: Duration(milliseconds: 500),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Card(
+                    elevation: cardElevation,
+                    margin: cardMargin,
+                    shape: cardShape,
+                    color: colorScheme.surfaceContainerHighest,
+                    child: Padding(
+                      padding: cardPadding,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            localization.encore_switch_title,
+                            style: textTheme.titleLarge?.copyWith(
+                                color: colorScheme.onSurface,
+                                fontWeight: FontWeight.w600),
                           ),
                           const SizedBox(height: 8),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 12),
-                                backgroundColor: colorScheme.secondaryContainer,
-                                foregroundColor:
-                                    colorScheme.onSecondaryContainer,
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8)),
-                              ),
-                              onPressed: _isResolutionChanging
-                                  ? null
-                                  : () => _resetResolution(),
-                              icon: _isResolutionChanging
-                                  ? SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                          strokeWidth: 2))
-                                  : Icon(Icons.refresh),
-                              label: Text(localization.reset_resolution),
+                          Text(
+                            localization.encore_switch_description,
+                            style: textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                              fontStyle: FontStyle.italic,
                             ),
+                          ),
+                          const SizedBox(height: 8),
+                          SwitchListTile(
+                            title: Text(localization.device_mitigation_title),
+                            subtitle: Text(
+                                localization.device_mitigation_description),
+                            value: _deviceMitigationEnabled,
+                            onChanged: _isEncoreConfigUpdating
+                                ? null
+                                : (bool value) => _updateEncoreTweak(
+                                    'DEVICE_MITIGATION', value),
+                            secondary: _isEncoreConfigUpdating
+                                ? SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2))
+                                : Icon(Icons.security_update_warning),
+                            activeColor: colorScheme.primary,
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                          SwitchListTile(
+                            title: Text(localization.lite_mode_title),
+                            subtitle: Text(localization.lite_mode_description),
+                            value: _liteModeEnabled,
+                            onChanged: _isEncoreConfigUpdating
+                                ? null
+                                : (bool value) =>
+                                    _updateEncoreTweak('LITE_MODE', value),
+                            secondary: _isEncoreConfigUpdating
+                                ? SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2))
+                                : Icon(Icons.flourescent),
+                            activeColor: colorScheme.primary,
+                            contentPadding: EdgeInsets.zero,
                           ),
                         ],
-                      ],
+                      ),
                     ),
                   ),
-                ),
-                // --- 4. game.txt Editor Card ---
-                Card(
-                  elevation: cardElevation,
-                  margin: cardMargin,
-                  shape: cardShape,
-                  color: colorScheme.surfaceContainerHighest,
-                  child: Padding(
-                    padding: cardPadding,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          localization.edit_game_txt_title,
-                          style: textTheme.titleLarge?.copyWith(
-                              color: colorScheme.onSurface,
-                              fontWeight: FontWeight.w600),
-                        ),
-                        const SizedBox(height: 8),
-                        TextField(
-                          controller: _gameTxtController,
-                          maxLines: 10,
-                          minLines: 5,
-                          enabled: !_isGameTxtLoading && !_isGameTxtSaving,
-                          decoration: InputDecoration(
-                            hintText: localization.game_txt_hint,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(
-                                  color: colorScheme.outline, width: 1.0),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(
-                                  color: colorScheme.outline, width: 1.0),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(
-                                  color: colorScheme.primary, width: 2.0),
-                            ),
-                            filled: true,
-                            fillColor: colorScheme.surfaceContainerLow,
-                            contentPadding: const EdgeInsets.all(12),
+                  Card(
+                    elevation: cardElevation,
+                    margin: cardMargin,
+                    shape: cardShape,
+                    color: colorScheme.surfaceContainerHighest,
+                    child: Padding(
+                      padding: cardPadding,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            localization.dnd_title,
+                            style: textTheme.titleLarge?.copyWith(
+                                color: colorScheme.onSurface,
+                                fontWeight: FontWeight.w600),
                           ),
-                          style: textTheme.bodyMedium
-                              ?.copyWith(color: colorScheme.onSurface),
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            // Removed the "Reading File" button
-                            Expanded(
+                          const SizedBox(height: 8),
+                          Text(
+                            localization.dnd_description,
+                            style: textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          SwitchListTile(
+                            title: Text(localization.dnd_toggle_title),
+                            value: _dndEnabled,
+                            onChanged: _isDndConfigUpdating
+                                ? null
+                                : (bool value) {
+                                    _toggleDnd(value);
+                                  },
+                            secondary: _isDndConfigUpdating
+                                ? SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2))
+                                : Icon(Icons.bedtime),
+                            activeColor: colorScheme.primary,
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Card(
+                    elevation: cardElevation,
+                    margin: cardMargin,
+                    shape: cardShape,
+                    color: colorScheme.surfaceContainerHighest,
+                    child: Padding(
+                      padding: cardPadding,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            localization.hamada_ai,
+                            style: textTheme.titleLarge?.copyWith(
+                                color: colorScheme.onSurface,
+                                fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            localization.hamada_ai_description,
+                            style: textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          SwitchListTile(
+                            title: Text(localization.hamada_ai_toggle_title),
+                            value: _hamadaAiEnabled,
+                            onChanged: isHamadaBusy
+                                ? null
+                                : (bool value) {
+                                    _toggleHamadaAI(value);
+                                  },
+                            secondary: _isHamadaCommandRunning
+                                ? SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2))
+                                : Icon(Icons.psychology_alt),
+                            activeColor: colorScheme.primary,
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                          SwitchListTile(
+                            title: Text(localization.hamada_ai_start_on_boot),
+                            value: _hamadaStartOnBoot,
+                            onChanged: _isServiceFileUpdating
+                                ? null
+                                : (bool value) {
+                                    _setHamadaStartOnBoot(value);
+                                  },
+                            secondary: _isServiceFileUpdating
+                                ? SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2))
+                                : Icon(Icons.rocket_launch),
+                            activeColor: colorScheme.primary,
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Card(
+                    elevation: cardElevation,
+                    margin: cardMargin,
+                    shape: cardShape,
+                    color: colorScheme.surfaceContainerHighest,
+                    child: Padding(
+                      padding: cardPadding,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            localization.downscale_resolution,
+                            style: textTheme.titleLarge?.copyWith(
+                                color: colorScheme.onSurface,
+                                fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 8),
+                          if (!_resolutionServiceAvailable)
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 8.0),
+                              child: Text(
+                                localization.resolution_unavailable_message,
+                                style: textTheme.bodyMedium?.copyWith(
+                                  color: colorScheme.error,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            )
+                          else ...[
+                            Row(
+                              children: [
+                                Icon(Icons.screen_rotation,
+                                    color: colorScheme.onSurfaceVariant),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Slider(
+                                    value: _resolutionValue,
+                                    min: 0,
+                                    max: (_resolutionPercentages.length - 1)
+                                        .toDouble(),
+                                    divisions:
+                                        _resolutionPercentages.length - 1,
+                                    label: _getCurrentPercentageLabel(),
+                                    onChanged: _isResolutionChanging
+                                        ? null
+                                        : (double value) {
+                                            setState(() {
+                                              _resolutionValue = value;
+                                            });
+                                          },
+                                    onChangeEnd: _isResolutionChanging
+                                        ? null
+                                        : (double value) {
+                                            _applyResolution(value);
+                                          },
+                                    activeColor: colorScheme.primary,
+                                    inactiveColor: colorScheme.onSurfaceVariant
+                                        .withOpacity(0.3),
+                                  ),
+                                ),
+                                Text(_getCurrentPercentageLabel(),
+                                    style: textTheme.bodyLarge?.copyWith(
+                                        color: colorScheme.onSurface)),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              width: double.infinity,
                               child: ElevatedButton.icon(
                                 style: ElevatedButton.styleFrom(
                                   padding:
                                       const EdgeInsets.symmetric(vertical: 12),
-                                  backgroundColor: colorScheme.primaryContainer,
+                                  backgroundColor:
+                                      colorScheme.secondaryContainer,
                                   foregroundColor:
-                                      colorScheme.onPrimaryContainer,
+                                      colorScheme.onSecondaryContainer,
                                   shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(8)),
                                 ),
-                                onPressed: _isGameTxtSaving
+                                onPressed: _isResolutionChanging
                                     ? null
-                                    : () => _saveGameTxt(),
-                                icon: _isGameTxtSaving
+                                    : () => _resetResolution(),
+                                icon: _isResolutionChanging
                                     ? SizedBox(
                                         width: 20,
                                         height: 20,
                                         child: CircularProgressIndicator(
                                             strokeWidth: 2))
-                                    : Icon(Icons.save),
-                                label: Text(localization.save_button),
+                                    : Icon(Icons.refresh),
+                                label: Text(localization.reset_resolution),
                               ),
                             ),
                           ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                // --- 5. Bypass Charging Card ---
-                Card(
-                  elevation: cardElevation,
-                  margin: cardMargin,
-                  shape: cardShape,
-                  color: colorScheme.surfaceContainerHighest,
-                  child: Padding(
-                    padding: cardPadding,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          localization.bypass_charging_title,
-                          style: textTheme.titleLarge?.copyWith(
-                              color: colorScheme.onSurface,
-                              fontWeight: FontWeight.w600),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          localization.bypass_charging_description,
-                          style: textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        if (_bypassSupportStatus.isNotEmpty) ...[
-                          Center(
-                            child: Text(
-                              _bypassSupportStatus,
-                              style: textTheme.bodyMedium?.copyWith(
-                                color: _isBypassSupported
-                                    ? Colors.green
-                                    : colorScheme.error,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
                         ],
-                        SwitchListTile(
-                          title: Text(localization.bypass_charging_toggle),
-                          value: _bypassEnabled,
-                          onChanged: (_isTogglingBypass || !_isBypassSupported)
-                              ? null
-                              : (bool value) {
-                                  _toggleBypassCharging(value);
-                                },
-                          secondary: _isTogglingBypass
-                              ? SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child:
-                                      CircularProgressIndicator(strokeWidth: 2))
-                              : Icon(Icons.battery_charging_full),
-                          activeColor: colorScheme.primary,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                      ],
+                      ),
                     ),
                   ),
-                ),
-                Card(
-                  elevation: cardElevation,
-                  margin: cardMargin,
-                  shape: cardShape,
-                  color: colorScheme.surfaceContainerHighest,
-                  child: Padding(
-                    padding: cardPadding,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          localization.background_settings_title,
-                          style: textTheme.titleLarge?.copyWith(
-                              color: colorScheme.onSurface,
-                              fontWeight: FontWeight.w600),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          localization.background_settings_description,
-                          style: textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                            fontStyle: FontStyle.italic,
+                  Card(
+                    elevation: cardElevation,
+                    margin: cardMargin,
+                    shape: cardShape,
+                    color: colorScheme.surfaceContainerHighest,
+                    child: Padding(
+                      padding: cardPadding,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            localization.edit_game_txt_title,
+                            style: textTheme.titleLarge?.copyWith(
+                                color: colorScheme.onSurface,
+                                fontWeight: FontWeight.w600),
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        if (_isBackgroundSettingsLoading)
-                          Center(child: CircularProgressIndicator())
-                        else ...[
-                          // Opacity Slider
-                          Text(localization.opacity_slider_label,
-                              style: textTheme.bodyMedium),
-                          Slider(
-                            value: _backgroundOpacity,
-                            min: 0.0,
-                            max: 1.0,
-                            divisions: 20,
-                            label:
-                                (_backgroundOpacity * 100).toStringAsFixed(0) +
-                                    '%',
-                            onChanged: (value) {
-                              setState(() => _backgroundOpacity = value);
-                            },
-                            onChangeEnd: (value) {
-                              _updateOpacity(value);
-                            },
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: _gameTxtController,
+                            maxLines: 10,
+                            minLines: 5,
+                            enabled: !_isGameTxtLoading && !_isGameTxtSaving,
+                            decoration: InputDecoration(
+                              hintText: localization.game_txt_hint,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(
+                                    color: colorScheme.outline, width: 1.0),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(
+                                    color: colorScheme.outline, width: 1.0),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(
+                                    color: colorScheme.primary, width: 2.0),
+                              ),
+                              filled: true,
+                              fillColor: colorScheme.surfaceContainerLow,
+                              contentPadding: const EdgeInsets.all(12),
+                            ),
+                            style: textTheme.bodyMedium
+                                ?.copyWith(color: colorScheme.onSurface),
                           ),
                           const SizedBox(height: 16),
-                          // Action Buttons
                           Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
                             children: [
                               Expanded(
                                 child: ElevatedButton.icon(
-                                  onPressed: _pickAndSetImage,
-                                  icon: Icon(Icons.image),
-                                  label: Text(localization.select_image_button),
                                   style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12),
                                     backgroundColor:
                                         colorScheme.primaryContainer,
                                     foregroundColor:
                                         colorScheme.onPrimaryContainer,
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8)),
                                   ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed: _resetBackground,
-                                  icon: Icon(Icons.refresh),
-                                  label: Text(
-                                      localization.reset_background_button),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: colorScheme.errorContainer,
-                                    foregroundColor:
-                                        colorScheme.onErrorContainer,
-                                  ),
+                                  onPressed: _isGameTxtSaving
+                                      ? null
+                                      : () => _saveGameTxt(),
+                                  icon: _isGameTxtSaving
+                                      ? SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                              strokeWidth: 2))
+                                      : Icon(Icons.save),
+                                  label: Text(localization.save_button),
                                 ),
                               ),
                             ],
                           ),
                         ],
-                      ],
+                      ),
                     ),
                   ),
-                ),
-              ],
+                  Card(
+                    elevation: cardElevation,
+                    margin: cardMargin,
+                    shape: cardShape,
+                    color: colorScheme.surfaceContainerHighest,
+                    child: Padding(
+                      padding: cardPadding,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            localization.bypass_charging_title,
+                            style: textTheme.titleLarge?.copyWith(
+                                color: colorScheme.onSurface,
+                                fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            localization.bypass_charging_description,
+                            style: textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          if (_bypassSupportStatus.isNotEmpty) ...[
+                            Center(
+                              child: Text(
+                                _bypassSupportStatus,
+                                style: textTheme.bodyMedium?.copyWith(
+                                  color: _isBypassSupported
+                                      ? Colors.green
+                                      : colorScheme.error,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                          SwitchListTile(
+                            title: Text(localization.bypass_charging_toggle),
+                            value: _bypassEnabled,
+                            onChanged:
+                                (_isTogglingBypass || !_isBypassSupported)
+                                    ? null
+                                    : (bool value) {
+                                        _toggleBypassCharging(value);
+                                      },
+                            secondary: _isTogglingBypass
+                                ? SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2))
+                                : Icon(Icons.battery_charging_full),
+                            activeColor: colorScheme.primary,
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Card(
+                    elevation: cardElevation,
+                    margin: cardMargin,
+                    shape: cardShape,
+                    color: colorScheme.surfaceContainerHighest,
+                    child: Padding(
+                      padding: cardPadding,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            localization.background_settings_title,
+                            style: textTheme.titleLarge?.copyWith(
+                                color: colorScheme.onSurface,
+                                fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            localization.background_settings_description,
+                            style: textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          if (_isBackgroundSettingsLoading)
+                            Center(child: CircularProgressIndicator())
+                          else ...[
+                            Text(localization.opacity_slider_label,
+                                style: textTheme.bodyMedium),
+                            Slider(
+                              value: _backgroundOpacity,
+                              min: 0.0,
+                              max: 1.0,
+                              divisions: 20,
+                              label: (_backgroundOpacity * 100)
+                                      .toStringAsFixed(0) +
+                                  '%',
+                              onChanged: (value) {
+                                setState(() => _backgroundOpacity = value);
+                              },
+                              onChangeEnd: (value) {
+                                _updateOpacity(value);
+                              },
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: _pickAndSetImage,
+                                    icon: Icon(Icons.image),
+                                    label:
+                                        Text(localization.select_image_button),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor:
+                                          colorScheme.primaryContainer,
+                                      foregroundColor:
+                                          colorScheme.onPrimaryContainer,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: _resetBackground,
+                                    icon: Icon(Icons.refresh),
+                                    label: Text(
+                                        localization.reset_background_button),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor:
+                                          colorScheme.errorContainer,
+                                      foregroundColor:
+                                          colorScheme.onErrorContainer,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

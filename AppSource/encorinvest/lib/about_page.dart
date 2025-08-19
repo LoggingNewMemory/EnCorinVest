@@ -16,20 +16,18 @@ class _AboutPageState extends State<AboutPage> {
   String _cpuInfo = 'Loading...';
   String _osVersion = 'Loading...';
   bool _isLoading = true;
+  bool _isContentVisible = false;
 
-  // --- NEW: State for background image ---
   String? _backgroundImagePath;
   double _backgroundOpacity = 0.2;
-  // --- END NEW ---
 
   @override
   void initState() {
     super.initState();
     _loadDeviceInfo();
-    _loadBackgroundSettings(); // --- NEW: Load background settings on start ---
+    _loadBackgroundSettings();
   }
 
-  // --- NEW: Method to load background settings from SharedPreferences ---
   Future<void> _loadBackgroundSettings() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -42,10 +40,9 @@ class _AboutPageState extends State<AboutPage> {
         });
       }
     } catch (e) {
-      print("Error loading background settings in about_page: $e");
+      // Error loading background settings
     }
   }
-  // --- END NEW ---
 
   Future<bool> _checkRootAccessInAbout() async {
     try {
@@ -95,7 +92,6 @@ class _AboutPageState extends State<AboutPage> {
         deviceModel = 'Error';
         cpuInfo = 'Error';
         osVersion = 'Error';
-        print("Error loading device info: $e");
       }
     } else {
       deviceModel = 'Root Required';
@@ -109,11 +105,11 @@ class _AboutPageState extends State<AboutPage> {
         _cpuInfo = cpuInfo.isEmpty ? 'N/A' : cpuInfo;
         _osVersion = osVersion.isEmpty ? 'N/A' : osVersion;
         _isLoading = false;
+        _isContentVisible = true;
       });
     }
   }
 
-  // Helper to get credit strings dynamically
   List<String> _getCredits(AppLocalizations localization) {
     return [
       localization.credits_1,
@@ -133,19 +129,14 @@ class _AboutPageState extends State<AboutPage> {
     final List<String> credits = _getCredits(localization);
 
     return Scaffold(
-      // --- MODIFIED: Make background transparent ---
       backgroundColor: Colors.transparent,
-      // --- END MODIFIED ---
       appBar: AppBar(
-        // --- MODIFIED: Make AppBar transparent ---
         backgroundColor: Colors.transparent,
         elevation: 0,
-        // --- END MODIFIED ---
       ),
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // --- NEW: Background Image Layer ---
           if (_backgroundImagePath != null && _backgroundImagePath!.isNotEmpty)
             Opacity(
               opacity: _backgroundOpacity,
@@ -153,83 +144,86 @@ class _AboutPageState extends State<AboutPage> {
                 File(_backgroundImagePath!),
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) {
-                  print("Error loading background image in about_page: $error");
                   return Container(color: Colors.transparent);
                 },
               ),
             ),
-          // --- END NEW ---
           Padding(
             padding:
                 const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
             child: _isLoading
                 ? Center(child: CircularProgressIndicator())
-                : SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Card(
-                          elevation: 0,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .surfaceContainerHighest,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildInfoRow(
-                                    localization.device, _deviceModel),
-                                _buildInfoRow(localization.cpu, _cpuInfo),
-                                _buildInfoRow(localization.os, _osVersion),
-                              ],
+                : AnimatedOpacity(
+                    opacity: _isContentVisible ? 1.0 : 0.0,
+                    duration: Duration(milliseconds: 500),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Card(
+                            elevation: 0,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildInfoRow(
+                                      localization.device, _deviceModel),
+                                  _buildInfoRow(localization.cpu, _cpuInfo),
+                                  _buildInfoRow(localization.os, _osVersion),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                        SizedBox(height: 20),
-                        Text(
-                          localization.about_title,
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleLarge
-                              ?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  decoration: TextDecoration.underline),
-                        ),
-                        SizedBox(height: 15),
-                        ...credits.map((creditText) => Padding(
-                              padding: EdgeInsets.symmetric(vertical: 3),
-                              child: Text(
-                                '• $creditText',
-                                style: Theme.of(context).textTheme.bodyMedium,
-                              ),
-                            )),
-                        SizedBox(height: 20),
-                        Text(
-                          localization.about_note,
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
-                              ?.copyWith(fontStyle: FontStyle.italic),
-                        ),
-                        SizedBox(height: 20),
-                        Center(
-                          child: Text(
-                            localization.about_quote,
+                          SizedBox(height: 20),
+                          Text(
+                            localization.about_title,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge
+                                ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    decoration: TextDecoration.underline),
+                          ),
+                          SizedBox(height: 15),
+                          ...credits.map((creditText) => Padding(
+                                padding: EdgeInsets.symmetric(vertical: 3),
+                                child: Text(
+                                  '• $creditText',
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                              )),
+                          SizedBox(height: 20),
+                          Text(
+                            localization.about_note,
                             style: Theme.of(context)
                                 .textTheme
                                 .bodyMedium
-                                ?.copyWith(
-                                  fontStyle: FontStyle.italic,
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
-                            textAlign: TextAlign.center,
+                                ?.copyWith(fontStyle: FontStyle.italic),
                           ),
-                        ),
-                        SizedBox(height: 20),
-                      ],
+                          SizedBox(height: 20),
+                          Center(
+                            child: Text(
+                              localization.about_quote,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    fontStyle: FontStyle.italic,
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
+                                  ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                          SizedBox(height: 20),
+                        ],
+                      ),
                     ),
                   ),
           ),
