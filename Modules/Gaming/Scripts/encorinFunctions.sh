@@ -26,19 +26,6 @@ echo 3 > /proc/sys/vm/drop_caches
 am kill-all
 }
 
-# Replace encore Governor logic
-
-if [ -f "$FIRST_POLICY/scaling_available_governors" ]; then
-    if grep -q 'schedhorizon' "$FIRST_POLICY/scaling_available_governors"; then
-        DEFAULT_CPU_GOV="schedhorizon"
-    else
-        DEFAULT_CPU_GOV="schedutil"
-    fi
-else
-    # Fallback if no policies found
-    DEFAULT_CPU_GOV="schedutil"
-fi
-
 # Taken from encore_utility
 # Thanks to Rem01 Gaming, definitely helping to reduce suddent lag bcs of notification
 dnd_off() {
@@ -514,6 +501,19 @@ encore_balanced_common() {
 	# Restore min CPU frequency
 	change_cpu_gov "$DEFAULT_CPU_GOV"
 	[ -d /proc/ppm ] && cpufreq_ppm_unlock || cpufreq_unlock
+
+	# Replace encore Governor logic
+
+	if [ -f "$FIRST_POLICY/scaling_available_governors" ]; then
+		if grep -q 'schedhorizon' "$FIRST_POLICY/scaling_available_governors"; then
+			DEFAULT_CPU_GOV="schedhorizon"
+		else
+			DEFAULT_CPU_GOV="schedutil"
+		fi
+	else
+		# Fallback if no policies found
+		DEFAULT_CPU_GOV="schedutil"
+	fi
 
 	# I/O Tweaks
 	for dir in /sys/block/mmcblk0 /sys/block/mmcblk1 /sys/block/sd*; do
