@@ -91,5 +91,9 @@
     "opacity_slider_label": "Background Opacity",
     "select_theme": "Select Theme:",
     "theme_classic": "Classic",
-    "theme_modern": "Modern"
+    "theme_modern": "Modern",
+    "custom_governor_title": "Custom Governor",
+    "custom_governor_description": "Set custom CPU governor, This will set the governor in balanced mode and LITE mode",
+    "loading_governors": "Loading governors...",
+    "no_governor_selected": "None"
 }

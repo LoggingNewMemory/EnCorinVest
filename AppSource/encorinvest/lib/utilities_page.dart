@@ -18,6 +18,8 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
   final String _configFilePath = '/data/adb/modules/EnCorinVest/encorin.txt';
   final String _encoreTweaksFilePath =
       '/data/adb/modules/EnCorinVest/Scripts/encoreTweaks.sh';
+  final String _encorinFunctionFilePath =
+      '/data/adb/modules/EnCorinVest/Scripts/encorinFunctions.sh';
   final String _hamadaMarker = '# Start HamadaAI (Default is Disabled)';
   final String _hamadaProcessName = 'HamadaAI';
   final String _hamadaStartCommand = 'HamadaAI';
@@ -56,6 +58,12 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
   int _originalDensity = 0;
   final List<int> _resolutionPercentages = [50, 60, 70, 80, 90, 100];
 
+  // Governor settings
+  List<String> _availableGovernors = [];
+  String? _selectedGovernor;
+  bool _isLoadingGovernors = true;
+  bool _isSavingGovernor = false;
+
   @override
   void initState() {
     super.initState();
@@ -71,6 +79,8 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     await _checkHamadaStartOnBoot();
     await _loadGameTxt();
     await _loadInitialBypassState();
+    await _loadAvailableGovernors();
+    await _loadSelectedGovernor();
     if (mounted) {
       setState(() {
         _isContentVisible = true;
@@ -166,6 +176,92 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     }
   }
 
+  Future<void> _loadAvailableGovernors() async {
+    if (!await _checkRootAccess() || !mounted) return;
+    setState(() => _isLoadingGovernors = true);
+    try {
+      final result = await _runRootCommandAndWait(
+          'cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors');
+      if (result.exitCode == 0 && result.stdout.toString().isNotEmpty) {
+        final governors = result.stdout.toString().trim().split(' ');
+        if (mounted) {
+          setState(() {
+            _availableGovernors = governors;
+          });
+        }
+      }
+    } catch (e) {
+      // Error loading governors
+    } finally {
+      if (mounted) setState(() => _isLoadingGovernors = false);
+    }
+  }
+
+  Future<void> _loadSelectedGovernor() async {
+    if (!await _checkRootAccess() || !mounted) return;
+    try {
+      final result = await _runRootCommandAndWait('cat $_configFilePath');
+      if (result.exitCode == 0) {
+        final content = result.stdout.toString();
+        final match =
+            RegExp(r'^GOV=(.*)$', multiLine: true).firstMatch(content);
+        if (match != null) {
+          final gov = match.group(1)?.trim();
+          if (gov != null && gov.isNotEmpty) {
+            if (mounted) {
+              setState(() {
+                _selectedGovernor = gov;
+              });
+            }
+          }
+        }
+      }
+    } catch (e) {
+      // Error loading selected governor
+    }
+  }
+
+  Future<void> _saveGovernor(String? governor) async {
+    if (!await _checkRootAccess() || !mounted) return;
+    setState(() => _isSavingGovernor = true);
+    final valueString = governor ?? '';
+
+    try {
+      final readResult = await _runRootCommandAndWait('cat $_configFilePath');
+      if (readResult.exitCode != 0) {
+        throw Exception('Failed to read config file');
+      }
+
+      String content = readResult.stdout.toString();
+
+      if (content.contains(RegExp(r'^GOV=', multiLine: true))) {
+        content = content.replaceAll(
+          RegExp(r'^GOV=.*$', multiLine: true),
+          'GOV=$valueString',
+        );
+      } else {
+        content = content.trimRight();
+        if (content.isNotEmpty) content += '\n';
+        content += 'GOV=$valueString\n';
+      }
+
+      String base64Content = base64Encode(utf8.encode(content));
+      final writeCommand =
+          '''echo '$base64Content' | base64 -d > $_configFilePath''';
+      final writeResult = await _runRootCommandAndWait(writeCommand);
+
+      if (writeResult.exitCode == 0) {
+        if (mounted) setState(() => _selectedGovernor = governor);
+      } else {
+        throw Exception('Failed to write to config file');
+      }
+    } catch (e) {
+      // Error saving governor
+    } finally {
+      if (mounted) setState(() => _isSavingGovernor = false);
+    }
+  }
+
   Future<void> _loadEncoreSwitchState() async {
     if (!await _checkRootAccess() || !mounted) return;
 
@@ -187,12 +283,16 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
     }
   }
 
+  // UPDATED FUNCTION
   Future<void> _updateEncoreTweak(String key, bool enable) async {
     if (!await _checkRootAccess() || !mounted) return;
 
     setState(() => _isEncoreConfigUpdating = true);
 
     try {
+      final value = enable ? '1' : '0';
+
+      // --- 1. Update encoreTweaks.sh (existing logic) ---
       final readResult =
           await _runRootCommandAndWait('cat $_encoreTweaksFilePath');
       if (readResult.exitCode != 0) {
@@ -200,8 +300,6 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
       }
 
       String content = readResult.stdout.toString();
-      final value = enable ? '1' : '0';
-
       content = content.replaceAll(
         RegExp('^$key=.*\$', multiLine: true),
         '$key=$value',
@@ -212,11 +310,21 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
           '''echo '$base64Content' | base64 -d > $_encoreTweaksFilePath''';
 
       final writeResult = await _runRootCommandAndWait(writeCmd);
-
       if (writeResult.exitCode != 0) {
         throw Exception('Failed to write to encoreTweaks.sh');
       }
 
+      // --- 2. Update encorinFuction.sh (new logic) ---
+      final sedCommand =
+          "sed -i 's|^$key=.*|$key=$value|' $_encorinFunctionFilePath";
+      final sedResult = await _runRootCommandAndWait(sedCommand);
+      if (sedResult.exitCode != 0) {
+        // Optionally, you could try to revert the change to encoreTweaks.sh here
+        throw Exception(
+            'Failed to write to encorinFuction.sh. Error: ${sedResult.stderr}');
+      }
+
+      // --- 3. Update UI State ---
       if (mounted) {
         setState(() {
           if (key == 'DEVICE_MITIGATION') {
@@ -228,6 +336,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
       }
     } catch (e) {
       if (mounted) {
+        // Revert UI on failure
         setState(() {
           if (key == 'DEVICE_MITIGATION') {
             _deviceMitigationEnabled = !enable;
@@ -235,6 +344,8 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
             _liteModeEnabled = !enable;
           }
         });
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Failed to update settings: ${e.toString()}')));
       }
     } finally {
       if (mounted) setState(() => _isEncoreConfigUpdating = false);
@@ -781,6 +892,87 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                             activeColor: colorScheme.primary,
                             contentPadding: EdgeInsets.zero,
                           ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Card(
+                    elevation: cardElevation,
+                    margin: cardMargin,
+                    shape: cardShape,
+                    color: colorScheme.surfaceContainerHighest,
+                    child: Padding(
+                      padding: cardPadding,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            localization.custom_governor_title,
+                            style: textTheme.titleLarge?.copyWith(
+                                color: colorScheme.onSurface,
+                                fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            localization.custom_governor_description,
+                            style: textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          if (_isLoadingGovernors)
+                            Center(
+                                child: Column(
+                              children: [
+                                CircularProgressIndicator(),
+                                const SizedBox(height: 8),
+                                Text(localization.loading_governors),
+                              ],
+                            ))
+                          else if (_availableGovernors.isEmpty)
+                            Center(
+                              child: Text(
+                                'No governors found or root access denied.',
+                                style: TextStyle(color: colorScheme.error),
+                              ),
+                            )
+                          else
+                            DropdownButtonFormField<String>(
+                              value: _availableGovernors
+                                      .contains(_selectedGovernor)
+                                  ? _selectedGovernor
+                                  : null,
+                              hint: Text(localization.no_governor_selected),
+                              isExpanded: true,
+                              decoration: InputDecoration(
+                                contentPadding:
+                                    const EdgeInsets.symmetric(horizontal: 12),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              onChanged: _isSavingGovernor
+                                  ? null
+                                  : (String? newValue) {
+                                      _saveGovernor(newValue);
+                                    },
+                              items: [
+                                DropdownMenuItem<String>(
+                                  value: null,
+                                  child:
+                                      Text(localization.no_governor_selected),
+                                ),
+                                ..._availableGovernors
+                                    .map<DropdownMenuItem<String>>(
+                                        (String value) {
+                                  return DropdownMenuItem<String>(
+                                    value: value,
+                                    child: Text(value),
+                                  );
+                                }).toList(),
+                              ],
+                            ),
                         ],
                       ),
                     ),

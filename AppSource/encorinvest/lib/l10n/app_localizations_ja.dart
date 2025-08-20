@@ -268,4 +268,17 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get theme_modern => 'モダン';
+
+  @override
+  String get custom_governor_title => 'カスタムガバナー';
+
+  @override
+  String get custom_governor_description =>
+      'カスタムCPUガバナーを設定します。これにより、バランスモードとLITEモードでガバナーが設定されます';
+
+  @override
+  String get loading_governors => 'ガバナーを読み込み中...';
+
+  @override
+  String get no_governor_selected => 'なし';
 }

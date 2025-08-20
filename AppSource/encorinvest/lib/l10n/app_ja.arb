@@ -91,5 +91,9 @@
     "opacity_slider_label": "背景の不透明度",
     "select_theme": "テーマを選択:",
     "theme_classic": "クラシック",
-    "theme_modern": "モダン"
+    "theme_modern": "モダン",
+    "custom_governor_title": "カスタムガバナー",
+    "custom_governor_description": "カスタムCPUガバナーを設定します。これにより、バランスモードとLITEモードでガバナーが設定されます",
+    "loading_governors": "ガバナーを読み込み中...",
+    "no_governor_selected": "なし"
 }

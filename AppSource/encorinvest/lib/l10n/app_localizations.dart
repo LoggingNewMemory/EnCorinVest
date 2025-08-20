@@ -615,6 +615,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Modern'**
   String get theme_modern;
+
+  /// No description provided for @custom_governor_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Governor'**
+  String get custom_governor_title;
+
+  /// No description provided for @custom_governor_description.
+  ///
+  /// In en, this message translates to:
+  /// **'Set custom CPU governor, This will set the governor in balanced mode and LITE mode'**
+  String get custom_governor_description;
+
+  /// No description provided for @loading_governors.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading governors...'**
+  String get loading_governors;
+
+  /// No description provided for @no_governor_selected.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get no_governor_selected;
 }
 
 class _AppLocalizationsDelegate

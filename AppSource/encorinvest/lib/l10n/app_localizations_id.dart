@@ -281,4 +281,17 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get theme_modern => 'Modern';
+
+  @override
+  String get custom_governor_title => 'Gubernur Kustom';
+
+  @override
+  String get custom_governor_description =>
+      'Atur gubernur CPU kustom, Ini akan mengatur gubernur dalam mode seimbang dan mode LITE';
+
+  @override
+  String get loading_governors => 'Memuat gubernur...';
+
+  @override
+  String get no_governor_selected => 'Tidak Ada';
 }
