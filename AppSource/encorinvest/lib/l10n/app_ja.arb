@@ -93,7 +93,7 @@
     "theme_classic": "クラシック",
     "theme_modern": "モダン",
     "custom_governor_title": "カスタムガバナー",
-    "custom_governor_description": "カスタムCPUガバナーを設定します。これにより、バランスモードとLITEモードでガバナーが設定されます",
+    "custom_governor_description": "カスタムCPUガバナーを設定します。これにより、バランスモードでガバナーが設定されます",
     "loading_governors": "ガバナーを読み込み中...",
     "no_governor_selected": "なし"
 }

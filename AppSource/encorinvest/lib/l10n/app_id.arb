@@ -93,7 +93,7 @@
     "theme_classic": "Klasik",
     "theme_modern": "Modern",
     "custom_governor_title": "Gubernur Kustom",
-    "custom_governor_description": "Atur gubernur CPU kustom, Ini akan mengatur gubernur dalam mode seimbang dan mode LITE",
+    "custom_governor_description": "Atur gubernur CPU kustom, Ini akan mengatur gubernur dalam mode seimbang",
     "loading_governors": "Memuat gubernur...",
     "no_governor_selected": "Tidak Ada"
 }

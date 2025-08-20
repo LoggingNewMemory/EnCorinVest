@@ -274,7 +274,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get custom_governor_description =>
-      'カスタムCPUガバナーを設定します。これにより、バランスモードとLITEモードでガバナーが設定されます';
+      'カスタムCPUガバナーを設定します。これにより、バランスモードでガバナーが設定されます';
 
   @override
   String get loading_governors => 'ガバナーを読み込み中...';

@@ -625,7 +625,7 @@ abstract class AppLocalizations {
   /// No description provided for @custom_governor_description.
   ///
   /// In en, this message translates to:
-  /// **'Set custom CPU governor, This will set the governor in balanced mode and LITE mode'**
+  /// **'Set custom CPU governor, This will set the governor in balanced mode'**
   String get custom_governor_description;
 
   /// No description provided for @loading_governors.

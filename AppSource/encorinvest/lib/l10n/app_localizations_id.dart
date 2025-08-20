@@ -287,7 +287,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get custom_governor_description =>
-      'Atur gubernur CPU kustom, Ini akan mengatur gubernur dalam mode seimbang dan mode LITE';
+      'Atur gubernur CPU kustom, Ini akan mengatur gubernur dalam mode seimbang';
 
   @override
   String get loading_governors => 'Memuat gubernur...';

@@ -284,7 +284,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get custom_governor_description =>
-      'Set custom CPU governor, This will set the governor in balanced mode and LITE mode';
+      'Set custom CPU governor, This will set the governor in balanced mode';
 
   @override
   String get loading_governors => 'Loading governors...';

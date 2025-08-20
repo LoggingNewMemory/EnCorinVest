@@ -93,7 +93,7 @@
     "theme_classic": "Classic",
     "theme_modern": "Modern",
     "custom_governor_title": "Custom Governor",
-    "custom_governor_description": "Set custom CPU governor, This will set the governor in balanced mode and LITE mode",
+    "custom_governor_description": "Set custom CPU governor, This will set the governor in balanced mode",
     "loading_governors": "Loading governors...",
     "no_governor_selected": "None"
 }
