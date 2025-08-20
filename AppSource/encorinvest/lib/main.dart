@@ -116,6 +116,7 @@ class _MyAppState extends State<MyApp> {
           GlobalCupertinoLocalizations.delegate,
         ],
         home: Scaffold(
+          backgroundColor: Colors.transparent,
           body: Stack(
             fit: StackFit.expand,
             children: [
