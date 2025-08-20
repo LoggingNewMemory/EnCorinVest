@@ -498,12 +498,15 @@ encore_balanced_common() {
 		devfreq_unlock "$path"
 	done &
 
-	# Reads GOV from encorin.txt, falls back to schedutil if not set.
+	# Reads GOV from encorin.txt, falls back to schedhorizon or schedutil if not set.
 	CONFIG_FILE="/data/adb/modules/EnCorinVest/encorin.txt"
 	CUSTOM_GOV=$(grep "^GOV=" "$CONFIG_FILE" | cut -d'=' -f2 | tr -d ' ')
+	AVAILABLE_GOVS=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors)
 
 	if [ -n "$CUSTOM_GOV" ]; then
 		change_cpu_gov "$CUSTOM_GOV"
+	elif [[ "$AVAILABLE_GOVS" == *"schedhorizon"* ]]; then
+		change_cpu_gov "schedhorizon"
 	else
 		change_cpu_gov "schedutil"
 	fi
