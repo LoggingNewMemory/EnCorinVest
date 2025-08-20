@@ -61,73 +61,43 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    _loadLocale();
-    _loadBackgroundSettings();
-    _loadThemePreference();
+    _loadAllPreferences();
   }
 
-  void _loadLocale() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String languageCode = prefs.getString('language_code') ?? 'en';
+  Future<void> _loadAllPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+
+    final languageCode = prefs.getString('language_code') ?? 'en';
+    final path = prefs.getString('background_image_path');
+    final opacity = prefs.getDouble('background_opacity') ?? 0.2;
+    final theme = prefs.getString('theme_preference') ?? 'Classic';
+
     setState(() {
       _locale = Locale(languageCode);
+      _backgroundImagePath = path;
+      _backgroundOpacity = opacity;
+      _currentTheme = theme;
     });
   }
 
-  Future<void> _loadBackgroundSettings() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final path = prefs.getString('background_image_path');
-      final opacity = prefs.getDouble('background_opacity') ?? 0.2;
-      if (mounted) {
-        setState(() {
-          _backgroundImagePath = path;
-          _backgroundOpacity = opacity;
-        });
-      }
-    } catch (e) {
-      // Error loading background settings
-    }
-  }
-
-  Future<void> _loadThemePreference() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final theme = prefs.getString('theme_preference') ?? 'Classic';
-      if (mounted) {
-        setState(() {
-          _currentTheme = theme;
-        });
-      }
-    } catch (e) {
-      // Handle error if needed
-    }
-  }
-
-  Future<void> _saveThemePreference(String theme) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('theme_preference', theme);
-    } catch (e) {
-      // Handle error if needed
-    }
-  }
-
-  void setLocale(Locale locale) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setString('language_code', locale.languageCode);
+  Future<void> _updateLocale(Locale locale) async {
+    if (!mounted) return;
     setState(() {
       _locale = locale;
     });
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('language_code', locale.languageCode);
   }
 
-  void changeTheme(String theme) {
-    if (_currentTheme != theme) {
-      setState(() {
-        _currentTheme = theme;
-      });
-      _saveThemePreference(theme);
-    }
+  Future<void> _updateTheme(String theme) async {
+    if (_currentTheme == theme) return;
+    if (!mounted) return;
+    setState(() {
+      _currentTheme = theme;
+    });
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('theme_preference', theme);
   }
 
   @override
@@ -169,10 +139,10 @@ class _MyAppState extends State<MyApp> {
                   ),
                 ),
               MainScreen(
-                onLocaleChange: setLocale,
-                onUtilitiesClosed: _loadBackgroundSettings,
+                onLocaleChange: _updateLocale,
+                onUtilitiesClosed: _loadAllPreferences,
                 currentTheme: _currentTheme,
-                onThemeChange: changeTheme,
+                onThemeChange: _updateTheme,
               ),
             ],
           ),
@@ -202,7 +172,7 @@ class MainScreen extends StatefulWidget {
   _MainScreenState createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   bool _hasRootAccess = false;
   bool _moduleInstalled = false;
   String _moduleVersion = 'Unknown';
@@ -217,52 +187,66 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
-    _loadSelectedLanguage();
+    WidgetsBinding.instance.addObserver(this);
     _initializeState();
-    _hamadaCheckTimer = Timer.periodic(Duration(seconds: 3), (timer) {
-      if (mounted) {
-        _checkHamadaProcessStatus();
-      }
-    });
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _hamadaCheckTimer?.cancel();
     super.dispose();
   }
 
-  void _loadSelectedLanguage() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String languageCode = prefs.getString('language_code') ?? 'en';
-    Map<String, String> codeMap = {
-      'en': 'EN',
-      'id': 'ID',
-      'ja': 'JP',
-    };
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      _initializeState();
+    } else if (state == AppLifecycleState.paused) {
+      _hamadaCheckTimer?.cancel();
+    }
+  }
+
+  void _startHamadaTimer() {
+    _hamadaCheckTimer?.cancel();
     if (mounted) {
-      setState(() {
-        _selectedLanguage = codeMap[languageCode] ?? 'EN';
+      _hamadaCheckTimer = Timer.periodic(Duration(seconds: 3), (timer) {
+        if (mounted) {
+          _checkHamadaProcessStatus();
+        }
       });
     }
+  }
+
+  Future<void> _loadSelectedLanguage() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    final languageCode = prefs.getString('language_code') ?? 'en';
+    const codeMap = {'en': 'EN', 'id': 'ID', 'ja': 'JP'};
+    setState(() {
+      _selectedLanguage = codeMap[languageCode] ?? 'EN';
+    });
   }
 
   Future<void> _initializeState() async {
     if (!mounted) return;
     setState(() => _isLoading = true);
 
-    var config = await ConfigManager.readConfig();
-    if (mounted) {
-      setState(() {
-        _currentMode = config['current_mode'] ?? 'NONE';
-      });
-    }
+    await _loadSelectedLanguage();
 
-    bool rootGranted = await _checkRootAccess();
+    final rootGranted = await _checkRootAccess();
     if (rootGranted) {
+      final config = await ConfigManager.readConfig();
       await _checkHamadaProcessStatus();
       await _checkModuleInstalled();
       if (_moduleInstalled) await _getModuleVersion();
+
+      if (mounted) {
+        setState(() {
+          _currentMode = config['current_mode'] ?? 'NONE';
+        });
+      }
     } else {
       if (mounted) {
         setState(() {
@@ -272,11 +256,13 @@ class _MainScreenState extends State<MainScreen> {
         });
       }
     }
+
     if (mounted) {
       setState(() {
         _isLoading = false;
         _isContentVisible = true;
       });
+      _startHamadaTimer();
     }
   }
 
@@ -299,9 +285,7 @@ class _MainScreenState extends State<MainScreen> {
           await run('su', ['-c', 'pgrep -x HamadaAI'], verbose: false);
       bool isRunning = result.exitCode == 0;
       if (mounted && _isHamadaAiRunning != isRunning) {
-        setState(() {
-          _isHamadaAiRunning = isRunning;
-        });
+        setState(() => _isHamadaAiRunning = isRunning);
       }
     } catch (e) {
       if (mounted && _isHamadaAiRunning) {
@@ -316,9 +300,10 @@ class _MainScreenState extends State<MainScreen> {
       var result = await run(
           'su', ['-c', 'test -d /data/adb/modules/EnCorinVest && echo "yes"'],
           verbose: false);
-      if (mounted)
+      if (mounted) {
         setState(
             () => _moduleInstalled = result.stdout.toString().trim() == 'yes');
+      }
     } catch (e) {
       if (mounted) setState(() => _moduleInstalled = false);
     }
@@ -333,9 +318,10 @@ class _MainScreenState extends State<MainScreen> {
       String line = result.stdout.toString().trim();
       String version =
           line.contains('=') ? line.split('=')[1].trim() : 'Unknown';
-      if (mounted)
+      if (mounted) {
         setState(
             () => _moduleVersion = version.isNotEmpty ? version : 'Unknown');
+      }
     } catch (e) {
       if (mounted) setState(() => _moduleVersion = 'Error');
     }
@@ -359,7 +345,6 @@ class _MainScreenState extends State<MainScreen> {
 
     try {
       await ConfigManager.saveMode(targetMode);
-
       var result = await run(
           'su', ['-c', '/data/adb/modules/EnCorinVest/Scripts/$scriptName'],
           verbose: false);
@@ -384,15 +369,10 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
-  void _changeLanguage(String language) async {
+  void _changeLanguage(String language) {
     if (language == _selectedLanguage) return;
 
-    Map<String, String> localeMap = {
-      'EN': 'en',
-      'ID': 'id',
-      'JP': 'ja',
-    };
-
+    const localeMap = {'EN': 'en', 'ID': 'id', 'JP': 'ja'};
     String localeCode = localeMap[language.toUpperCase()] ?? 'en';
     widget.onLocaleChange(Locale(localeCode));
 
@@ -400,28 +380,36 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   Future<void> _launchURL(String url) async {
-    try {
-      if (!await launchUrl(Uri.parse(url),
-              mode: LaunchMode.externalApplication) &&
-          mounted) {
+    if (!await launchUrl(Uri.parse(url),
+        mode: LaunchMode.externalApplication)) {
+      if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('Could not launch $url')));
       }
-    } catch (e) {
-      if (mounted)
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error launching $url')));
     }
   }
 
   void _navigateToAboutPage() {
     Navigator.push(
-        context, MaterialPageRoute(builder: (context) => AboutPage()));
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => AboutPage(),
+        transitionDuration: Duration.zero,
+        reverseTransitionDuration: Duration.zero,
+      ),
+    );
   }
 
   void _navigateToUtilitiesPage() async {
     await Navigator.push(
-        context, MaterialPageRoute(builder: (context) => UtilitiesPage()));
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            UtilitiesPage(),
+        transitionDuration: Duration.zero,
+        reverseTransitionDuration: Duration.zero,
+      ),
+    );
     _initializeState();
     widget.onUtilitiesClosed();
   }
@@ -437,7 +425,11 @@ class _MainScreenState extends State<MainScreen> {
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: _isLoading
-              ? Center(child: CircularProgressIndicator())
+              ? Center(
+                  child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                  child: LinearProgressIndicator(),
+                ))
               : AnimatedOpacity(
                   opacity: _isContentVisible ? 1.0 : 0.0,
                   duration: Duration(milliseconds: 500),
@@ -454,54 +446,33 @@ class _MainScreenState extends State<MainScreen> {
                             'powersafe.sh',
                             localization.power_save,
                             Icons.battery_saver,
-                            colorScheme.primaryContainer,
-                            colorScheme.onPrimaryContainer,
                             'POWER_SAVE'),
                         _buildControlRow(
                             localization.balanced_desc,
                             'balanced.sh',
                             localization.balanced,
                             Icons.balance,
-                            colorScheme.secondaryContainer,
-                            colorScheme.onSecondaryContainer,
                             'BALANCED'),
                         _buildControlRow(
                             localization.performance_desc,
                             'performance.sh',
                             localization.performance,
                             Icons.speed,
-                            colorScheme.tertiaryContainer,
-                            colorScheme.onTertiaryContainer,
                             'PERFORMANCE'),
                         _buildControlRow(
                             localization.gaming_desc,
                             'game.sh',
                             localization.gaming_pro,
                             Icons.sports_esports,
-                            colorScheme.errorContainer,
-                            colorScheme.onErrorContainer,
                             'GAMING_PRO'),
-                        _buildControlRow(
-                            localization.cooldown_desc,
-                            'cool.sh',
-                            localization.cooldown,
-                            Icons.ac_unit,
-                            colorScheme.surfaceVariant,
-                            colorScheme.onSurfaceVariant,
-                            'COOLDOWN'),
-                        _buildControlRow(
-                            localization.clear_desc,
-                            'kill.sh',
-                            localization.clear,
-                            Icons.clear_all,
-                            colorScheme.error,
-                            colorScheme.onError,
-                            'CLEAR'),
+                        _buildControlRow(localization.cooldown_desc, 'cool.sh',
+                            localization.cooldown, Icons.ac_unit, 'COOLDOWN'),
+                        _buildControlRow(localization.clear_desc, 'kill.sh',
+                            localization.clear, Icons.clear_all, 'CLEAR'),
                         SizedBox(height: 5),
                         _buildLanguageSelector(localization),
                         SizedBox(height: 3),
-                        _buildThemeSelector(
-                            localization), // New theme selector card
+                        _buildThemeSelector(localization),
                         SizedBox(height: 20),
                       ],
                     ),
@@ -714,7 +685,7 @@ class _MainScreenState extends State<MainScreen> {
                   ?.copyWith(color: Theme.of(context).colorScheme.primary),
               dropdownColor:
                   Theme.of(context).colorScheme.surfaceContainerHighest,
-              underline: Container(), // Removes the underline
+              underline: Container(),
               iconEnabledColor: Theme.of(context).colorScheme.primary,
             ),
           ],
@@ -723,7 +694,6 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  // New Widget for Theme Selection
   Widget _buildThemeSelector(AppLocalizations localization) {
     final colorScheme = Theme.of(context).colorScheme;
     return Card(
@@ -761,19 +731,13 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  Widget _buildControlRow(
-      String description,
-      String scriptName,
-      String buttonText,
-      IconData modeIcon,
-      Color backgroundColor,
-      Color foregroundColor,
-      String modeKey) {
-    bool isCurrentMode = _currentMode == modeKey;
-    bool isExecutingThis = _executingScript == scriptName;
-    bool isHamadaMode = _isHamadaAiRunning;
-    bool isInteractable = _hasRootAccess && _moduleInstalled;
-    ColorScheme colorScheme = Theme.of(context).colorScheme;
+  Widget _buildControlRow(String description, String scriptName,
+      String buttonText, IconData modeIcon, String modeKey) {
+    final isCurrentMode = _currentMode == modeKey;
+    final isExecutingThis = _executingScript == scriptName;
+    final isHamadaMode = _isHamadaAiRunning;
+    final isInteractable = _hasRootAccess && _moduleInstalled;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Opacity(
       opacity: isHamadaMode ? 0.6 : 1.0,

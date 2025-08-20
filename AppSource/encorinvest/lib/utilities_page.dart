@@ -284,7 +284,11 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
               ),
             ),
           if (_isLoading)
-            const Center(child: CircularProgressIndicator())
+            const Center(
+                child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 32.0),
+              child: LinearProgressIndicator(),
+            ))
           else
             AnimatedOpacity(
               opacity: _isLoading ? 0.0 : 1.0,

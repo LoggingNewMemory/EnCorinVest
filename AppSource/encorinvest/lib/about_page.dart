@@ -16,7 +16,6 @@ class _AboutPageState extends State<AboutPage> {
   String _cpuInfo = 'Loading...';
   String _osVersion = 'Loading...';
   bool _isLoading = true;
-  bool _isContentVisible = false;
 
   String? _backgroundImagePath;
   double _backgroundOpacity = 0.2;
@@ -24,21 +23,32 @@ class _AboutPageState extends State<AboutPage> {
   @override
   void initState() {
     super.initState();
-    _loadDeviceInfo();
-    _loadBackgroundSettings();
+    _loadAllData();
+  }
+
+  Future<void> _loadAllData() async {
+    await Future.wait([
+      _loadBackgroundSettings(),
+      _loadDeviceInfo(),
+    ]);
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _loadBackgroundSettings() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      if (!mounted) return;
       final path = prefs.getString('background_image_path');
       final opacity = prefs.getDouble('background_opacity') ?? 0.2;
-      if (mounted) {
-        setState(() {
-          _backgroundImagePath = path;
-          _backgroundOpacity = opacity;
-        });
-      }
+      setState(() {
+        _backgroundImagePath = path;
+        _backgroundOpacity = opacity;
+      });
     } catch (e) {
       // Error loading background settings
     }
@@ -54,10 +64,7 @@ class _AboutPageState extends State<AboutPage> {
   }
 
   Future<void> _loadDeviceInfo() async {
-    if (!mounted) return;
-    setState(() => _isLoading = true);
-
-    bool rootGranted = await _checkRootAccessInAbout();
+    final rootGranted = await _checkRootAccessInAbout();
 
     String deviceModel = 'N/A';
     String cpuInfo = 'N/A';
@@ -65,29 +72,26 @@ class _AboutPageState extends State<AboutPage> {
 
     if (rootGranted) {
       try {
-        var deviceResult =
-            await run('su', ['-c', 'getprop ro.product.model'], verbose: false);
-        deviceModel = deviceResult.stdout.toString().trim();
+        final results = await Future.wait([
+          run('su', ['-c', 'getprop ro.product.model'], verbose: false),
+          run('su', ['-c', 'getprop ro.board.platform'], verbose: false),
+          run('su', ['-c', 'getprop ro.hardware'], verbose: false),
+          run('su', ['-c', 'cat /proc/cpuinfo | grep Hardware | cut -d: -f2'],
+              verbose: false),
+          run('su', ['-c', 'getprop ro.build.version.release'], verbose: false),
+        ]);
 
-        var cpuResult = await run('su', ['-c', 'getprop ro.board.platform'],
-            verbose: false);
-        cpuInfo = cpuResult.stdout.toString().trim();
+        deviceModel = results[0].stdout.toString().trim();
+        cpuInfo = results[1].stdout.toString().trim();
+
         if (cpuInfo.isEmpty || cpuInfo.toLowerCase() == 'unknown') {
-          cpuResult =
-              await run('su', ['-c', 'getprop ro.hardware'], verbose: false);
-          cpuInfo = cpuResult.stdout.toString().trim();
+          cpuInfo = results[2].stdout.toString().trim();
         }
         if (cpuInfo.isEmpty || cpuInfo.toLowerCase() == 'unknown') {
-          cpuResult = await run(
-              'su', ['-c', 'cat /proc/cpuinfo | grep Hardware | cut -d: -f2'],
-              verbose: false);
-          cpuInfo = cpuResult.stdout.toString().trim();
+          cpuInfo = results[3].stdout.toString().trim();
         }
 
-        var osResult = await run(
-            'su', ['-c', 'getprop ro.build.version.release'],
-            verbose: false);
-        osVersion = 'Android ' + osResult.stdout.toString().trim();
+        osVersion = 'Android ' + results[4].stdout.toString().trim();
       } catch (e) {
         deviceModel = 'Error';
         cpuInfo = 'Error';
@@ -104,8 +108,6 @@ class _AboutPageState extends State<AboutPage> {
         _deviceModel = deviceModel.isEmpty ? 'N/A' : deviceModel;
         _cpuInfo = cpuInfo.isEmpty ? 'N/A' : cpuInfo;
         _osVersion = osVersion.isEmpty ? 'N/A' : osVersion;
-        _isLoading = false;
-        _isContentVisible = true;
       });
     }
   }
@@ -126,7 +128,7 @@ class _AboutPageState extends State<AboutPage> {
   @override
   Widget build(BuildContext context) {
     final localization = AppLocalizations.of(context)!;
-    final List<String> credits = _getCredits(localization);
+    final credits = _getCredits(localization);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -152,9 +154,13 @@ class _AboutPageState extends State<AboutPage> {
             padding:
                 const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
             child: _isLoading
-                ? Center(child: CircularProgressIndicator())
+                ? Center(
+                    child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                    child: LinearProgressIndicator(),
+                  ))
                 : AnimatedOpacity(
-                    opacity: _isContentVisible ? 1.0 : 0.0,
+                    opacity: _isLoading ? 0.0 : 1.0,
                     duration: Duration(milliseconds: 500),
                     child: SingleChildScrollView(
                       child: Column(
