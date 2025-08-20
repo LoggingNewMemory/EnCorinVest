@@ -498,9 +498,9 @@ class _MainScreenState extends State<MainScreen> {
                             colorScheme.error,
                             colorScheme.onError,
                             'CLEAR'),
-                        SizedBox(height: 25),
+                        SizedBox(height: 5),
                         _buildLanguageSelector(localization),
-                        SizedBox(height: 10),
+                        SizedBox(height: 3),
                         _buildThemeSelector(
                             localization), // New theme selector card
                         SizedBox(height: 20),
