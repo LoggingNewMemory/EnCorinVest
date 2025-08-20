@@ -138,20 +138,3 @@ ui_print "Go Check it Out!                              "
 ui_print " "
 
 sleep 2
-
-case "$((RANDOM % 14 + 1))" in
-1) ui_print "- Wooly's Fairy Tale [Rem01 Gaming]" ;;
-2) ui_print "- Sheep-counting Lullaby [Rem01 Gaming]" ;;
-3) ui_print "- Fog? The Black Shores! [Rem01 Gaming]" ;;
-4) ui_print "- Adventure? Let's go! [Rem01 Gaming]" ;;
-5) ui_print "- Hero Takes the Stage! [Rem01 Gaming]" ;;
-6) ui_print "- Woolies Save the World! [Rem01 Gaming]" ;;
-7) ui_print "- I Cast Testicular Torsion!!! [Nazephyrus]" ;;
-8) ui_print "- We Are KLC! [Kanagawa Yamada]" ;;
-9) ui_print "- Gacor Kang [Nazephyrus]" ;;
-10) ui_print "- Don't look back with regret, look forward with hope [Kentarou]" ;;
-11) ui_print "- Go Beyond - Plus Ultra! [Momin]" ;;
-12) ui_print "- Cheeki Breeki IV Damke [Ody]" ;;
-13) ui_print "- Hope You Hydrated Well ❤️ [Ody]" ;;
-14) ui_print "- The List Is Not Even 20 Yet [Kanagawa Yamada]" ;;
-esac

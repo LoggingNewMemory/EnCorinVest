@@ -26,19 +26,6 @@ echo 3 > /proc/sys/vm/drop_caches
 am kill-all
 }
 
-# Replace encore Governor logic
-
-if [ -f "$FIRST_POLICY/scaling_available_governors" ]; then
-    if grep -q 'schedhorizon' "$FIRST_POLICY/scaling_available_governors"; then
-        DEFAULT_CPU_GOV="schedhorizon"
-    else
-        DEFAULT_CPU_GOV="schedutil"
-    fi
-else
-    # Fallback if no policies found
-    DEFAULT_CPU_GOV="schedutil"
-fi
-
 # Taken from encore_utility
 # Thanks to Rem01 Gaming, definitely helping to reduce suddent lag bcs of notification
 dnd_off() {
@@ -117,7 +104,7 @@ write() {
 
 change_cpu_gov() {
 	chmod 644 /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
-	echo "$1" | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor >/dev/null
+	echo "$1" | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor >/dev/null 
 	chmod 444 /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
 	chmod 444 /sys/devices/system/cpu/cpufreq/policy*/scaling_governor
 }
@@ -511,8 +498,20 @@ encore_balanced_common() {
 		devfreq_unlock "$path"
 	done &
 
-	# Restore min CPU frequency
-	change_cpu_gov "$DEFAULT_CPU_GOV"
+	# Reads GOV from encorin.txt, falls back to schedhorizon or schedutil if not set.
+	CONFIG_FILE="/data/adb/modules/EnCorinVest/encorin.txt"
+	CUSTOM_GOV=$(grep "^GOV=" "$CONFIG_FILE" | cut -d'=' -f2 | tr -d ' ')
+	AVAILABLE_GOVS=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors)
+
+	if [ -n "$CUSTOM_GOV" ]; then
+		change_cpu_gov "$CUSTOM_GOV"
+	elif [[ "$AVAILABLE_GOVS" == *"schedhorizon"* ]]; then
+		change_cpu_gov "schedhorizon"
+	else
+		change_cpu_gov "schedutil"
+	fi
+
+	# Unlock CPU frequency controls
 	[ -d /proc/ppm ] && cpufreq_ppm_unlock || cpufreq_unlock
 
 	# I/O Tweaks
@@ -554,7 +553,7 @@ fi
 
 if [ -d "/dev/stune/" ]; then
     # We are not concerned with prioritizing latency
-    if grep -qo '[0-9]\+' /sys/kernel/debug/sched_features; then
+    if grep -qo '[0-g]\+' /sys/kernel/debug/sched_features; then
 		tweak 0 /dev/stune/top-app/schedtune.prefer_idle
     fi
 

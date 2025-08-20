@@ -1,5 +1,10 @@
 #!/system/bin/sh
 
+# Wait for boot completion
+while [ -z "$(getprop sys.boot_completed)" ]; do
+    sleep 10
+done
+
 # EnCorinVest Service Script
 # Mali Scheduler Tweaks By: MiAzami
 
@@ -24,11 +29,6 @@ tweak 0 /proc/sys/kernel/panic
 tweak 0 /proc/sys/kernel/panic_on_oops
 tweak 0 /proc/sys/kernel/panic_on_warn
 tweak 0 /proc/sys/kernel/softlockup_panic
-
-# Wait for boot completion
-while [ -z "$(getprop sys.boot_completed)" ]; do
-    sleep 10
-done
 
 sh /data/adb/modules/EnCorinVest/AnyaMelfissa/AnyaMelfissa.sh
 sh /data/adb/modules/EnCorinVest/KoboKanaeru/KoboKanaeru.sh

@@ -309,15 +309,6 @@ fi
 tweak "deadline" "$deviceio/queue/scheduler"
 tweak 1 "$queue/rq_affinity"
 
-# Switch GOV to Schedhorizon / Schedutil
-for path in /sys/devices/system/cpu/cpufreq/policy*; do
-    if grep -q 'schedhorizon' "$path/scaling_available_governors"; then
-        tweak schedhorizon "$path/scaling_governor"
-    else
-        tweak schedutil "$path/scaling_governor"
-    fi
-done
-
 # Settings Set | Supposed All Devices Have
 
 # Optimize Priority
