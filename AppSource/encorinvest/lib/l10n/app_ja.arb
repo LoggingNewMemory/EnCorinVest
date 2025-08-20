@@ -88,5 +88,8 @@
     "please_disable_hamada_ai_first": "最初にHamadaAIを無効にしてください",
     "background_settings_title": "背景設定",
     "background_settings_description": "アプリの背景画像と不透明度をカスタマイズします。",
-    "opacity_slider_label": "背景の不透明度"
+    "opacity_slider_label": "背景の不透明度",
+    "select_theme": "テーマを選択:",
+    "theme_classic": "クラシック",
+    "theme_modern": "モダン"
 }

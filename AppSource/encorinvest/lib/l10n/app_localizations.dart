@@ -597,6 +597,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Background Opacity'**
   String get opacity_slider_label;
+
+  /// No description provided for @select_theme.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Theme:'**
+  String get select_theme;
+
+  /// No description provided for @theme_classic.
+  ///
+  /// In en, this message translates to:
+  /// **'Classic'**
+  String get theme_classic;
+
+  /// No description provided for @theme_modern.
+  ///
+  /// In en, this message translates to:
+  /// **'Modern'**
+  String get theme_modern;
 }
 
 class _AppLocalizationsDelegate

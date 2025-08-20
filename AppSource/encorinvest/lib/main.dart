@@ -51,6 +51,7 @@ class _MyAppState extends State<MyApp> {
   Locale? _locale;
   String? _backgroundImagePath;
   double _backgroundOpacity = 0.2;
+  String _currentTheme = 'Classic'; // Default theme
 
   static final _defaultLightColorScheme =
       ColorScheme.fromSeed(seedColor: Colors.blue);
@@ -62,6 +63,7 @@ class _MyAppState extends State<MyApp> {
     super.initState();
     _loadLocale();
     _loadBackgroundSettings();
+    _loadThemePreference();
   }
 
   void _loadLocale() async {
@@ -88,12 +90,44 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
+  Future<void> _loadThemePreference() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final theme = prefs.getString('theme_preference') ?? 'Classic';
+      if (mounted) {
+        setState(() {
+          _currentTheme = theme;
+        });
+      }
+    } catch (e) {
+      // Handle error if needed
+    }
+  }
+
+  Future<void> _saveThemePreference(String theme) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('theme_preference', theme);
+    } catch (e) {
+      // Handle error if needed
+    }
+  }
+
   void setLocale(Locale locale) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString('language_code', locale.languageCode);
     setState(() {
       _locale = locale;
     });
+  }
+
+  void changeTheme(String theme) {
+    if (_currentTheme != theme) {
+      setState(() {
+        _currentTheme = theme;
+      });
+      _saveThemePreference(theme);
+    }
   }
 
   @override
@@ -116,11 +150,14 @@ class _MyAppState extends State<MyApp> {
           GlobalCupertinoLocalizations.delegate,
         ],
         home: Scaffold(
-          backgroundColor: Colors.transparent,
+          // Conditional background color based on the selected theme
+          backgroundColor:
+              _currentTheme == 'Classic' ? Colors.transparent : null,
           body: Stack(
             fit: StackFit.expand,
             children: [
-              if (_backgroundImagePath != null &&
+              if (_currentTheme == 'Classic' &&
+                  _backgroundImagePath != null &&
                   _backgroundImagePath!.isNotEmpty)
                 Opacity(
                   opacity: _backgroundOpacity,
@@ -135,6 +172,8 @@ class _MyAppState extends State<MyApp> {
               MainScreen(
                 onLocaleChange: setLocale,
                 onUtilitiesClosed: _loadBackgroundSettings,
+                currentTheme: _currentTheme,
+                onThemeChange: changeTheme,
               ),
             ],
           ),
@@ -150,8 +189,15 @@ class _MyAppState extends State<MyApp> {
 class MainScreen extends StatefulWidget {
   final Function(Locale) onLocaleChange;
   final VoidCallback onUtilitiesClosed;
+  final String currentTheme;
+  final Function(String) onThemeChange;
 
-  MainScreen({required this.onLocaleChange, required this.onUtilitiesClosed});
+  MainScreen({
+    required this.onLocaleChange,
+    required this.onUtilitiesClosed,
+    required this.currentTheme,
+    required this.onThemeChange,
+  });
 
   @override
   _MainScreenState createState() => _MainScreenState();
@@ -454,6 +500,9 @@ class _MainScreenState extends State<MainScreen> {
                             'CLEAR'),
                         SizedBox(height: 25),
                         _buildLanguageSelector(localization),
+                        SizedBox(height: 10),
+                        _buildThemeSelector(
+                            localization), // New theme selector card
                         SizedBox(height: 20),
                       ],
                     ),
@@ -638,32 +687,78 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   Widget _buildLanguageSelector(AppLocalizations localization) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(localization.select_language,
-            style: Theme.of(context).textTheme.bodyMedium),
-        DropdownButton<String>(
-          value: _selectedLanguage,
-          items: <String>['EN', 'ID', 'JP'].map((String value) {
-            return DropdownMenuItem<String>(
-              value: value,
-              child: Text(value),
-            );
-          }).toList(),
-          onChanged: (String? newValue) {
-            if (newValue != null) _changeLanguage(newValue);
-          },
-          style: Theme.of(context)
-              .textTheme
-              .bodyMedium
-              ?.copyWith(color: Theme.of(context).colorScheme.primary),
-          dropdownColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-          underline: Container(
-              height: 1, color: Theme.of(context).colorScheme.primary),
-          iconEnabledColor: Theme.of(context).colorScheme.primary,
+    return Card(
+      elevation: 0,
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(localization.select_language,
+                style: Theme.of(context).textTheme.bodyMedium),
+            DropdownButton<String>(
+              value: _selectedLanguage,
+              items: <String>['EN', 'ID', 'JP'].map((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value),
+                );
+              }).toList(),
+              onChanged: (String? newValue) {
+                if (newValue != null) _changeLanguage(newValue);
+              },
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: Theme.of(context).colorScheme.primary),
+              dropdownColor:
+                  Theme.of(context).colorScheme.surfaceContainerHighest,
+              underline: Container(), // Removes the underline
+              iconEnabledColor: Theme.of(context).colorScheme.primary,
+            ),
+          ],
         ),
-      ],
+      ),
+    );
+  }
+
+  // New Widget for Theme Selection
+  Widget _buildThemeSelector(AppLocalizations localization) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Card(
+      elevation: 0,
+      color: colorScheme.surfaceContainerHighest,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(localization.select_theme,
+                style: Theme.of(context).textTheme.bodyMedium),
+            ToggleButtons(
+              isSelected: [
+                widget.currentTheme == 'Classic',
+                widget.currentTheme == 'Modern',
+              ],
+              onPressed: (int index) {
+                widget.onThemeChange(index == 0 ? 'Classic' : 'Modern');
+              },
+              borderRadius: BorderRadius.circular(8.0),
+              selectedColor: colorScheme.onPrimary,
+              fillColor: colorScheme.primary,
+              color: colorScheme.onSurfaceVariant,
+              constraints: BoxConstraints(minHeight: 32.0, minWidth: 80.0),
+              children: <Widget>[
+                Text(localization.theme_classic),
+                Text(localization.theme_modern),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 

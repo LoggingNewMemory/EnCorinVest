@@ -272,4 +272,13 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get opacity_slider_label => 'Opasitas Latar Belakang';
+
+  @override
+  String get select_theme => 'Pilih Tema:';
+
+  @override
+  String get theme_classic => 'Klasik';
+
+  @override
+  String get theme_modern => 'Modern';
 }

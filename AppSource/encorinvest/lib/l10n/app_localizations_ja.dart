@@ -259,4 +259,13 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get opacity_slider_label => '背景の不透明度';
+
+  @override
+  String get select_theme => 'テーマを選択:';
+
+  @override
+  String get theme_classic => 'クラシック';
+
+  @override
+  String get theme_modern => 'モダン';
 }

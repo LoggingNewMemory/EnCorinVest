@@ -269,4 +269,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get opacity_slider_label => 'Background Opacity';
+
+  @override
+  String get select_theme => 'Select Theme:';
+
+  @override
+  String get theme_classic => 'Classic';
+
+  @override
+  String get theme_modern => 'Modern';
 }

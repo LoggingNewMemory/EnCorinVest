@@ -88,5 +88,8 @@
     "please_disable_hamada_ai_first": "Please Disable HamadaAI First",
     "background_settings_title": "Background Settings",
     "background_settings_description": "Customize the app's background image and opacity.",
-    "opacity_slider_label": "Background Opacity"
+    "opacity_slider_label": "Background Opacity",
+    "select_theme": "Select Theme:",
+    "theme_classic": "Classic",
+    "theme_modern": "Modern"
 }

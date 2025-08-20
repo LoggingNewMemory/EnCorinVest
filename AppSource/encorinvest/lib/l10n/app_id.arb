@@ -88,5 +88,8 @@
     "please_disable_hamada_ai_first": "Harap Nonaktifkan HamadaAI Terlebih Dahulu",
     "background_settings_title": "Pengaturan Latar Belakang",
     "background_settings_description": "Sesuaikan gambar latar belakang dan opasitas aplikasi.",
-    "opacity_slider_label": "Opasitas Latar Belakang"
+    "opacity_slider_label": "Opasitas Latar Belakang",
+    "select_theme": "Pilih Tema:",
+    "theme_classic": "Klasik",
+    "theme_modern": "Modern"
 }
