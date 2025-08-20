@@ -156,8 +156,7 @@ class _MyAppState extends State<MyApp> {
           body: Stack(
             fit: StackFit.expand,
             children: [
-              if (_currentTheme == 'Classic' &&
-                  _backgroundImagePath != null &&
+              if (_backgroundImagePath != null &&
                   _backgroundImagePath!.isNotEmpty)
                 Opacity(
                   opacity: _backgroundOpacity,
