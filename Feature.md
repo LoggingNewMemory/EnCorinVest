@@ -14,7 +14,12 @@ If your module is not listed here, you can try to combine it (Ex: SkiaVK / GL Mo
 - Fast Charge (Gaming & Ubur-ubur variant)
 - Hamada AI (Auto switch to performance when enter game)
 - Downscale Resolution
-- Bastion Battery Included (Reduce battery usage without reducing performance)
+- Touch Imrpove Tweak
 - Disable Frame Rate Limit 
 - Disable Lock Frame Rate When Low Battery
 - Bypass Charging on Supported Devices
+- Add Dalvik Hyperthread and Tweak
+- Add Dexopt tweak
+- IORap enable (If available, idk)
+- LMK Tweak
+- Minor Render Tweak (Still can be combined with other Render Tweak) - Note: Might be unstable
