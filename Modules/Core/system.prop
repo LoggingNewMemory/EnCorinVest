@@ -5,3 +5,28 @@ debug.graphics.game_default_frame_rate.disabled=true
 
 # Disable FPS Drop when low battery
 sys.surfaceflinger.idle_reduce_framerate_enable=no
+
+###############################
+# Thank you: Kazuyoo
+###############################
+debug.rs.profile=0
+debug.rs.script=1
+debug.rs.shader=1
+debug.rs.shader.attributes=0
+debug.rs.shader.uniforms=0
+debug.rs.visual=0
+debug.rs.reduce=0
+debug.rs.reduce-split-accum=0
+debug.rs.max-threads=$(nproc)
+debug.rs.forcecompat=0
+debug.rs.forcerecompile=0
+debug.rs.precision=0
+debug.rs.reduce=0
+debug.rs.rsov=1
+debug.rs.arm-no-hwdiv=0
+debug.rs.arm-no-tune-for-cpu=0
+debug.rs.debug=0
+debug.rs.reduce-split-accum=0
+debug.rs.shader.attributes=1
+debug.rs.shader.uniforms=1
+#####################################
