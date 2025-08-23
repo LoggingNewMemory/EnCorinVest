@@ -19,23 +19,6 @@ persist.sys.composition.type=mdp
 debug.egl.force_msaa=0
 debug.egl.buffcount=4
 
-# LMK
-ro.lmk.kill_timeout_ms=0
-ro.lmk.low=1001
-ro.lmk.psi_complete_stall_ms=700
-ro.lmk.psi_partial_stall_ms=70
-ro.lmk.thrashing_limit=100
-ro.lmk.thrashing_limit_decay=10
-ro.config.low_ram=false
-ro.lmk.use_minfree_levels=false
-ro.lmk.medium=900
-ro.lmk.critical_upgrade=false
-ro.lmk.enhance_batch_kill=false
-ro.lmk.enable_adaptive_lmk=false
-ro.lmk.use_minfree_levels=false
-ro.lmk.kill_heaviest_task=false
-ro.lmk.downgrade_pressure=100
-
 #########################
 # Supposed this to work
 #########################
