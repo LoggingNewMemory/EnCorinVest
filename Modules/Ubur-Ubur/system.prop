@@ -6,9 +6,6 @@ debug.graphics.game_default_frame_rate.disabled=true
 # Disable FPS Drop when low battery
 sys.surfaceflinger.idle_reduce_framerate_enable=no
 
-# Memory optimize
-persist.vendor.sys.memplus.enable=true
-
 # Touch Improve
 windowsmgr.max_events_per_sec=90
 view.scroll_friction=0
@@ -29,10 +26,6 @@ dalvik.vm.heapmaxfree=8m
 persist.bg.dexopt.enable=true
 pm.dexopt.bg-dexopt=everything
 dalvik.vm.dexopt-flags=v=n,o=a,u=y,m=y
-
-# IORap
-iorapd.readahead.enable=true
-ro.iorapd.enable=true
 
 # Render
 debug.composition.type=mdp
