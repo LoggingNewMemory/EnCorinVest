@@ -13,20 +13,6 @@ ro.min_pointer_dur=8
 debug.egl.hw=1
 video.accelerate.hw=1
 
-#Dalvik Hyperthread
-persist.sys.dalvik.multithread=true
-
-#Dalvik
-dalvik.vm.heapstartsize=16m
-dalvik.vm.heapgrowthlimit=320m
-dalvik.vm.heapsize=640m
-dalvik.vm.heapmaxfree=8m
-
-#Dexopt
-persist.bg.dexopt.enable=true
-pm.dexopt.bg-dexopt=everything
-dalvik.vm.dexopt-flags=v=n,o=a,u=y,m=y
-
 # Render
 debug.composition.type=mdp
 persist.sys.composition.type=mdp
