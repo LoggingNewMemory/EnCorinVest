@@ -54,7 +54,3 @@ ro.lmk.downgrade_pressure=100
 # Supposed this to work
 #########################
 debug.renderengine.backend=skiaglthreaded
-
-debug.composition.type=mdp
-persist.sys.composition.type=mdp
-debug.egl.force_msaa=0
