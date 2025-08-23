@@ -13,8 +13,15 @@ ro.min_pointer_dur=8
 debug.egl.hw=1
 video.accelerate.hw=1
 
+# Memory optimize
+persist.vendor.sys.memplus.enable=true
+
 #Dalvik Hyperthread
 persist.sys.dalvik.multithread=true
+
+# IORap
+iorapd.readahead.enable=true
+ro.iorapd.enable=true
 
 #Dalvik
 dalvik.vm.heapstartsize=16m
@@ -55,30 +62,6 @@ ro.lmk.downgrade_pressure=100
 #########################
 debug.renderengine.backend=skiaglthreaded
 
-###############################
-# Thank you: Kazuyoo
-###############################
-debug.rs.profile=0
-debug.rs.script=1
-debug.rs.shader=1
-debug.rs.shader.attributes=0
-debug.rs.shader.uniforms=0
-debug.rs.visual=0
-debug.rs.reduce=0
-debug.rs.reduce-split-accum=0
-debug.rs.max-threads=$(nproc)
-debug.rs.forcecompat=0
-debug.rs.forcerecompile=0
-debug.rs.precision=0
-debug.rs.reduce=0
-debug.rs.rsov=1
-debug.rs.arm-no-hwdiv=0
-debug.rs.arm-no-tune-for-cpu=0
-debug.rs.debug=0
-debug.rs.reduce-split-accum=0
-debug.rs.shader.attributes=1
-debug.rs.shader.uniforms=1
-#####################################
 debug.composition.type=mdp
 persist.sys.composition.type=mdp
 debug.egl.force_msaa=0
