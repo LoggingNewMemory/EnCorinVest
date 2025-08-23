@@ -31,7 +31,7 @@ dalvik.vm.dexopt-flags=v=n,o=a,u=y,m=y
 debug.composition.type=mdp
 persist.sys.composition.type=mdp
 debug.egl.force_msaa=0
-debug.egl.buffcount=4
+debug.egl.buffcount=2
 
 # LMK
 ro.lmk.kill_timeout_ms=0
@@ -58,4 +58,3 @@ debug.renderengine.backend=skiaglthreaded
 debug.composition.type=mdp
 persist.sys.composition.type=mdp
 debug.egl.force_msaa=0
-debug.egl.buffcount=4
