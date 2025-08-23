@@ -13,15 +13,8 @@ ro.min_pointer_dur=8
 debug.egl.hw=1
 video.accelerate.hw=1
 
-# Memory optimize
-persist.vendor.sys.memplus.enable=true
-
 #Dalvik Hyperthread
 persist.sys.dalvik.multithread=true
-
-# IORap
-iorapd.readahead.enable=true
-ro.iorapd.enable=true
 
 #Dalvik
 dalvik.vm.heapstartsize=16m
