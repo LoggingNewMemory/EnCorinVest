@@ -5,21 +5,3 @@ debug.graphics.game_default_frame_rate.disabled=true
 
 # Disable FPS Drop when low battery
 sys.surfaceflinger.idle_reduce_framerate_enable=no
-
-# Touch Improve
-windowsmgr.max_events_per_sec=90
-view.scroll_friction=0
-ro.min_pointer_dur=8
-debug.egl.hw=1
-video.accelerate.hw=1
-
-# Render
-debug.composition.type=mdp
-persist.sys.composition.type=mdp
-debug.egl.force_msaa=0
-debug.egl.buffcount=4
-
-#########################
-# Supposed this to work
-#########################
-debug.renderengine.backend=skiaglthreaded
