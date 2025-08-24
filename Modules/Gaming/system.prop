@@ -7,6 +7,32 @@ debug.graphics.game_default_frame_rate.disabled=true
 sys.surfaceflinger.idle_reduce_framerate_enable=no
 
 ###############################
+# Taken From BreezeOS
+###############################
+# Touch
+ro.max.fling_velocity=10000
+ro.surface_flinger.max_frame_buffer_acquired_buffers=3
+ro.surface_flinger.max_virtual_display_dimension=1920
+# Memory
+persist.vendor.sys.memplus.enable=true
+# LMK
+ro.lmk.kill_timeout_ms=0
+ro.lmk.low=1001
+ro.lmk.psi_complete_stall_ms=700
+ro.lmk.psi_partial_stall_ms=70
+ro.lmk.thrashing_limit=100
+ro.lmk.thrashing_limit_decay=10
+ro.lmk.use_minfree_levels=false
+ro.lmk.medium=900
+ro.lmk.critical_upgrade=false
+ro.lmk.enhance_batch_kill=false
+ro.lmk.enable_adaptive_lmk=false
+ro.lmk.use_minfree_levels=false
+ro.lmk.kill_heaviest_task=false
+ro.lmk.downgrade_pressure=100
+ro.config.low_ram=false
+
+###############################
 # Thank you: Kazuyoo
 ###############################
 debug.rs.profile=0
