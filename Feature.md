@@ -18,8 +18,5 @@ If your module is not listed here, you can try to combine it (Ex: SkiaVK / GL Mo
 - Disable Frame Rate Limit 
 - Disable Lock Frame Rate When Low Battery
 - Bypass Charging on Supported Devices
-- Add Dalvik Hyperthread and Tweak
-- Add Dexopt tweak
-- IORap enable (If available, idk)
 - LMK Tweak
 - Minor Render Tweak (Still can be combined with other Render Tweak) - Note: Might be unstable
