@@ -48,12 +48,6 @@ dnd_on() {
 
 SCRIPT_PATH="/data/adb/modules/EnCorinVest/Scripts"
 
-##################################
-# BYPASS CHARGING SWITCH
-##################################
-
-SCRIPT_PATH="/data/adb/modules/EnCorinVest/Scripts"
-
 bypass_on() {
     BYPASS=$(grep "^ENABLE_BYPASS=" /data/adb/modules/EnCorinVest/encorin.txt | cut -d'=' -f2 | tr -d ' ')
     if [ "$BYPASS" = "Yes" ]; then
