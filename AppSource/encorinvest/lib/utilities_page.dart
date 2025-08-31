@@ -1132,8 +1132,6 @@ class _BypassChargingCardState extends State<BypassChargingCard> {
   bool _isToggling = false;
 
   final String _configFilePath = '/data/adb/modules/EnCorinVest/encorin.txt';
-  final String _controllerPath =
-      '/data/adb/modules/EnCorinVest/Scripts/encorin_bypass_controller.sh';
 
   @override
   void initState() {
@@ -1150,11 +1148,6 @@ class _BypassChargingCardState extends State<BypassChargingCard> {
       final sedCommand =
           "sed -i 's|^ENABLE_BYPASS=.*|ENABLE_BYPASS=$value|' $_configFilePath";
       await _runRootCommandAndWait(sedCommand);
-
-      if (widget.isSupported) {
-        final action = enable ? 'enable' : 'disable';
-        await _runRootCommandAndWait('$_controllerPath $action');
-      }
 
       if (mounted) setState(() => _isEnabled = enable);
     } finally {
