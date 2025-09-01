@@ -1,8 +1,3 @@
-# Disable encore lite mode
-LITE_MODE=1
-# Set mitigation
-DEVICE_MITIGATION=0
-
 #######################
 # EnCorinVest Functions
 #######################
