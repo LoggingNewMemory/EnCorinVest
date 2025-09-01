@@ -121,7 +121,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
 
   Future<Map<String, dynamic>> _loadEncoreSwitchState() async {
     final result = await _runRootCommandAndWait(
-        'cat /data/adb/modules/EnCorinVest/Scripts/encoreTweaks.sh');
+        'cat /data/adb/modules/EnCorinVest/Scripts/encorinFunctions.sh');
     if (result.exitCode == 0) {
       final content = result.stdout.toString();
       return {
@@ -370,8 +370,6 @@ class _EncoreSwitchCardState extends State<EncoreSwitchCard> {
   late bool _liteModeEnabled;
   bool _isUpdating = false;
 
-  final String _encoreTweaksFilePath =
-      '/data/adb/modules/EnCorinVest/Scripts/encoreTweaks.sh';
   final String _encorinFunctionFilePath =
       '/data/adb/modules/EnCorinVest/Scripts/encorinFunctions.sh';
 
@@ -388,17 +386,12 @@ class _EncoreSwitchCardState extends State<EncoreSwitchCard> {
 
     try {
       final value = enable ? '1' : '0';
-      final sedCommandTweaks =
-          "sed -i 's|^$key=.*|$key=$value|' $_encoreTweaksFilePath";
-      final sedCommandFunctions =
+      final sedCommand =
           "sed -i 's|^$key=.*|$key=$value|' $_encorinFunctionFilePath";
 
-      final results = await Future.wait([
-        _runRootCommandAndWait(sedCommandTweaks),
-        _runRootCommandAndWait(sedCommandFunctions)
-      ]);
+      final result = await _runRootCommandAndWait(sedCommand);
 
-      if (results.every((r) => r.exitCode == 0)) {
+      if (result.exitCode == 0) {
         if (mounted) {
           setState(() {
             if (key == 'DEVICE_MITIGATION') _deviceMitigationEnabled = enable;
@@ -406,13 +399,14 @@ class _EncoreSwitchCardState extends State<EncoreSwitchCard> {
           });
         }
       } else {
-        throw Exception('Failed to write to one or more script files.');
+        throw Exception('Failed to write to the script file.');
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Failed to update settings: $e')));
         setState(() {
+          // Revert on failure
           _deviceMitigationEnabled = widget.initialDeviceMitigation;
           _liteModeEnabled = widget.initialLiteMode;
         });
