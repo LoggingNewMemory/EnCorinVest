@@ -423,9 +423,27 @@ encore_perfprofile() {
 	# If lite mode enabled, use the default governor instead.
 	# device mitigation also will prevent performance gov to be
 	# applied (some device hates performance governor).
-	[ $LITE_MODE -eq 0 ] && [ $DEVICE_MITIGATION -eq 0 ] &&
-		change_cpu_gov performance ||
-		change_cpu_gov "$DEFAULT_CPU_GOV"
+	if [ "$LITE_MODE" -eq 1 ] || [ "$DEVICE_MITIGATION" -eq 1 ]; then
+		# LITE or MITIGATION MODE: Read GOV from the config file.
+		CONFIG_FILE="/data/adb/modules/EnCorinVest/encorin.txt"
+		CUSTOM_GOV=$(grep "^GOV=" "$CONFIG_FILE" | cut -d'=' -f2 | tr -d ' ')
+
+		if [ -n "$CUSTOM_GOV" ]; then
+			# If GOV is set in the file, use it directly.
+			change_cpu_gov "$CUSTOM_GOV"
+		else
+			# If GOV is empty, check for schedhorizon, then fallback to schedutil.
+			if grep -q "schedhorizon" /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors; then
+				change_cpu_gov "schedhorizon"
+			else
+				change_cpu_gov "schedutil"
+			fi
+		fi
+	else
+		# FULL PERFORMANCE MODE (LITE_MODE=0 and DEVICE_MITIGATION=0)
+		# Lock governor to "performance"
+		change_cpu_gov "performance"
+	fi
 
 	# Force CPU to highest possible frequency.
 	[ -d /proc/ppm ] && cpufreq_ppm_max_perf || cpufreq_max_perf
