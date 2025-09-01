@@ -249,7 +249,7 @@ qcom_cpudcvs_min_perf() {
 }
 
 #################################
-# CPU Minumum (Modified from Encore max CPU)
+# CPU Minimum (Modified from Encore max CPU)
 #################################
 
 cpufreq_ppm_min_perf() {
@@ -266,13 +266,6 @@ cpufreq_min_perf() {
 	for path in /sys/devices/system/cpu/*/cpufreq; do
 		cpu_minfreq=$(<"$path/cpuinfo_min_freq")
 		apply "$cpu_minfreq" "$path/scaling_max_freq"
-
-		[ $LITE_MODE -eq 1 ] && {
-			cpu_midfreq=$(which_midfreq "$path/scaling_available_frequencies")
-			apply "$cpu_midfreq" "$path/scaling_min_freq"
-			continue
-		}
-
 		apply "$cpu_minfreq" "$path/scaling_min_freq"
 	done
 	chmod -f 444 /sys/devices/system/cpu/cpufreq/policy*/scaling_*_freq
