@@ -2,6 +2,11 @@
 # EnCorinVest Functions
 #######################
 
+# Read configurations from encorin.sh
+CONFIG_FILE="/data/adb/modules/EnCorinVest/encorin.sh"
+LITE_MODE=$(grep "^LITE_MODE" "$CONFIG_FILE" | cut -d'=' -f2)
+DEVICE_MITIGATION=$(grep "^DEVICE_MITIGATION" "$CONFIG_FILE" | cut -d'=' -f2)
+
 tweak() {
     if [ -e "$2" ]; then
         chmod 644 "$2" >/dev/null 2>&1

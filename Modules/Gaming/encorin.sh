@@ -1,4 +1,3 @@
-[EnCorinVest config]
 DND=No
 ENABLE_BYPASS=No
 GOV=
