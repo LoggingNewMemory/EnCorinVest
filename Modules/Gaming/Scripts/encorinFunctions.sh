@@ -29,21 +29,17 @@ am kill-all
 # Taken from encore_utility
 # Thanks to Rem01 Gaming, definitely helping to reduce suddent lag bcs of notification
 dnd_off() {
-	DND=$(grep "^DND" /data/adb/modules/EnCorinVest/encorin.txt | cut -d'=' -f2 | tr -d ' ')
+	DND=$(grep "^DND" /data/adb/modules/EnCorinVest/encorin.sh | cut -d'=' -f2 | tr -d ' ')
 	if [ "$DND" = "Yes" ]; then
 		cmd notification set_dnd off
 	fi
 }
 
 dnd_on() {
-	DND=$(grep "^DND" /data/adb/modules/EnCorinVest/encorin.txt | cut -d'=' -f2 | tr -d ' ')
+	DND=$(grep "^DND" /data/adb/modules/EnCorinVest/encorin.sh | cut -d'=' -f2 | tr -d ' ')
 	if [ "$DND" = "Yes" ]; then
 		cmd notification set_dnd priority
 	fi
-}
-
-yamada_midfreq() {
-	
 }
 
 ##################################
@@ -53,14 +49,14 @@ yamada_midfreq() {
 SCRIPT_PATH="/data/adb/modules/EnCorinVest/Scripts"
 
 bypass_on() {
-    BYPASS=$(grep "^ENABLE_BYPASS=" /data/adb/modules/EnCorinVest/encorin.txt | cut -d'=' -f2 | tr -d ' ')
+    BYPASS=$(grep "^ENABLE_BYPASS=" /data/adb/modules/EnCorinVest/encorin.sh | cut -d'=' -f2 | tr -d ' ')
     if [ "$BYPASS" = "Yes" ]; then
         sh $SCRIPT_PATH/encorin_bypass_controller.sh enable
     fi
 }
 
 bypass_off() {
-    BYPASS=$(grep "^ENABLE_BYPASS=" /data/adb/modules/EnCorinVest/encorin.txt | cut -d'=' -f2 | tr -d ' ')
+    BYPASS=$(grep "^ENABLE_BYPASS=" /data/adb/modules/EnCorinVest/encorin.sh | cut -d'=' -f2 | tr -d ' ')
     if [ "$BYPASS" = "Yes" ]; then
         sh $SCRIPT_PATH/encorin_bypass_controller.sh disable
     fi
@@ -415,7 +411,7 @@ encore_perfprofile() {
 	# applied (some device hates performance governor).
 	if [ "$LITE_MODE" -eq 1 ] || [ "$DEVICE_MITIGATION" -eq 1 ]; then
 		# LITE or MITIGATION MODE: Read GOV from the config file.
-		CONFIG_FILE="/data/adb/modules/EnCorinVest/encorin.txt"
+		CONFIG_FILE="/data/adb/modules/EnCorinVest/encorin.sh"
 		CUSTOM_GOV=$(grep "^GOV=" "$CONFIG_FILE" | cut -d'=' -f2 | tr -d ' ')
 
 		if [ -n "$CUSTOM_GOV" ]; then
@@ -501,7 +497,7 @@ encore_balanced_common() {
 	done &
 
 	# Reads GOV from encorin.txt, falls back to schedhorizon or schedutil if not set.
-	CONFIG_FILE="/data/adb/modules/EnCorinVest/encorin.txt"
+	CONFIG_FILE="/data/adb/modules/EnCorinVest/encorin.sh"
 	CUSTOM_GOV=$(grep "^GOV=" "$CONFIG_FILE" | cut -d'=' -f2 | tr -d ' ')
 	AVAILABLE_GOVS=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors)
 
