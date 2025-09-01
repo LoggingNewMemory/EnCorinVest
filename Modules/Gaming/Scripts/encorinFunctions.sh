@@ -1,5 +1,5 @@
 # Disable encore lite mode
-LITE_MODE=0
+LITE_MODE=1
 # Set mitigation
 DEVICE_MITIGATION=0
 
@@ -258,13 +258,6 @@ cpufreq_ppm_min_perf() {
 		((cluster++))
 		cpu_minfreq=$(<"$path/cpuinfo_min_freq")
 		apply "$cluster $cpu_minfreq" /proc/ppm/policy/hard_userlimit_max_cpu_freq
-
-		[ $LITE_MODE -eq 1 ] && {
-			cpu_midfreq=$(which_midfreq "$path/scaling_available_frequencies")
-			apply "$cluster $cpu_midfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
-			continue
-		}
-
 		apply "$cluster $cpu_minfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
 	done
 }
