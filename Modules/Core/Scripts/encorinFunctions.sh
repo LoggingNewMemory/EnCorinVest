@@ -1,5 +1,5 @@
 # Disable encore lite mode
-LITE_MODE=0
+LITE_MODE=1
 # Set mitigation
 DEVICE_MITIGATION=0
 
@@ -40,6 +40,10 @@ dnd_on() {
 	if [ "$DND" = "Yes" ]; then
 		cmd notification set_dnd priority
 	fi
+}
+
+yamada_midfreq() {
+	
 }
 
 ##################################
@@ -142,9 +146,7 @@ cpufreq_ppm_max_perf() {
 		apply "$cluster $cpu_maxfreq" /proc/ppm/policy/hard_userlimit_max_cpu_freq
 
 		[ $LITE_MODE -eq 1 ] && {
-			cpu_midfreq=$(which_midfreq "$path/scaling_available_frequencies")
-			apply "$cluster $cpu_midfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
-			continue
+			sh /data/adb/modules/EnCorinVest/Scripts/YamadaMidfreq.sh
 		}
 
 		apply "$cluster $cpu_maxfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
@@ -157,9 +159,7 @@ cpufreq_max_perf() {
 		apply "$cpu_maxfreq" "$path/scaling_max_freq"
 
 		[ $LITE_MODE -eq 1 ] && {
-			cpu_midfreq=$(which_midfreq "$path/scaling_available_frequencies")
-			apply "$cpu_midfreq" "$path/scaling_min_freq"
-			continue
+			sh /data/adb/modules/EnCorinVest/Scripts/YamadaMidfreq.sh
 		}
 
 		apply "$cpu_maxfreq" "$path/scaling_min_freq"
@@ -258,13 +258,6 @@ cpufreq_ppm_min_perf() {
 		((cluster++))
 		cpu_minfreq=$(<"$path/cpuinfo_min_freq")
 		apply "$cluster $cpu_minfreq" /proc/ppm/policy/hard_userlimit_max_cpu_freq
-
-		[ $LITE_MODE -eq 1 ] && {
-			cpu_midfreq=$(which_midfreq "$path/scaling_available_frequencies")
-			apply "$cluster $cpu_midfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
-			continue
-		}
-
 		apply "$cluster $cpu_minfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
 	done
 }
@@ -423,9 +416,27 @@ encore_perfprofile() {
 	# If lite mode enabled, use the default governor instead.
 	# device mitigation also will prevent performance gov to be
 	# applied (some device hates performance governor).
-	[ $LITE_MODE -eq 0 ] && [ $DEVICE_MITIGATION -eq 0 ] &&
-		change_cpu_gov performance ||
-		change_cpu_gov "$DEFAULT_CPU_GOV"
+	if [ "$LITE_MODE" -eq 1 ] || [ "$DEVICE_MITIGATION" -eq 1 ]; then
+		# LITE or MITIGATION MODE: Read GOV from the config file.
+		CONFIG_FILE="/data/adb/modules/EnCorinVest/encorin.txt"
+		CUSTOM_GOV=$(grep "^GOV=" "$CONFIG_FILE" | cut -d'=' -f2 | tr -d ' ')
+
+		if [ -n "$CUSTOM_GOV" ]; then
+			# If GOV is set in the file, use it directly.
+			change_cpu_gov "$CUSTOM_GOV"
+		else
+			# If GOV is empty, check for schedhorizon, then fallback to schedutil.
+			if grep -q "schedhorizon" /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors; then
+				change_cpu_gov "schedhorizon"
+			else
+				change_cpu_gov "schedutil"
+			fi
+		fi
+	else
+		# FULL PERFORMANCE MODE (LITE_MODE=0 and DEVICE_MITIGATION=0)
+		# Lock governor to "performance"
+		change_cpu_gov "performance"
+	fi
 
 	# Force CPU to highest possible frequency.
 	[ -d /proc/ppm ] && cpufreq_ppm_max_perf || cpufreq_max_perf
