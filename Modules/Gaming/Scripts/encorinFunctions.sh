@@ -146,7 +146,9 @@ cpufreq_ppm_max_perf() {
 		apply "$cluster $cpu_maxfreq" /proc/ppm/policy/hard_userlimit_max_cpu_freq
 
 		[ $LITE_MODE -eq 1 ] && {
-			sh /data/adb/modules/EnCorinVest/Scripts/YamadaMidfreq.sh
+			cpu_midfreq=$(which_midfreq "$path/scaling_available_frequencies")
+			apply "$cluster $cpu_midfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
+			continue
 		}
 
 		apply "$cluster $cpu_maxfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
@@ -159,7 +161,9 @@ cpufreq_max_perf() {
 		apply "$cpu_maxfreq" "$path/scaling_max_freq"
 
 		[ $LITE_MODE -eq 1 ] && {
-			sh /data/adb/modules/EnCorinVest/Scripts/YamadaMidfreq.sh
+			cpu_midfreq=$(which_midfreq "$path/scaling_available_frequencies")
+			apply "$cpu_midfreq" "$path/scaling_min_freq"
+			continue
 		}
 
 		apply "$cpu_maxfreq" "$path/scaling_min_freq"
