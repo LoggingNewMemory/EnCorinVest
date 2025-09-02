@@ -7,25 +7,6 @@
 # 3 > Powersave
 # 0 > Common Tweak
 
-# Config file path
-ENCORIN_CONFIG="/data/adb/modules/EnCorinVest/encorin.txt"
-
-# Format: 1=MTK, 2=SD, 3=Exynos, 4=Unisoc, 5=Tensor, 6=Intel, 7=Tegra
-SOC=$(grep '^SOC=' "$ENCORIN_CONFIG" | cut -d'=' -f2)
-LITE_MODE=$(grep '^LITE_MODE=' "$ENCORIN_CONFIG" | cut -d'=' -f2)
-PPM_POLICY=$(grep '^PPM_POLICY=' "$ENCORIN_CONFIG" | cut -d'=' -f2)
-
-DEFAULT_CPU_GOV=$(grep '^GOV=' "$ENCORIN_CONFIG" | cut -d'=' -f2)
-if [ -z "$DEFAULT_CPU_GOV" ]; then
-    if [ -e /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors ] && grep -q "schedhorizon" /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors; then
-        DEFAULT_CPU_GOV="schedhorizon"
-    else
-        DEFAULT_CPU_GOV="schedutil"
-    fi
-fi
-
-DEVICE_MITIGATION=$(grep '^DEVICE_MITIGATION=' "$ENCORIN_CONFIG" | cut -d'=' -f2)
-DND_GAMEPLAY=$(grep '^DND=' "$ENCORIN_CONFIG" | cut -d'=' -f2)
 
 ###################################
 # Common Function
@@ -620,43 +601,15 @@ intel_powersave() {
 ###################################
 
 perfcommon() {
-	# Disable Kernel panic
-	# Workaround for kernel panic on startup in S25U.
-	# This is wrong, you know it and I know it.
-	# Move on and call me an idiot later.
-	apply 0 /proc/sys/kernel/panic
-	apply 0 /proc/sys/kernel/panic_on_oops
-	apply 0 /proc/sys/kernel/panic_on_warn
-	apply 0 /proc/sys/kernel/softlockup_panic
+	# # I/O Tweaks
+	# for dir in /sys/block/*; do
+	# 	# Disable I/O statistics accounting
+	# 	apply 0 "$dir/queue/iostats"
 
-	# Sync to data in the rare case a device crashes
-	sync
+	# 	# Don't use I/O as random spice
+	# 	apply 0 "$dir/queue/add_random"
+	# done &
 
-	# Push Notification
-	su -lp 2000 -c "/system/bin/cmd notification post -t 'Encore Tweaks' 'encore' 'Tweaks successfully applied' </dev/null 2>&1 | cat" >/dev/null
-
-	# I/O Tweaks
-	for dir in /sys/block/*; do
-		# Disable I/O statistics accounting
-		apply 0 "$dir/queue/iostats"
-
-		# Don't use I/O as random spice
-		apply 0 "$dir/queue/add_random"
-	done &
-
-	# Networking tweaks
-	for algo in bbr3 bbr2 bbrplus bbr westwood cubic; do
-		if grep -q "$algo" /proc/sys/net/ipv4/tcp_available_congestion_control; then
-			apply "$algo" /proc/sys/net/ipv4/tcp_congestion_control
-			break
-		fi
-	done
-
-	apply 1 /proc/sys/net/ipv4/tcp_low_latency
-	apply 1 /proc/sys/net/ipv4/tcp_ecn
-	apply 3 /proc/sys/net/ipv4/tcp_fastopen
-	apply 1 /proc/sys/net/ipv4/tcp_sack
-	apply 0 /proc/sys/net/ipv4/tcp_timestamps
 
 	# Limit max perf event processing time to this much CPU usage
 	apply 3 /proc/sys/kernel/perf_cpu_time_max_percent
@@ -713,7 +666,9 @@ perfcommon() {
 
 performance_profile() {
 	# Enable Do not Disturb
-	[ "$DND_GAMEPLAY" -eq 1 ] && set_dnd 1
+	if [ "$DND" = "1" ]; then
+		set_dnd 1
+	fi
 
 	# Disable battery saver module
 	[ -f /sys/module/battery_saver/parameters/enabled ] && {
@@ -801,7 +756,9 @@ performance_profile() {
 }
 
 normal_profile() {
-	[ "$DND_GAMEPLAY" -eq 1 ] && set_dnd 0
+	if [ "$DND" = "1" ]; then
+		set_dnd 0
+	fi
 
 	# Disable battery saver module
 	[ -f /sys/module/battery_saver/parameters/enabled ] && {
