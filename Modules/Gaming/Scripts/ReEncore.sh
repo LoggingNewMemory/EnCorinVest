@@ -1,28 +1,31 @@
 # This is Encore script
 # Plain Copy Paste and override config file
 # But my config file works differently 
+# Note: Encore.sh can be run with this 
+# 1 > Performance
+# 2 > Normal
+# 3 > Powersave
+# 0 > Common Tweak
 
-# Config dir
-MODULE_CONFIG="/data/adb/.config/encore"
+# Config file path
+ENCORIN_CONFIG="/data/adb/modules/EnCorinVest/encorin.txt"
 
-# SoC recognition
-SOC=$(<$MODULE_CONFIG/soc_recognition)
+# Format: 1=MTK, 2=SD, 3=Exynos, 4=Unisoc, 5=Tensor, 6=Intel, 7=Tegra
+SOC=$(grep '^SOC=' "$ENCORIN_CONFIG" | cut -d'=' -f2)
+LITE_MODE=$(grep '^LITE_MODE=' "$ENCORIN_CONFIG" | cut -d'=' -f2)
+PPM_POLICY=$(grep '^PPM_POLICY=' "$ENCORIN_CONFIG" | cut -d'=' -f2)
 
-# Lite mode
-LITE_MODE=$(<$MODULE_CONFIG/lite_mode)
-
-# PPM policies settings for MediaTek devices
-PPM_POLICY=$(<$MODULE_CONFIG/ppm_policies_mediatek)
-
-# Default CPU Governor
-if [ -f $MODULE_CONFIG/custom_default_cpu_gov ]; then
-	DEFAULT_CPU_GOV="$(<$MODULE_CONFIG/custom_default_cpu_gov)"
-else
-	DEFAULT_CPU_GOV="$(<$MODULE_CONFIG/default_cpu_gov)"
+DEFAULT_CPU_GOV=$(grep '^GOV=' "$ENCORIN_CONFIG" | cut -d'=' -f2)
+if [ -z "$DEFAULT_CPU_GOV" ]; then
+    if [ -e /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors ] && grep -q "schedhorizon" /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors; then
+        DEFAULT_CPU_GOV="schedhorizon"
+    else
+        DEFAULT_CPU_GOV="schedutil"
+    fi
 fi
 
-# Device specific bug workaround
-DEVICE_MITIGATION="$(<$MODULE_CONFIG/device_mitigation)"
+DEVICE_MITIGATION=$(grep '^DEVICE_MITIGATION=' "$ENCORIN_CONFIG" | cut -d'=' -f2)
+DND_GAMEPLAY=$(grep '^DND=' "$ENCORIN_CONFIG" | cut -d'=' -f2)
 
 ###################################
 # Common Function
@@ -710,7 +713,7 @@ perfcommon() {
 
 performance_profile() {
 	# Enable Do not Disturb
-	[ "$(<$MODULE_CONFIG/dnd_gameplay)" -eq 1 ] && set_dnd 1
+	[ "$DND_GAMEPLAY" -eq 1 ] && set_dnd 1
 
 	# Disable battery saver module
 	[ -f /sys/module/battery_saver/parameters/enabled ] && {
@@ -798,7 +801,7 @@ performance_profile() {
 }
 
 normal_profile() {
-	[ "$(<$MODULE_CONFIG/dnd_gameplay)" -eq 1 ] && set_dnd 0
+	[ "$DND_GAMEPLAY" -eq 1 ] && set_dnd 0
 
 	# Disable battery saver module
 	[ -f /sys/module/battery_saver/parameters/enabled ] && {
