@@ -52,7 +52,7 @@ change_cpu_gov() {
 }
 
 set_dnd() {
-	case $1 in
+	case $1 in 
 	# Turn off DND mode
 	0) cmd notification set_dnd off ;;
 	# Turn on DND mode
