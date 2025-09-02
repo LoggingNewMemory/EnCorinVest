@@ -1,4 +1,77 @@
 LATESTARTSERVICE=true
+# Initialize SOC variable
+SOC=0
+
+soc_recognition_extra() {
+	[ -d /sys/class/kgsl/kgsl-3d0/devfreq ] && {
+		SOC=2
+		ui_print "- Snapdragon"
+		return 0
+	}
+
+	[ -d /sys/devices/platform/kgsl-2d0.0/kgsl ] && {
+		SOC=2
+		ui_print "- Snapdragon"
+		return 0
+	}
+
+	[ -d /sys/kernel/ged/hal ] && {
+		SOC=1
+		ui_print "- MediaTek"
+		return 0
+	}
+
+	[ -d /sys/kernel/tegra_gpu ] && {
+		SOC=7
+		ui_print "- Nvidia Tegra"
+		return 0
+	}
+
+	return 1
+}
+
+get_soc_getprop() {
+	local SOC_PROP="
+ro.board.platform
+ro.soc.model
+ro.hardware
+ro.chipname
+ro.hardware.chipname
+ro.vendor.soc.model.external_name
+ro.vendor.qti.soc_name
+ro.vendor.soc.model.part_name
+ro.vendor.soc.model
+"
+
+	for prop in $SOC_PROP; do
+		getprop "$prop"
+	done
+}
+
+recognize_soc() {
+	case "$1" in
+	*mt* | *MT*) SOC=1 ;;
+	*sm* | *qcom* | *SM* | *QCOM* | *Qualcomm*) SOC=2 ;;
+	*exynos* | *Exynos* | *EXYNOS* | *universal* | *samsung* | *erd* | *s5e*) SOC=3 ;;
+	*Unisoc* | *unisoc* | *ums*) SOC=4 ;;
+	*gs* | *Tensor* | *tensor*) SOC=5 ;;
+	*Intel* | *intel*) SOC=6 ;;
+	*kirin*) SOC=8 ;;
+	esac
+
+	case "$SOC" in
+	1) ui_print "- MediaTek" ;;
+	2) ui_print "- Snapdragon" ;;
+	3) ui_print "- Exynos" ;;
+	4) ui_print "- Unisoc" ;;
+	5) ui_print "- Google Tensor" ;;
+	6) ui_print "- Intel" ;;
+	7) ui_print "- Nvidia Tegra" ;;
+	8) ui_print "- Kirin" ;;
+	0) return 1 ;;
+	esac
+}
+# S=================================================================#
 
 ui_print "------------------------------------"
 ui_print "             EnCorinVest            " 
@@ -31,6 +104,36 @@ ui_print "RAM : $(free | grep Mem |  awk '{print $2}') "
 ui_print " "
 sleep 1.5
 
+# S=================================================================#
+# SOC Recognition and Configuration
+# S=================================================================#
+ui_print "------------------------------------"
+ui_print "        RECOGNIZING CHIPSET         "
+ui_print "------------------------------------"
+# SOC CODE:
+# 1 = MediaTek
+# 2 = Qualcomm Snapdragon
+# 3 = Exynos
+# 4 = Unisoc
+# 5 = Google Tensor
+# 6 = Intel
+# 7 = Nvidia Tegra
+# 8 = Kirin
+
+# Recognize Chipset
+soc_recognition_extra
+[ $SOC -eq 0 ] && recognize_soc "$(get_soc_getprop)"
+[ $SOC -eq 0 ] && recognize_soc "$(grep -E "Hardware|Processor" /proc/cpuinfo | uniq | cut -d ':' -f 2 | sed 's/^[ \t]*//')"
+[ $SOC -eq 0 ] && recognize_soc "$(grep "model\sname" /proc/cpuinfo | uniq | cut -d ':' -f 2 | sed 's/^[ \t]*//')"
+[ $SOC -eq 0 ] && {
+	ui_print "! Unknown SoC, skipping some tweaks"
+	ui_print "! If you think this is wrong, please report to maintainer"
+}
+ui_print " "
+sleep 1.5
+# S=================================================================#
+
+
 ui_print "------------------------------------"
 ui_print "            MODULE INFO             "
 ui_print "------------------------------------"
@@ -44,6 +147,18 @@ sleep 1.5
 ui_print "       INSTALLING EnCorinVest       "
 ui_print " "
 sleep 1.5
+
+# Ensure encorin.txt exists and update it with the detected SOC
+CONFIG_FILE="$MODPATH/encorin.txt"
+ui_print "- Extracting configuration file..."
+unzip -o "$ZIPFILE" 'encorin.txt' -d $MODPATH >&2
+if [ -f "$CONFIG_FILE" ]; then
+    ui_print "- Writing SOC Code ($SOC) to $CONFIG_FILE"
+    sed -i "s/^SOC=.*/SOC=$SOC/" "$CONFIG_FILE"
+else
+    ui_print "! encorin.txt not found, cannot write SOC value."
+fi
+ui_print " "
 
 # Check if game.txt exists in the new location, skip copy operations if it does
 if [ -f "/data/EnCorinVest/game.txt" ]; then
