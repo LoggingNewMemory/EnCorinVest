@@ -1,5 +1,5 @@
 #!/system/bin/sh
-# This still have some Encore function
+# This still have some Encore function 
 # However this is out of Encore, so don't expect easy SYNC
 
 ###############################
@@ -110,6 +110,10 @@ which_midfreq() {
 	total_opp=$(wc -w <"$1")
 	mid_opp=$(((total_opp + 1) / 2))
 	tr ' ' '\n' <"$1" | grep -v '^[[:space:]]*$' | sort -nr | head -n $mid_opp | tail -n 1
+}
+
+mtk_gpufreq_maxfreq_index() {
+	awk -F'[][]' '{print $2}' "$1" | head -n 1
 }
 
 mtk_gpufreq_minfreq_index() {
@@ -276,24 +280,24 @@ mediatek_performance() {
 	tweak 0 /sys/module/sspm_v3/holders/ged/parameters/is_GED_KPI_enabled
 
 	# GPU Frequency
-	if [ "$LITE_MODE" -eq 0 ]; then
+	tweak 0 /proc/gpufreq/gpufreq_opp_freq
+	tweak -1 /proc/gpufreqv2/fix_target_opp_index
+
+	if [ "$LITE_MODE" -eq 1 ]; then
 		if [ -d /proc/gpufreqv2 ]; then
-			tweak 0 /proc/gpufreqv2/fix_target_opp_index
+			opp_freq_index=$(mtk_gpufreq_midfreq_index /proc/gpufreqv2/gpu_working_opp_table)
 		else
-			gpu_freq=$(sed -n 's/.*freq = \([0-9]\{1,\}\).*/\1/p' /proc/gpufreq/gpufreq_opp_dump | head -n 1)
-			tweak "$gpu_freq" /proc/gpufreq/gpufreq_opp_freq
+			opp_freq_index=$(mtk_gpufreq_midfreq_index /proc/gpufreq/gpufreq_opp_dump)
 		fi
 	else
-		tweak 0 /proc/gpufreq/gpufreq_opp_freq
-		tweak -1 /proc/gpufreqv2/fix_target_opp_index
-
 		if [ -d /proc/gpufreqv2 ]; then
-			mid_oppfreq=$(mtk_gpufreq_midfreq_index /proc/gpufreqv2/gpu_working_opp_table)
+			opp_freq_index=$(mtk_gpufreq_maxfreq_index /proc/gpufreqv2/gpu_working_opp_table)
 		else
-			mid_oppfreq=$(mtk_gpufreq_midfreq_index /proc/gpufreq/gpufreq_opp_dump)
+			opp_freq_index=$(mtk_gpufreq_maxfreq_index /proc/gpufreq/gpufreq_opp_dump)
 		fi
-		tweak $mid_oppfreq /sys/kernel/ged/hal/custom_boost_gpu_freq
 	fi
+	tweak "$opp_freq_index" /sys/kernel/ged/hal/custom_boost_gpu_freq
+
 
 	# Disable GPU Power limiter
 	[ -f "/proc/gpufreq/gpufreq_power_limited" ] && {
