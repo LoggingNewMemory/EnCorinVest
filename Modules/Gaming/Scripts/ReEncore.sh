@@ -807,9 +807,9 @@ normal_profile() {
 	# 	devfreq_unlock "$path"
 	# done &
 
-	# Restore min CPU frequency
-	change_cpu_gov "$DEFAULT_CPU_GOV"
-	[ -d /proc/ppm ] && cpufreq_ppm_unlock || cpufreq_unlock
+	# # Restore min CPU frequency
+	# change_cpu_gov "$DEFAULT_CPU_GOV"
+	# [ -d /proc/ppm ] && cpufreq_ppm_unlock || cpufreq_unlock
 
 	# # I/O Tweaks
 	# for dir in /sys/block/mmcblk0 /sys/block/mmcblk1 /sys/block/sd*; do

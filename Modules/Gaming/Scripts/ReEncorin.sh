@@ -190,6 +190,25 @@ cpufreq_unlock() {
 	chmod -f 644 /sys/devices/system/cpu/cpufreq/policy*/scaling_*_freq
 }
 
+cpufreq_ppm_min_perf() {
+    cluster=-1
+    for path in /sys/devices/system/cpu/cpufreq/policy*; do
+        ((cluster++))
+        cpu_minfreq=$(<"$path/cpuinfo_min_freq")
+        tweak "$cluster $cpu_minfreq" /proc/ppm/policy/hard_userlimit_max_cpu_freq
+        tweak "$cluster $cpu_minfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
+    done
+}
+
+cpufreq_min_perf() {
+    for path in /sys/devices/system/cpu/*/cpufreq; do
+        cpu_minfreq=$(<"$path/cpuinfo_min_freq")
+        tweak "$cpu_minfreq" "$path/scaling_max_freq"
+        tweak "$cpu_minfreq" "$path/scaling_min_freq"
+    done
+    chmod -f 444 /sys/devices/system/cpu/cpufreq/policy*/scaling_*_freq
+}
+
 ##################################
 # Function End
 ##################################
@@ -399,8 +418,30 @@ dnd_off
 # Powersave Profile (3)
 ##########################################
 powersave_basic() {
-    echo "Powersave Profile is not yet implemented."
-    # Add your powersave mode tweaks here in the future
+    # In case someone need to go to powersave after performance
+    dnd_off
+
+    # Apply balanced settings to revert performance tweaks
+    balanced_basic
+
+    # Enable battery saver module if it exists
+    [ -f /sys/module/battery_saver/parameters/enabled ] && {
+        if grep -qo '[0-9]\+' /sys/module/battery_saver/parameters/enabled; then
+            tweak 1 /sys/module/battery_saver/parameters/enabled
+        else
+            tweak Y /sys/module/battery_saver/parameters/enabled
+        fi
+    }
+
+    # Set CPU governor to powersave
+    change_cpu_gov "powersave"
+
+    # Force CPU frequency to the lowest possible value
+    if [ -d /proc/ppm ]; then
+        cpufreq_ppm_min_perf
+    else
+        cpufreq_min_perf
+    fi
 }
 
 ##########################################
