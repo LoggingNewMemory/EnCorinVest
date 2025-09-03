@@ -1,5 +1,5 @@
 #!/system/bin/sh
-# This still have some Encore function 
+# This still have some Encore function
 # However this is out of Encore, so don't expect easy SYNC
 
 ###############################
@@ -9,7 +9,7 @@
 # Config file path
 ENCORIN_CONFIG="/data/adb/modules/EnCorinVest/encorin.txt"
 
-# Format: 1=MTK, 2=SD, 3=Exynos, 4=Unisoc, 5=Tensor, 6=Intel, 7=Tegra
+# Format: 1=MTK, 2=SD, 3=Exynos, 4=Unisoc, 5=Tensor, 6=Tegra, 7=Kirin
 SOC=$(grep '^SOC=' "$ENCORIN_CONFIG" | cut -d'=' -f2)
 LITE_MODE=$(grep '^LITE_MODE=' "$ENCORIN_CONFIG" | cut -d'=' -f2)
 
@@ -94,6 +94,10 @@ dnd_on() {
 	fi
 }
 
+###################################
+# Frequency fetching & setting (From Encore)
+###################################
+
 which_maxfreq() {
 	tr ' ' '\n' <"$1" | sort -nr | head -n 1
 }
@@ -106,6 +110,16 @@ which_midfreq() {
 	total_opp=$(wc -w <"$1")
 	mid_opp=$(((total_opp + 1) / 2))
 	tr ' ' '\n' <"$1" | grep -v '^[[:space:]]*$' | sort -nr | head -n $mid_opp | tail -n 1
+}
+
+mtk_gpufreq_minfreq_index() {
+	awk -F'[][]' '{print $2}' "$1" | tail -n 1
+}
+
+mtk_gpufreq_midfreq_index() {
+	total_opp=$(wc -l <"$1")
+	mid_opp=$(((total_opp + 1) / 2))
+	awk -F'[][]' '{print $2}' "$1" | head -n $mid_opp | tail -n 1
 }
 
 devfreq_max_perf() {
@@ -129,6 +143,36 @@ devfreq_unlock() {
 	min_freq=$(which_minfreq "$1/available_frequencies")
 	kakangkuh "$max_freq" "$1/max_freq"
 	kakangkuh "$min_freq" "$1/min_freq"
+}
+
+devfreq_min_perf() {
+	[ ! -f "$1/available_frequencies" ] && return 1
+	freq=$(which_minfreq "$1/available_frequencies")
+	tweak "$freq" "$1/min_freq"
+	tweak "$freq" "$1/max_freq"
+}
+
+qcom_cpudcvs_max_perf() {
+	[ ! -f "$1/available_frequencies" ] && return 1
+	freq=$(which_maxfreq "$1/available_frequencies")
+	tweak "$freq" "$1/hw_max_freq"
+	tweak "$freq" "$1/hw_min_freq"
+}
+
+qcom_cpudcvs_mid_perf() {
+	[ ! -f "$1/available_frequencies" ] && return 1
+	max_freq=$(which_maxfreq "$1/available_frequencies")
+	mid_freq=$(which_midfreq "$1/available_frequencies")
+	tweak "$max_freq" "$1/hw_max_freq"
+	tweak "$mid_freq" "$1/hw_min_freq"
+}
+
+qcom_cpudcvs_unlock() {
+	[ ! -f "$1/available_frequencies" ] && return 1
+	max_freq=$(which_maxfreq "$1/available_frequencies")
+	min_freq=$(which_minfreq "$1/available_frequencies")
+	kakangkuh "$max_freq" "$1/hw_max_freq"
+	kakangkuh "$min_freq" "$1/hw_min_freq"
 }
 
 change_cpu_gov() {
@@ -209,9 +253,351 @@ cpufreq_min_perf() {
     chmod -f 444 /sys/devices/system/cpu/cpufreq/policy*/scaling_*_freq
 }
 
-##################################
-# Function End
-##################################
+
+###################################
+# Device-specific performance profile
+###################################
+
+mediatek_performance() {
+	# Force off FPSGO
+	tweak 0 /sys/kernel/fpsgo/common/force_onoff
+
+	# MTK Power and CCI mode
+	tweak 1 /proc/cpufreq/cpufreq_cci_mode
+	tweak 3 /proc/cpufreq/cpufreq_power_mode
+
+	# DDR Boost mode
+	tweak 1 /sys/devices/platform/boot_dramboost/dramboost/dramboost
+
+	# EAS/HMP Switch
+	tweak 0 /sys/devices/system/cpu/eas/enable
+
+	# Disable GED KPI
+	tweak 0 /sys/module/sspm_v3/holders/ged/parameters/is_GED_KPI_enabled
+
+	# GPU Frequency
+	if [ "$LITE_MODE" -eq 0 ]; then
+		if [ -d /proc/gpufreqv2 ]; then
+			tweak 0 /proc/gpufreqv2/fix_target_opp_index
+		else
+			gpu_freq=$(sed -n 's/.*freq = \([0-9]\{1,\}\).*/\1/p' /proc/gpufreq/gpufreq_opp_dump | head -n 1)
+			tweak "$gpu_freq" /proc/gpufreq/gpufreq_opp_freq
+		fi
+	else
+		tweak 0 /proc/gpufreq/gpufreq_opp_freq
+		tweak -1 /proc/gpufreqv2/fix_target_opp_index
+
+		if [ -d /proc/gpufreqv2 ]; then
+			mid_oppfreq=$(mtk_gpufreq_midfreq_index /proc/gpufreqv2/gpu_working_opp_table)
+		else
+			mid_oppfreq=$(mtk_gpufreq_midfreq_index /proc/gpufreq/gpufreq_opp_dump)
+		fi
+		tweak $mid_oppfreq /sys/kernel/ged/hal/custom_boost_gpu_freq
+	fi
+
+	# Disable GPU Power limiter
+	[ -f "/proc/gpufreq/gpufreq_power_limited" ] && {
+		for setting in ignore_batt_oc ignore_batt_percent ignore_low_batt ignore_thermal_protect ignore_pbm_limited; do
+			tweak "$setting 1" /proc/gpufreq/gpufreq_power_limited
+		done
+	}
+
+	# Disable battery current limiter
+	tweak "stop 1" /proc/mtk_batoc_throttling/battery_oc_protect_stop
+
+	# DRAM Frequency
+	if [ "$LITE_MODE" -eq 0 ]; then
+		tweak 0 /sys/devices/platform/10012000.dvfsrc/helio-dvfsrc/dvfsrc_req_ddr_opp
+		tweak 0 /sys/kernel/helio-dvfsrc/dvfsrc_force_vcore_dvfs_opp
+		devfreq_max_perf /sys/class/devfreq/mtk-dvfsrc-devfreq
+	else
+		tweak -1 /sys/devices/platform/10012000.dvfsrc/helio-dvfsrc/dvfsrc_req_ddr_opp
+		tweak -1 /sys/kernel/helio-dvfsrc/dvfsrc_force_vcore_dvfs_opp
+		devfreq_mid_perf /sys/class/devfreq/mtk-dvfsrc-devfreq
+	fi
+
+	# Eara Thermal
+	tweak 0 /sys/kernel/eara_thermal/enable
+}
+
+snapdragon_performance() {
+	if [ "$DEVICE_MITIGATION" -eq 0 ]; then
+		for path in /sys/class/devfreq/*cpu*-lat \
+			/sys/class/devfreq/*cpu*-bw \
+			/sys/class/devfreq/*llccbw* \
+			/sys/class/devfreq/*bus_llcc* \
+			/sys/class/devfreq/*bus_ddr* \
+			/sys/class/devfreq/*memlat* \
+			/sys/class/devfreq/*cpubw* \
+			/sys/class/devfreq/*kgsl-ddr-qos*; do
+			if [ "$LITE_MODE" -eq 1 ]; then
+				devfreq_mid_perf "$path"
+			else
+				devfreq_max_perf "$path"
+			fi
+		done &
+
+		for component in DDR LLCC L3; do
+			path="/sys/devices/system/cpu/bus_dcvs/$component"
+			if [ "$LITE_MODE" -eq 1 ]; then
+				qcom_cpudcvs_mid_perf "$path"
+			else
+				qcom_cpudcvs_max_perf "$path"
+			fi
+		done &
+	fi
+
+	# GPU tweak
+	gpu_path="/sys/class/kgsl/kgsl-3d0/devfreq"
+	if [ "$LITE_MODE" -eq 0 ]; then
+	    devfreq_max_perf "$gpu_path"
+	else
+	    devfreq_mid_perf "$gpu_path"
+	fi
+
+	tweak 0 /sys/class/kgsl/kgsl-3d0/bus_split
+	tweak 1 /sys/class/kgsl/kgsl-3d0/force_clk_on
+}
+
+tegra_performance() {
+	gpu_path="/sys/kernel/tegra_gpu"
+	if [ -d "$gpu_path" ]; then
+		max_freq=$(which_maxfreq "$gpu_path/available_frequencies")
+		tweak "$max_freq" "$gpu_path/gpu_cap_rate"
+
+		if [ "$LITE_MODE" -eq 1 ]; then
+			mid_freq=$(which_midfreq "$gpu_path/available_frequencies")
+			tweak "$mid_freq" "$gpu_path/gpu_floor_rate"
+		else
+			tweak "$max_freq" "$gpu_path/gpu_floor_rate"
+		fi
+	fi
+}
+
+exynos_performance() {
+	gpu_path="/sys/kernel/gpu"
+	[ -d "$gpu_path" ] && {
+		max_freq=$(which_maxfreq "$gpu_path/gpu_available_frequencies")
+		tweak "$max_freq" "$gpu_path/gpu_max_clock"
+
+		if [ "$LITE_MODE" -eq 1 ]; then
+			mid_freq=$(which_midfreq "$gpu_path/gpu_available_frequencies")
+			tweak "$mid_freq" "$gpu_path/gpu_min_clock"
+		else
+			tweak "$max_freq" "$gpu_path/gpu_min_clock"
+		fi
+	}
+
+	mali_sysfs=$(find /sys/devices/platform/ -iname "*.mali" -print -quit 2>/dev/null)
+	tweak always_on "$mali_sysfs/power_policy"
+
+	if [ "$DEVICE_MITIGATION" -eq 0 ]; then
+		for path in /sys/class/devfreq/*devfreq_mif*; do
+			if [ "$LITE_MODE" -eq 1 ]; then
+				devfreq_mid_perf "$path"
+			else
+				devfreq_max_perf "$path"
+			fi
+		done &
+	fi
+}
+
+unisoc_performance() {
+	gpu_path=$(find /sys/class/devfreq/ -type d -iname "*.gpu" -print -quit 2>/dev/null)
+	[ -n "$gpu_path" ] && {
+		if [ "$LITE_MODE" -eq 0 ]; then
+			devfreq_max_perf "$gpu_path"
+		else
+			devfreq_mid_perf "$gpu_path"
+		fi
+	}
+}
+
+tensor_performance() {
+	gpu_path=$(find /sys/devices/platform/ -type d -iname "*.mali" -print -quit 2>/dev/null)
+	[ -n "$gpu_path" ] && {
+		max_freq=$(which_maxfreq "$gpu_path/available_frequencies")
+		tweak "$max_freq" "$gpu_path/scaling_max_freq"
+
+		if [ "$LITE_MODE" -eq 1 ]; then
+			mid_freq=$(which_midfreq "$gpu_path/available_frequencies")
+			tweak "$mid_freq" "$gpu_path/scaling_min_freq"
+		else
+			tweak "$max_freq" "$gpu_path/scaling_min_freq"
+		fi
+	}
+
+	if [ "$DEVICE_MITIGATION" -eq 0 ]; then
+		for path in /sys/class/devfreq/*devfreq_mif*; do
+			if [ "$LITE_MODE" -eq 1 ]; then
+				devfreq_mid_perf "$path"
+			else
+				devfreq_max_perf "$path"
+			fi
+		done &
+	fi
+}
+
+
+###################################
+# Device-specific normal profile
+###################################
+
+mediatek_normal() {
+	tweak 2 /sys/kernel/fpsgo/common/force_onoff
+	tweak 0 /proc/cpufreq/cpufreq_cci_mode
+	tweak 0 /proc/cpufreq/cpufreq_power_mode
+	tweak 0 /sys/devices/platform/boot_dramboost/dramboost/dramboost
+	tweak 2 /sys/devices/system/cpu/eas/enable
+	tweak 1 /sys/module/sspm_v3/holders/ged/parameters/is_GED_KPI_enabled
+	kakangkuh 0 /proc/gpufreq/gpufreq_opp_freq
+	kakangkuh -1 /proc/gpufreqv2/fix_target_opp_index
+
+	if [ -d /proc/gpufreqv2 ]; then
+		min_oppfreq=$(mtk_gpufreq_minfreq_index /proc/gpufreqv2/gpu_working_opp_table)
+	else
+		min_oppfreq=$(mtk_gpufreq_minfreq_index /proc/gpufreq/gpufreq_opp_dump)
+	fi
+	tweak $min_oppfreq /sys/kernel/ged/hal/custom_boost_gpu_freq
+
+	[ -f "/proc/gpufreq/gpufreq_power_limited" ] && {
+		for setting in ignore_batt_oc ignore_batt_percent ignore_low_batt ignore_thermal_protect ignore_pbm_limited; do
+			tweak "$setting 0" /proc/gpufreq/gpufreq_power_limited
+		done
+	}
+
+	tweak "stop 0" /proc/mtk_batoc_throttling/battery_oc_protect_stop
+	kakangkuh -1 /sys/devices/platform/10012000.dvfsrc/helio-dvfsrc/dvfsrc_req_ddr_opp
+	kakangkuh -1 /sys/kernel/helio-dvfsrc/dvfsrc_force_vcore_dvfs_opp
+	devfreq_unlock /sys/class/devfreq/mtk-dvfsrc-devfreq
+	tweak 1 /sys/kernel/eara_thermal/enable
+}
+
+snapdragon_normal() {
+	if [ "$DEVICE_MITIGATION" -eq 0 ]; then
+		for path in /sys/class/devfreq/*cpu*-lat \
+			/sys/class/devfreq/*cpu*-bw \
+			/sys/class/devfreq/*llccbw* \
+			/sys/class/devfreq/*bus_llcc* \
+			/sys/class/devfreq/*bus_ddr* \
+			/sys/class/devfreq/*memlat* \
+			/sys/class/devfreq/*cpubw* \
+			/sys/class/devfreq/*kgsl-ddr-qos*; do
+			devfreq_unlock "$path"
+		done &
+
+		for component in DDR LLCC L3; do
+			qcom_cpudcvs_unlock /sys/devices/system/cpu/bus_dcvs/$component
+		done
+	fi
+
+	devfreq_unlock /sys/class/kgsl/kgsl-3d0/devfreq
+	tweak 1 /sys/class/kgsl/kgsl-3d0/bus_split
+	tweak 0 /sys/class/kgsl/kgsl-3d0/force_clk_on
+}
+
+tegra_normal() {
+	gpu_path="/sys/kernel/tegra_gpu"
+	[ -d "$gpu_path" ] && {
+		max_freq=$(which_maxfreq "$gpu_path/available_frequencies")
+		min_freq=$(which_minfreq "$gpu_path/available_frequencies")
+		kakangkuh "$max_freq" "$gpu_path/gpu_cap_rate"
+		kakangkuh "$min_freq" "$gpu_path/gpu_floor_rate"
+	}
+}
+
+exynos_normal() {
+	gpu_path="/sys/kernel/gpu"
+	[ -d "$gpu_path" ] && {
+		max_freq=$(which_maxfreq "$gpu_path/gpu_available_frequencies")
+		min_freq=$(which_minfreq "$gpu_path/gpu_available_frequencies")
+		kakangkuh "$max_freq" "$gpu_path/gpu_max_clock"
+		kakangkuh "$min_freq" "$gpu_path/gpu_min_clock"
+	}
+
+	mali_sysfs=$(find /sys/devices/platform/ -iname "*.mali" -print -quit 2>/dev/null)
+	tweak coarse_demand "$mali_sysfs/power_policy"
+
+	if [ "$DEVICE_MITIGATION" -eq 0 ]; then
+		for path in /sys/class/devfreq/*devfreq_mif*; do
+			devfreq_unlock "$path"
+		done &
+	fi
+}
+
+unisoc_normal() {
+	gpu_path=$(find /sys/class/devfreq/ -type d -iname "*.gpu" -print -quit 2>/dev/null)
+	[ -n "$gpu_path" ] && devfreq_unlock "$gpu_path"
+}
+
+tensor_normal() {
+	gpu_path=$(find /sys/devices/platform/ -type d -iname "*.mali" -print -quit 2>/dev/null)
+	[ -n "$gpu_path" ] && {
+		max_freq=$(which_maxfreq "$gpu_path/available_frequencies")
+		min_freq=$(which_minfreq "$gpu_path/available_frequencies")
+		kakangkuh "$max_freq" "$gpu_path/scaling_max_freq"
+		kakangkuh "$min_freq" "$gpu_path/scaling_min_freq"
+	}
+
+	if [ "$DEVICE_MITIGATION" -eq 0 ]; then
+		for path in /sys/class/devfreq/*devfreq_mif*; do
+			devfreq_unlock "$path"
+		done &
+	fi
+}
+
+
+###################################
+# Device-specific powersave profile
+###################################
+
+mediatek_powersave() {
+	tweak 1 /proc/cpufreq/cpufreq_power_mode
+	if [ -d /proc/gpufreqv2 ]; then
+		min_gpufreq_index=$(mtk_gpufreq_minfreq_index /proc/gpufreqv2/gpu_working_opp_table)
+		tweak "$min_gpufreq_index" /proc/gpufreqv2/fix_target_opp_index
+	else
+		gpu_freq=$(sed -n 's/.*freq = \([0-9]\{1,\}\).*/\1/p' /proc/gpufreq/gpufreq_opp_dump | tail -n 1)
+		tweak "$gpu_freq" /proc/gpufreq/gpufreq_opp_freq
+	fi
+}
+
+snapdragon_powersave() {
+	devfreq_min_perf /sys/class/kgsl/kgsl-3d0/devfreq
+}
+
+tegra_powersave() {
+	gpu_path="/sys/kernel/tegra_gpu"
+	[ -d "$gpu_path" ] && {
+		freq=$(which_minfreq "$gpu_path/available_frequencies")
+		tweak "$freq" "$gpu_path/gpu_floor_rate"
+		tweak "$freq" "$gpu_path/gpu_cap_rate"
+	}
+}
+
+exynos_powersave() {
+	gpu_path="/sys/kernel/gpu"
+	[ -d "$gpu_path" ] && {
+		freq=$(which_minfreq "$gpu_path/gpu_available_frequencies")
+		tweak "$freq" "$gpu_path/gpu_min_clock"
+		tweak "$freq" "$gpu_path/gpu_max_clock"
+	}
+}
+
+unisoc_powersave() {
+	gpu_path=$(find /sys/class/devfreq/ -type d -iname "*.gpu" -print -quit 2>/dev/null)
+	[ -n "$gpu_path" ] && devfreq_min_perf "$gpu_path"
+}
+
+tensor_powersave() {
+	gpu_path=$(find /sys/devices/platform/ -type d -iname "*.mali" -print -quit 2>/dev/null)
+	[ -n "$gpu_path" ] && {
+		freq=$(which_minfreq "$gpu_path/available_frequencies")
+		tweak "$freq" "$gpu_path/scaling_min_freq"
+		tweak "$freq" "$gpu_path/scaling_max_freq"
+	}
+}
+
 
 ##################################
 # Performance Profile (1)
@@ -231,60 +617,30 @@ performance_basic() {
     tweak 3 /proc/sys/net/ipv4/tcp_fastopen
     tweak 1 /proc/sys/net/ipv4/tcp_sack
     tweak 0 /proc/sys/net/ipv4/tcp_timestamps
-
-    # Limit max perf event processing time to this much CPU usage
     tweak 3 /proc/sys/kernel/perf_cpu_time_max_percent
-
-    # Disable schedstats
     tweak 0 /proc/sys/kernel/sched_schedstats
-
-    # Disable Oppo/Realme cpustats
     tweak 0 /proc/sys/kernel/task_cpustats_enable
-
-    # Disable Sched auto group
     tweak 0 /proc/sys/kernel/sched_autogroup_enabled
-
-    # Enable CRF
     tweak 1 /proc/sys/kernel/sched_child_runs_first
-
-    # Improve real time latencies by reducing the scheduler migration time
     tweak 32 /proc/sys/kernel/sched_nr_migrate
-
-    # Tweaking scheduler to reduce latency
     tweak 50000 /proc/sys/kernel/sched_migration_cost_ns
     tweak 1000000 /proc/sys/kernel/sched_min_granularity_ns
     tweak 1500000 /proc/sys/kernel/sched_wakeup_granularity_ns
-
-    # Disable read-ahead for swap devices
     tweak 0 /proc/sys/vm/page-cluster
-
-    # Update /proc/stat less often to reduce jitter
     tweak 15 /proc/sys/vm/stat_interval
-
-    # Disable compaction_proactiveness
     tweak 0 /proc/sys/vm/compaction_proactiveness
-
-    # Disable SPI CRC
     tweak 0 /sys/module/mmc_core/parameters/use_spi_crc
-
-    # Disable OnePlus opchain
     tweak 0 /sys/module/opchain/parameters/chain_on
-
-    # Disable Oplus bloats
     tweak 0 /sys/module/cpufreq_bouncing/parameters/enable
     tweak 0 /proc/task_info/task_sched_info/task_sched_info_enable
     tweak 0 /proc/oplus_scheduler/sched_assist/sched_assist_enabled
-
-    # Report max CPU capabilities to these libraries
     tweak "libunity.so, libil2cpp.so, libmain.so, libUE4.so, libgodot_android.so, libgdx.so, libgdx-box2d.so, libminecraftpe.so, libLive2DCubismCore.so, libyuzu-android.so, libryujinx.so, libcitra-android.so, libhdr_pro_engine.so, libandroidx.graphics.path.so, libeffect.so" /proc/sys/kernel/sched_lib_name
     tweak 255 /proc/sys/kernel/sched_lib_mask_force
 
-    # Set thermal governor to step_wise
     for dir in /sys/class/thermal/thermal_zone*; do
         tweak "step_wise" "$dir/policy"
     done
 
-    # Disable battery saver module
     [ -f /sys/module/battery_saver/parameters/enabled ] && {
         if grep -qo '[0-9]\+' /sys/module/battery_saver/parameters/enabled; then
             tweak 0 /sys/module/battery_saver/parameters/enabled
@@ -293,26 +649,18 @@ performance_basic() {
         fi
     }
 
-    # Disable split lock mitigation
     tweak 0 /proc/sys/kernel/split_lock_mitigate
 
     if [ -f "/sys/kernel/debug/sched_features" ]; then
-        # Consider scheduling tasks that are eager to run
         tweak NEXT_BUDDY /sys/kernel/debug/sched_features
-
-        # Some sources report large latency spikes during large migrations
         tweak NO_TTWU_QUEUE /sys/kernel/debug/sched_features
     fi
 
     if [ -d "/dev/stune/" ]; then
-        # Prefer to schedule top-app tasks on idle CPUs
         tweak 1 /dev/stune/top-app/schedtune.prefer_idle
-
-        # Mark top-app as boosted, find high-performing CPUs
         tweak 1 /dev/stune/top-app/schedtune.boost
     fi
 
-    # Oppo/Oplus/Realme Touchpanel
     tp_path="/proc/touchpanel"
     if [ -d "$tp_path" ]; then
         tweak 1 $tp_path/game_switch_enable
@@ -322,13 +670,9 @@ performance_basic() {
         tweak 1 $tp_path/oppo_tp_direction
     fi
 
-    # Memory tweak
     tweak 80 /proc/sys/vm/vfs_cache_pressure
 
-    # eMMC and UFS frequency
-    for path in /sys/class/devfreq/*.ufshc \
-        /sys/class/devfreq/mmc*; do
-
+    for path in /sys/class/devfreq/*.ufshc /sys/class/devfreq/mmc*; do
         if [ -d "$path" ]; then
             if [ "$LITE_MODE" -eq 1 ]; then
                 devfreq_mid_perf "$path"
@@ -338,25 +682,32 @@ performance_basic() {
         fi
     done &
 
-    # CPU GOV
     if [ "$LITE_MODE" -eq 0 ] && [ "$DEVICE_MITIGATION" -eq 0 ]; then
         change_cpu_gov "performance"
     else
         change_cpu_gov "$DEFAULT_CPU_GOV"
     fi
 
-    # Force CPU frequency to the highest possible value
     if [ -d "/proc/ppm" ]; then
         cpufreq_ppm_max_perf
     else
         cpufreq_max_perf
     fi
 
-    # I/O Tweaks
     for dir in /sys/block/mmcblk0 /sys/block/mmcblk1 /sys/block/sd*; do
         tweak 32 "$dir/queue/read_ahead_kb"
         tweak 32 "$dir/queue/nr_requests"
     done &
+    
+    # Apply device-specific tweaks
+    case $SOC in
+        1) mediatek_performance ;;
+        2) snapdragon_performance ;;
+        3) exynos_performance ;;
+        4) unisoc_performance ;;
+        5) tensor_performance ;;
+        6) tegra_performance ;;
+    esac
 }
 
 ##########################################
@@ -397,20 +748,27 @@ balanced_basic() {
 
     kakangkuh 120 /proc/sys/vm/vfs_cache_pressure
 
-    for path in /sys/class/devfreq/*.ufshc \
-        /sys/class/devfreq/mmc*; do
+    for path in /sys/class/devfreq/*.ufshc /sys/class/devfreq/mmc*; do
         devfreq_unlock "$path"
     done &
 
-    # Restore the default CPU governor
     change_cpu_gov "$DEFAULT_CPU_GOV"
 
-    # Unlock CPU frequency limits
     if [ -d /proc/ppm ]; then
         cpufreq_ppm_unlock
     else
         cpufreq_unlock
     fi
+    
+    # Apply device-specific tweaks
+    case $SOC in
+        1) mediatek_normal ;;
+        2) snapdragon_normal ;;
+        3) exynos_normal ;;
+        4) unisoc_normal ;;
+        5) tensor_normal ;;
+        6) tegra_normal ;;
+    esac
 }
 
 ##########################################
@@ -418,13 +776,10 @@ balanced_basic() {
 ##########################################
 powersave_basic() {
     sync
-    # In case someone need to go to powersave after performance
     dnd_off
 
-    # Apply balanced settings to revert performance tweaks
     balanced_basic
 
-    # Enable battery saver module if it exists
     [ -f /sys/module/battery_saver/parameters/enabled ] && {
         if grep -qo '[0-9]\+' /sys/module/battery_saver/parameters/enabled; then
             tweak 1 /sys/module/battery_saver/parameters/enabled
@@ -432,23 +787,34 @@ powersave_basic() {
             tweak Y /sys/module/battery_saver/parameters/enabled
         fi
     }
+    
+    for path in /sys/class/devfreq/*.ufshc /sys/class/devfreq/mmc*; do
+		devfreq_min_perf "$path"
+	done &
 
-    # Set CPU governor to powersave
     change_cpu_gov "powersave"
 
-    # Force CPU frequency to the lowest possible value
     if [ -d /proc/ppm ]; then
         cpufreq_ppm_min_perf
     else
         cpufreq_min_perf
     fi
+
+    # Apply device-specific tweaks
+    case $SOC in
+        1) mediatek_powersave ;;
+        2) snapdragon_powersave ;;
+        3) exynos_powersave ;;
+        4) unisoc_powersave ;;
+        5) tensor_powersave ;;
+        6) tegra_powersave ;;
+    esac
 }
 
 ##########################################
 # MAIN EXECUTION LOGIC
 ##########################################
 
-# Check if an argument was provided
 if [ -z "$1" ]; then
     echo "Usage: $0 <mode>"
     echo "  1: Performance"
@@ -459,7 +825,6 @@ fi
 
 MODE=$1
 
-# Execute the corresponding function based on the mode
 case $MODE in
     1)
         performance_basic
