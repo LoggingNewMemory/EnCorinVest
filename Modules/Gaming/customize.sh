@@ -2,28 +2,42 @@ LATESTARTSERVICE=true
 # Initialize SOC variable
 SOC=0
 
+ui_print "------------------------------------"
+ui_print "             EnCorinVest            " 
+ui_print "------------------------------------"
+ui_print "         By: Kanagawa Yamada        "
+ui_print "------------------------------------"
+ui_print " "
+sleep 1.5
+
+ui_print "------------------------------------"
+ui_print "DO NOT COMBINE WITH ANY PERF MODULE!"
+ui_print "------------------------------------"
+ui_print " "
+sleep 1.5
+
+# =============================
+# SOC Recognition and Configuration
+# =============================
+
 soc_recognition_extra() {
 	[ -d /sys/class/kgsl/kgsl-3d0/devfreq ] && {
 		SOC=2
-		ui_print "- Snapdragon"
 		return 0
 	}
 
 	[ -d /sys/devices/platform/kgsl-2d0.0/kgsl ] && {
 		SOC=2
-		ui_print "- Snapdragon"
 		return 0
 	}
 
 	[ -d /sys/kernel/ged/hal ] && {
 		SOC=1
-		ui_print "- MediaTek"
 		return 0
 	}
 
 	[ -d /sys/kernel/tegra_gpu ] && {
 		SOC=6
-		ui_print "- Nvidia Tegra"
 		return 0
 	}
 
@@ -58,52 +72,9 @@ recognize_soc() {
 	*kirin*) SOC=7 ;;
 	esac
 
-	case "$SOC" in
-	1) ui_print "- MediaTek" ;;
-	2) ui_print "- Snapdragon" ;;
-	3) ui_print "- Exynos" ;;
-	4) ui_print "- Unisoc" ;;
-	5) ui_print "- Google Tensor" ;;
-	6) ui_print "- Nvidia Tegra" ;;
-	7) ui_print "- Kirin" ;;
-	0) return 1 ;;
-	esac
+	[ $SOC -eq 0 ] && return 1
 }
 
-ui_print "------------------------------------"
-ui_print "             EnCorinVest            " 
-ui_print "------------------------------------"
-ui_print "         By: Kanagawa Yamada        "
-ui_print "------------------------------------"
-ui_print " "
-sleep 1.5
-
-ui_print "------------------------------------"
-ui_print "      SNAPDRAGON | MEDIATEK         "
-ui_print "          EXYNOS | UniSoc           "
-ui_print "------------------------------------"
-ui_print "DO NOT COMBINE WITH ANY PERF MODULE!"
-ui_print "------------------------------------"
-ui_print " "
-sleep 1.5
-
-ui_print "-----------------📱-----------------"
-ui_print "            DEVICE INFO             "
-ui_print "-----------------📱-----------------"
-ui_print "DEVICE : $(getprop ro.build.product) "
-ui_print "MODEL : $(getprop ro.product.model) "
-ui_print "MANUFACTURE : $(getprop ro.product.system.manufacturer) "
-ui_print "PROC : $(getprop ro.product.board) "
-ui_print "CPU : $(getprop ro.hardware) "
-ui_print "ANDROID VER : $(getprop ro.build.version.release) "
-ui_print "KERNEL : $(uname -r) "
-ui_print "RAM : $(free | grep Mem |  awk '{print $2}') "
-ui_print " "
-sleep 1.5
-
-# =============================
-# SOC Recognition and Configuration
-# =============================
 ui_print "------------------------------------"
 ui_print "        RECOGNIZING CHIPSET         "
 ui_print "------------------------------------"
@@ -116,17 +87,15 @@ ui_print "------------------------------------"
 # 6 = Nvidia Tegra
 # 7 = Kirin
 
-# Recognize Chipset
+# Recognize Chipset by calling the functions defined above
 soc_recognition_extra
 [ $SOC -eq 0 ] && recognize_soc "$(get_soc_getprop)"
 [ $SOC -eq 0 ] && recognize_soc "$(grep -E "Hardware|Processor" /proc/cpuinfo | uniq | cut -d ':' -f 2 | sed 's/^[ \t]*//')"
 [ $SOC -eq 0 ] && recognize_soc "$(grep "model\sname" /proc/cpuinfo | uniq | cut -d ':' -f 2 | sed 's/^[ \t]*//')"
 [ $SOC -eq 0 ] && {
-	ui_print "! Unknown SoC, skipping some tweaks"
-	ui_print "! If you think this is wrong, please report to maintainer"
+  ui_print "! Unable to detect your SoC (Chipset)."
+  abort "! Installation cannot continue. Aborting."
 }
-ui_print " "
-sleep 1.5
 
 ui_print "------------------------------------"
 ui_print "            MODULE INFO             "
@@ -185,7 +154,7 @@ fi
 
 cp "$MODPATH"/EnCorinVest.apk /data/local/tmp >/dev/null 2>&1
 pm install /data/local/tmp/EnCorinVest.apk >/dev/null 2>&1
-rm /data/local/tmp/EnCorinVest.apk >/dev/null 2>&1
+rm /data/local/tmp/EnCorinVest.apk >/dev/null 2&>1
 
 ui_print " "
 ui_print "         INSTALLING HAMADA AI         "
