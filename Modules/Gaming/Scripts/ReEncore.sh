@@ -611,114 +611,114 @@ perfcommon() {
 	# done &
 
 
-	# Limit max perf event processing time to this much CPU usage
-	apply 3 /proc/sys/kernel/perf_cpu_time_max_percent
+	# # Limit max perf event processing time to this much CPU usage
+	# apply 3 /proc/sys/kernel/perf_cpu_time_max_percent
 
-	# Disable schedstats
-	apply 0 /proc/sys/kernel/sched_schedstats
+	# # Disable schedstats
+	# apply 0 /proc/sys/kernel/sched_schedstats
 
-	# Disable Oppo/Realme cpustats
-	apply 0 /proc/sys/kernel/task_cpustats_enable
+	# # Disable Oppo/Realme cpustats
+	# apply 0 /proc/sys/kernel/task_cpustats_enable
 
-	# Disable Sched auto group
-	apply 0 /proc/sys/kernel/sched_autogroup_enabled
+	# # Disable Sched auto group
+	# apply 0 /proc/sys/kernel/sched_autogroup_enabled
 
-	# Enable CRF
-	apply 1 /proc/sys/kernel/sched_child_runs_first
+	# # Enable CRF
+	# apply 1 /proc/sys/kernel/sched_child_runs_first
 
-	# Improve real time latencies by reducing the scheduler migration time
-	apply 32 /proc/sys/kernel/sched_nr_migrate
+	# # Improve real time latencies by reducing the scheduler migration time
+	# apply 32 /proc/sys/kernel/sched_nr_migrate
 
-	# Tweaking scheduler to reduce latency
-	apply 50000 /proc/sys/kernel/sched_migration_cost_ns
-	apply 1000000 /proc/sys/kernel/sched_min_granularity_ns
-	apply 1500000 /proc/sys/kernel/sched_wakeup_granularity_ns
+	# # Tweaking scheduler to reduce latency
+	# apply 50000 /proc/sys/kernel/sched_migration_cost_ns
+	# apply 1000000 /proc/sys/kernel/sched_min_granularity_ns
+	# apply 1500000 /proc/sys/kernel/sched_wakeup_granularity_ns
 
-	# Disable read-ahead for swap devices
-	apply 0 /proc/sys/vm/page-cluster
+	# # Disable read-ahead for swap devices
+	# apply 0 /proc/sys/vm/page-cluster
 
-	# Update /proc/stat less often to reduce jitter
-	apply 15 /proc/sys/vm/stat_interval
+	# # Update /proc/stat less often to reduce jitter
+	# apply 15 /proc/sys/vm/stat_interval
 
-	# Disable compaction_proactiveness
-	apply 0 /proc/sys/vm/compaction_proactiveness
+	# # Disable compaction_proactiveness
+	# apply 0 /proc/sys/vm/compaction_proactiveness
 
-	# Disable SPI CRC
-	apply 0 /sys/module/mmc_core/parameters/use_spi_crc
+	# # Disable SPI CRC
+	# apply 0 /sys/module/mmc_core/parameters/use_spi_crc
 
-	# Disable OnePlus opchain
-	apply 0 /sys/module/opchain/parameters/chain_on
+	# # Disable OnePlus opchain
+	# apply 0 /sys/module/opchain/parameters/chain_on
 
-	# Disable Oplus bloats
-	apply 0 /sys/module/cpufreq_bouncing/parameters/enable
-	apply 0 /proc/task_info/task_sched_info/task_sched_info_enable
-	apply 0 /proc/oplus_scheduler/sched_assist/sched_assist_enabled
+	# # Disable Oplus bloats
+	# apply 0 /sys/module/cpufreq_bouncing/parameters/enable
+	# apply 0 /proc/task_info/task_sched_info/task_sched_info_enable
+	# apply 0 /proc/oplus_scheduler/sched_assist/sched_assist_enabled
 
-	# Report max CPU capabilities to these libraries
-	apply "libunity.so, libil2cpp.so, libmain.so, libUE4.so, libgodot_android.so, libgdx.so, libgdx-box2d.so, libminecraftpe.so, libLive2DCubismCore.so, libyuzu-android.so, libryujinx.so, libcitra-android.so, libhdr_pro_engine.so, libandroidx.graphics.path.so, libeffect.so" /proc/sys/kernel/sched_lib_name
-	apply 255 /proc/sys/kernel/sched_lib_mask_force
+	# # Report max CPU capabilities to these libraries
+	# apply "libunity.so, libil2cpp.so, libmain.so, libUE4.so, libgodot_android.so, libgdx.so, libgdx-box2d.so, libminecraftpe.so, libLive2DCubismCore.so, libyuzu-android.so, libryujinx.so, libcitra-android.so, libhdr_pro_engine.so, libandroidx.graphics.path.so, libeffect.so" /proc/sys/kernel/sched_lib_name
+	# apply 255 /proc/sys/kernel/sched_lib_mask_force
 
-	# Set thermal governor to step_wise
-	for dir in /sys/class/thermal/thermal_zone*; do
-		apply "step_wise" "$dir/policy"
-	done
+	# # Set thermal governor to step_wise
+	# for dir in /sys/class/thermal/thermal_zone*; do
+	# 	apply "step_wise" "$dir/policy"
+	# done
 }
 
 performance_profile() {
-	# Enable Do not Disturb
-	if [ "$DND" = "1" ]; then
-		set_dnd 1
-	fi
+	# # Enable Do not Disturb
+	# if [ "$DND" = "1" ]; then
+	# 	set_dnd 1
+	# fi
 
-	# Disable battery saver module
-	[ -f /sys/module/battery_saver/parameters/enabled ] && {
-		if grep -qo '[0-9]\+' /sys/module/battery_saver/parameters/enabled; then
-			apply 0 /sys/module/battery_saver/parameters/enabled
-		else
-			apply N /sys/module/battery_saver/parameters/enabled
-		fi
-	}
+	# # Disable battery saver module
+	# [ -f /sys/module/battery_saver/parameters/enabled ] && {
+	# 	if grep -qo '[0-9]\+' /sys/module/battery_saver/parameters/enabled; then
+	# 		apply 0 /sys/module/battery_saver/parameters/enabled
+	# 	else
+	# 		apply N /sys/module/battery_saver/parameters/enabled
+	# 	fi
+	# }
 
-	# Disable split lock mitigation
-	apply 0 /proc/sys/kernel/split_lock_mitigate
+	# # Disable split lock mitigation
+	# apply 0 /proc/sys/kernel/split_lock_mitigate
 
-	if [ -f "/sys/kernel/debug/sched_features" ]; then
-		# Consider scheduling tasks that are eager to run
-		apply NEXT_BUDDY /sys/kernel/debug/sched_features
+	# if [ -f "/sys/kernel/debug/sched_features" ]; then
+	# 	# Consider scheduling tasks that are eager to run
+	# 	apply NEXT_BUDDY /sys/kernel/debug/sched_features
 
-		# Some sources report large latency spikes during large migrations
-		apply NO_TTWU_QUEUE /sys/kernel/debug/sched_features
-	fi
+	# 	# Some sources report large latency spikes during large migrations
+	# 	apply NO_TTWU_QUEUE /sys/kernel/debug/sched_features
+	# fi
 
-	if [ -d "/dev/stune/" ]; then
-		# Prefer to schedule top-app tasks on idle CPUs
-		apply 1 /dev/stune/top-app/schedtune.prefer_idle
+	# if [ -d "/dev/stune/" ]; then
+	# 	# Prefer to schedule top-app tasks on idle CPUs
+	# 	apply 1 /dev/stune/top-app/schedtune.prefer_idle
 
-		# Mark top-app as boosted, find high-performing CPUs
-		apply 1 /dev/stune/top-app/schedtune.boost
-	fi
+	# 	# Mark top-app as boosted, find high-performing CPUs
+	# 	apply 1 /dev/stune/top-app/schedtune.boost
+	# fi
 
-	# Oppo/Oplus/Realme Touchpanel
-	tp_path="/proc/touchpanel"
-	if [ -d "$tp_path" ]; then
-		apply 1 $tp_path/game_switch_enable
-		apply 0 $tp_path/oplus_tp_limit_enable
-		apply 0 $tp_path/oppo_tp_limit_enable
-		apply 1 $tp_path/oplus_tp_direction
-		apply 1 $tp_path/oppo_tp_direction
-	fi
+	# # Oppo/Oplus/Realme Touchpanel
+	# tp_path="/proc/touchpanel"
+	# if [ -d "$tp_path" ]; then
+	# 	apply 1 $tp_path/game_switch_enable
+	# 	apply 0 $tp_path/oplus_tp_limit_enable
+	# 	apply 0 $tp_path/oppo_tp_limit_enable
+	# 	apply 1 $tp_path/oplus_tp_direction
+	# 	apply 1 $tp_path/oppo_tp_direction
+	# fi
 
-	# Memory tweak
-	apply 80 /proc/sys/vm/vfs_cache_pressure
+	# # Memory tweak
+	# apply 80 /proc/sys/vm/vfs_cache_pressure
 
-	# eMMC and UFS frequency
-	for path in /sys/class/devfreq/*.ufshc \
-		/sys/class/devfreq/mmc*; do
+	# # eMMC and UFS frequency
+	# for path in /sys/class/devfreq/*.ufshc \
+	# 	/sys/class/devfreq/mmc*; do
 
-		[ $LITE_MODE -eq 1 ] &&
-			devfreq_mid_perf "$path" ||
-			devfreq_max_perf "$path"
-	done &
+	# 	[ $LITE_MODE -eq 1 ] &&
+	# 		devfreq_mid_perf "$path" ||
+	# 		devfreq_max_perf "$path"
+	# done &
 
 	# Set CPU governor to performance.
 	# performance governor in this case is only used for "flex"
@@ -726,12 +726,12 @@ performance_profile() {
 	# If lite mode enabled, use the default governor instead.
 	# device mitigation also will prevent performance gov to be
 	# applied (some device hates performance governor).
-	[ $LITE_MODE -eq 0 ] && [ $DEVICE_MITIGATION -eq 0 ] &&
-		change_cpu_gov performance ||
-		change_cpu_gov "$DEFAULT_CPU_GOV"
+	# [ $LITE_MODE -eq 0 ] && [ $DEVICE_MITIGATION -eq 0 ] &&
+	# 	change_cpu_gov performance ||
+	# 	change_cpu_gov "$DEFAULT_CPU_GOV"
 
-	# Force CPU to highest possible frequency.
-	[ -d /proc/ppm ] && cpufreq_ppm_max_perf || cpufreq_max_perf
+	# # Force CPU to highest possible frequency.
+	# [ -d /proc/ppm ] && cpufreq_ppm_max_perf || cpufreq_max_perf
 
 	# I/O Tweaks
 	for dir in /sys/block/mmcblk0 /sys/block/mmcblk1 /sys/block/sd*; do
