@@ -1,4 +1,6 @@
 #!/system/bin/sh
+# This still have some Encore function 
+# However this is out of Encore, so don't expect easy SYNC
 
 ###############################
 # DEFINE CONFIG
@@ -33,6 +35,12 @@ tweak() {
         echo "$1" > "$2" 2>/dev/null
         chmod 444 "$2" >/dev/null 2>&1
     fi
+}
+
+kakangkuh() {
+	[ ! -f "$2" ] && return 1
+	chmod 644 "$2" >/dev/null 2>&1
+	echo "$1" >"$2" 2>/dev/null
 }
 
 kill_all() {
@@ -90,6 +98,10 @@ which_maxfreq() {
 	tr ' ' '\n' <"$1" | sort -nr | head -n 1
 }
 
+which_minfreq() {
+	tr ' ' '\n' <"$1" | grep -v '^[[:space:]]*$' | sort -n | head -n 1
+}
+
 which_midfreq() {
 	total_opp=$(wc -w <"$1")
 	mid_opp=$(((total_opp + 1) / 2))
@@ -109,6 +121,14 @@ devfreq_mid_perf() {
 	mid_freq=$(which_midfreq "$1/available_frequencies")
 	tweak "$max_freq" "$1/max_freq"
 	tweak "$mid_freq" "$1/min_freq"
+}
+
+devfreq_unlock() {
+	[ ! -f "$1/available_frequencies" ] && return 1
+	max_freq=$(which_maxfreq "$1/available_frequencies")
+	min_freq=$(which_minfreq "$1/available_frequencies")
+	kakangkuh "$max_freq" "$1/max_freq"
+	kakangkuh "$min_freq" "$1/min_freq"
 }
 
 change_cpu_gov() {
@@ -147,6 +167,27 @@ cpufreq_max_perf() {
 		fi
 	done
 	chmod -f 444 /sys/devices/system/cpu/cpufreq/policy*/scaling_*_freq
+}
+
+cpufreq_ppm_unlock() {
+	cluster=0
+	for path in /sys/devices/system/cpu/cpufreq/policy*; do
+		cpu_maxfreq=$(<"$path/cpuinfo_max_freq")
+		cpu_minfreq=$(<"$path/cpuinfo_min_freq")
+		kakangkuh "$cluster $cpu_maxfreq" /proc/ppm/policy/hard_userlimit_max_cpu_freq
+		kakangkuh "$cluster $cpu_minfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
+		((cluster++))
+	done
+}
+
+cpufreq_unlock() {
+	for path in /sys/devices/system/cpu/*/cpufreq; do
+		cpu_maxfreq=$(<"$path/cpuinfo_max_freq")
+		cpu_minfreq=$(<"$path/cpuinfo_min_freq")
+		kakangkuh "$cpu_maxfreq" "$path/scaling_max_freq"
+		kakangkuh "$cpu_minfreq" "$path/scaling_min_freq"
+	done
+	chmod -f 644 /sys/devices/system/cpu/cpufreq/policy*/scaling_*_freq
 }
 
 ##################################
@@ -305,8 +346,53 @@ performance_basic() {
 # Balanced Profile (2)
 ##########################################
 balanced_basic() {
-    echo "Balanced Profile is not yet implemented."
-    # Add your balanced mode tweaks here in the future
+dnd_off
+
+    [ -f /sys/module/battery_saver/parameters/enabled ] && {
+        if grep -qo '[0-9]\+' /sys/module/battery_saver/parameters/enabled; then
+        kakangkuh 0 /sys/module/battery_saver/parameters/enabled
+        else
+        kakangkuh N /sys/module/battery_saver/parameters/enabled
+        fi
+    }
+
+    kakangkuh 1 /proc/sys/kernel/split_lock_mitigate
+
+    if [ -f "/sys/kernel/debug/sched_features" ]; then
+        kakangkuh NEXT_BUDDY /sys/kernel/debug/sched_features
+        kakangkuh TTWU_QUEUE /sys/kernel/debug/sched_features
+    fi
+
+    if [ -d "/dev/stune/" ]; then
+        kakangkuh 0 /dev/stune/top-app/schedtune.prefer_idle
+        kakangkuh 1 /dev/stune/top-app/schedtune.boost
+    fi
+
+    tp_path="/proc/touchpanel"
+    if [ -d "$tp_path" ]; then
+        kakangkuh 0 $tp_path/game_switch_enable
+        kakangkuh 1 $tp_path/oplus_tp_limit_enable
+        kakangkuh 1 $tp_path/oppo_tp_limit_enable
+        kakangkuh 0 $tp_path/oplus_tp_direction
+        kakangkuh 0 $tp_path/oppo_tp_direction
+    fi
+
+    kakangkuh 120 /proc/sys/vm/vfs_cache_pressure
+
+    for path in /sys/class/devfreq/*.ufshc \
+        /sys/class/devfreq/mmc*; do
+        devfreq_unlock "$path"
+    done &
+
+    # Restore the default CPU governor
+    change_cpu_gov "$DEFAULT_CPU_GOV"
+
+    # Unlock CPU frequency limits
+    if [ -d /proc/ppm ]; then
+        cpufreq_ppm_unlock
+    else
+        cpufreq_unlock
+    fi
 }
 
 ##########################################

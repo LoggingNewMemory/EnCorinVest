@@ -733,14 +733,14 @@ performance_profile() {
 	# # Force CPU to highest possible frequency.
 	# [ -d /proc/ppm ] && cpufreq_ppm_max_perf || cpufreq_max_perf
 
-	# I/O Tweaks
-	for dir in /sys/block/mmcblk0 /sys/block/mmcblk1 /sys/block/sd*; do
-		# Reduce heuristic read-ahead in exchange for I/O latency
-		apply 32 "$dir/queue/read_ahead_kb"
+	# # I/O Tweaks
+	# for dir in /sys/block/mmcblk0 /sys/block/mmcblk1 /sys/block/sd*; do
+	# 	# Reduce heuristic read-ahead in exchange for I/O latency
+	# 	apply 32 "$dir/queue/read_ahead_kb"
 
-		# Reduce the maximum number of I/O requests in exchange for latency
-		apply 32 "$dir/queue/nr_requests"
-	done &
+	# 	# Reduce the maximum number of I/O requests in exchange for latency
+	# 	apply 32 "$dir/queue/nr_requests"
+	# done &
 
 	case $SOC in
 	1) mediatek_performance ;;
@@ -756,69 +756,69 @@ performance_profile() {
 }
 
 normal_profile() {
-	if [ "$DND" = "1" ]; then
-		set_dnd 0
-	fi
+	# if [ "$DND" = "1" ]; then
+	# 	set_dnd 0
+	# fi
 
-	# Disable battery saver module
-	[ -f /sys/module/battery_saver/parameters/enabled ] && {
-		if grep -qo '[0-9]\+' /sys/module/battery_saver/parameters/enabled; then
-			apply 0 /sys/module/battery_saver/parameters/enabled
-		else
-			apply N /sys/module/battery_saver/parameters/enabled
-		fi
-	}
+	# # Disable battery saver module
+	# [ -f /sys/module/battery_saver/parameters/enabled ] && {
+	# 	if grep -qo '[0-9]\+' /sys/module/battery_saver/parameters/enabled; then
+	# 		apply 0 /sys/module/battery_saver/parameters/enabled
+	# 	else
+	# 		apply N /sys/module/battery_saver/parameters/enabled
+	# 	fi
+	# }
 
-	# Enable split lock mitigation
-	apply 1 /proc/sys/kernel/split_lock_mitigate
+	# # Enable split lock mitigation
+	# apply 1 /proc/sys/kernel/split_lock_mitigate
 
-	if [ -f "/sys/kernel/debug/sched_features" ]; then
-		# Consider scheduling tasks that are eager to run
-		apply NEXT_BUDDY /sys/kernel/debug/sched_features
+	# if [ -f "/sys/kernel/debug/sched_features" ]; then
+	# 	# Consider scheduling tasks that are eager to run
+	# 	apply NEXT_BUDDY /sys/kernel/debug/sched_features
 
-		# Schedule tasks on their origin CPU if possible
-		apply TTWU_QUEUE /sys/kernel/debug/sched_features
-	fi
+	# 	# Schedule tasks on their origin CPU if possible
+	# 	apply TTWU_QUEUE /sys/kernel/debug/sched_features
+	# fi
 
-	if [ -d "/dev/stune/" ]; then
-		# We are not concerned with prioritizing latency
-		apply 0 /dev/stune/top-app/schedtune.prefer_idle
+	# if [ -d "/dev/stune/" ]; then
+	# 	# We are not concerned with prioritizing latency
+	# 	apply 0 /dev/stune/top-app/schedtune.prefer_idle
 
-		# Mark top-app as boosted, find high-performing CPUs
-		apply 1 /dev/stune/top-app/schedtune.boost
-	fi
+	# 	# Mark top-app as boosted, find high-performing CPUs
+	# 	apply 1 /dev/stune/top-app/schedtune.boost
+	# fi
 
-	# Oppo/Oplus/Realme Touchpanel
-	tp_path="/proc/touchpanel"
-	if [ -d "$tp_path" ]; then
-		apply 0 $tp_path/game_switch_enable
-		apply 1 $tp_path/oplus_tp_limit_enable
-		apply 1 $tp_path/oppo_tp_limit_enable
-		apply 0 $tp_path/oplus_tp_direction
-		apply 0 $tp_path/oppo_tp_direction
-	fi
+	# # Oppo/Oplus/Realme Touchpanel
+	# tp_path="/proc/touchpanel"
+	# if [ -d "$tp_path" ]; then
+	# 	apply 0 $tp_path/game_switch_enable
+	# 	apply 1 $tp_path/oplus_tp_limit_enable
+	# 	apply 1 $tp_path/oppo_tp_limit_enable
+	# 	apply 0 $tp_path/oplus_tp_direction
+	# 	apply 0 $tp_path/oppo_tp_direction
+	# fi
 
-	# Memory Tweaks
-	apply 120 /proc/sys/vm/vfs_cache_pressure
+	# # Memory Tweaks
+	# apply 120 /proc/sys/vm/vfs_cache_pressure
 
-	# eMMC and UFS frequency
-	for path in /sys/class/devfreq/*.ufshc \
-		/sys/class/devfreq/mmc*; do
-		devfreq_unlock "$path"
-	done &
+	# # eMMC and UFS frequency
+	# for path in /sys/class/devfreq/*.ufshc \
+	# 	/sys/class/devfreq/mmc*; do
+	# 	devfreq_unlock "$path"
+	# done &
 
 	# Restore min CPU frequency
 	change_cpu_gov "$DEFAULT_CPU_GOV"
 	[ -d /proc/ppm ] && cpufreq_ppm_unlock || cpufreq_unlock
 
-	# I/O Tweaks
-	for dir in /sys/block/mmcblk0 /sys/block/mmcblk1 /sys/block/sd*; do
-		# Reduce heuristic read-ahead in exchange for I/O latency
-		apply 128 "$dir/queue/read_ahead_kb"
+	# # I/O Tweaks
+	# for dir in /sys/block/mmcblk0 /sys/block/mmcblk1 /sys/block/sd*; do
+	# 	# Reduce heuristic read-ahead in exchange for I/O latency
+	# 	apply 128 "$dir/queue/read_ahead_kb"
 
-		# Reduce the maximum number of I/O requests in exchange for latency
-		apply 64 "$dir/queue/nr_requests"
-	done &
+	# 	# Reduce the maximum number of I/O requests in exchange for latency
+	# 	apply 64 "$dir/queue/nr_requests"
+	# done &
 
 	case $SOC in
 	1) mediatek_normal ;;
