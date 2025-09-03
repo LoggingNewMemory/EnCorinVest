@@ -284,9 +284,6 @@ performance_basic() {
         tweak "step_wise" "$dir/policy"
     done
 
-    # Enable DND | External
-    dnd_on
-
     # Disable battery saver module
     [ -f /sys/module/battery_saver/parameters/enabled ] && {
         if grep -qo '[0-9]\+' /sys/module/battery_saver/parameters/enabled; then
