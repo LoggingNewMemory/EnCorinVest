@@ -22,7 +22,7 @@ soc_recognition_extra() {
 	}
 
 	[ -d /sys/kernel/tegra_gpu ] && {
-		SOC=7
+		SOC=6
 		ui_print "- Nvidia Tegra"
 		return 0
 	}
@@ -55,7 +55,7 @@ recognize_soc() {
 	*exynos* | *Exynos* | *EXYNOS* | *universal* | *samsung* | *erd* | *s5e*) SOC=3 ;;
 	*Unisoc* | *unisoc* | *ums*) SOC=4 ;;
 	*gs* | *Tensor* | *tensor*) SOC=5 ;;
-	*kirin*) SOC=8 ;;
+	*kirin*) SOC=7 ;;
 	esac
 
 	case "$SOC" in
@@ -64,8 +64,8 @@ recognize_soc() {
 	3) ui_print "- Exynos" ;;
 	4) ui_print "- Unisoc" ;;
 	5) ui_print "- Google Tensor" ;;
-	7) ui_print "- Nvidia Tegra" ;;
-	8) ui_print "- Kirin" ;;
+	6) ui_print "- Nvidia Tegra" ;;
+	7) ui_print "- Kirin" ;;
 	0) return 1 ;;
 	esac
 }
@@ -101,9 +101,9 @@ ui_print "RAM : $(free | grep Mem |  awk '{print $2}') "
 ui_print " "
 sleep 1.5
 
-# S=================================================================#
+# =============================
 # SOC Recognition and Configuration
-# S=================================================================#
+# =============================
 ui_print "------------------------------------"
 ui_print "        RECOGNIZING CHIPSET         "
 ui_print "------------------------------------"
@@ -113,8 +113,8 @@ ui_print "------------------------------------"
 # 3 = Exynos
 # 4 = Unisoc
 # 5 = Google Tensor
-# 7 = Nvidia Tegra
-# 8 = Kirin
+# 6 = Nvidia Tegra
+# 7 = Kirin
 
 # Recognize Chipset
 soc_recognition_extra
