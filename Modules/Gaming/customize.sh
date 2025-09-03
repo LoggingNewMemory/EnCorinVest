@@ -55,7 +55,6 @@ recognize_soc() {
 	*exynos* | *Exynos* | *EXYNOS* | *universal* | *samsung* | *erd* | *s5e*) SOC=3 ;;
 	*Unisoc* | *unisoc* | *ums*) SOC=4 ;;
 	*gs* | *Tensor* | *tensor*) SOC=5 ;;
-	*Intel* | *intel*) SOC=6 ;;
 	*kirin*) SOC=8 ;;
 	esac
 
@@ -65,7 +64,6 @@ recognize_soc() {
 	3) ui_print "- Exynos" ;;
 	4) ui_print "- Unisoc" ;;
 	5) ui_print "- Google Tensor" ;;
-	6) ui_print "- Intel" ;;
 	7) ui_print "- Nvidia Tegra" ;;
 	8) ui_print "- Kirin" ;;
 	0) return 1 ;;
@@ -115,7 +113,6 @@ ui_print "------------------------------------"
 # 3 = Exynos
 # 4 = Unisoc
 # 5 = Google Tensor
-# 6 = Intel
 # 7 = Nvidia Tegra
 # 8 = Kirin
 
