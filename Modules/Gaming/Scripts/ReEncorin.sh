@@ -218,6 +218,7 @@ cpufreq_min_perf() {
 ##################################
 performance_basic() {
     sync
+    dnd_on
 
     # I/O Tweaks
     for dir in /sys/block/*; do
@@ -365,7 +366,8 @@ performance_basic() {
 # Balanced Profile (2)
 ##########################################
 balanced_basic() {
-dnd_off
+    sync
+    dnd_off
 
     [ -f /sys/module/battery_saver/parameters/enabled ] && {
         if grep -qo '[0-9]\+' /sys/module/battery_saver/parameters/enabled; then
@@ -418,6 +420,7 @@ dnd_off
 # Powersave Profile (3)
 ##########################################
 powersave_basic() {
+    sync
     # In case someone need to go to powersave after performance
     dnd_off
 
