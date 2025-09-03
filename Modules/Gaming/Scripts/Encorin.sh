@@ -26,6 +26,12 @@ DEVICE_MITIGATION=$(grep '^DEVICE_MITIGATION=' "$ENCORIN_CONFIG" | cut -d'=' -f2
 DND=$(grep '^DND=' "$ENCORIN_CONFIG" | cut -d'=' -f2)
 
 ##############################
+# ADDED: Source External Script
+##############################
+MODULE_PATH="/data/adb/modules/EnCorinVest"
+source "$MODULE_PATH/Scripts/corin.sh"
+
+##############################
 # Begin Functions
 ##############################
 
@@ -514,7 +520,7 @@ exynos_normal() {
 	gpu_path="/sys/kernel/gpu"
 	[ -d "$gpu_path" ] && {
 		max_freq=$(which_maxfreq "$gpu_path/gpu_available_frequencies")
-		min_freq=$(which_minfreq "$gpu_path/gpu_available_frequencies")
+		min_freq=$(which_minfreq "$gpu_path/available_frequencies")
 		kakangkuh "$max_freq" "$gpu_path/gpu_max_clock"
 		kakangkuh "$min_freq" "$gpu_path/gpu_min_clock"
 	}
@@ -607,6 +613,7 @@ tensor_powersave() {
 # Performance Profile (1)
 ##################################
 performance_basic() {
+    corin_perf
     sync
     dnd_on
 
@@ -718,6 +725,7 @@ performance_basic() {
 # Balanced Profile (2)
 ##########################################
 balanced_basic() {
+    corin_balanced
     sync
     dnd_off
 
@@ -779,6 +787,7 @@ balanced_basic() {
 # Powersave Profile (3)
 ##########################################
 powersave_basic() {
+    corin_powersave
     sync
     dnd_off
 

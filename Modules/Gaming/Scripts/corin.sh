@@ -1,5 +1,10 @@
-MODULE_PATH="/data/adb/modules/EnCorinVest"
-source "$MODULE_PATH/Scripts/encorinFunctions.sh"
+tweak() {
+    if [ -e "$2" ]; then
+        chmod 644 "$2" >/dev/null 2>&1
+        echo "$1" > "$2" 2>/dev/null
+        chmod 444 "$2" >/dev/null 2>&1
+    fi
+}
 
 corin_perf() {
 # FreakZy Storage
@@ -49,7 +54,7 @@ cmd looper_stats enable
 settings put global low_power 0
 }
 
-corin_powersave_extra() {
+corin_powersave() {
 # FreakZy Storage
 
 tweak "deadline" "$deviceio/queue/scheduler"
