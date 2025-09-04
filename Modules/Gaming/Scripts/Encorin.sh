@@ -25,6 +25,9 @@ fi
 DEVICE_MITIGATION=$(grep '^DEVICE_MITIGATION=' "$ENCORIN_CONFIG" | cut -d'=' -f2)
 DND=$(grep '^DND=' "$ENCORIN_CONFIG" | cut -d'=' -f2)
 
+##############################
+# Path Variable
+##############################
 ipv4="/proc/sys/net/ipv4"
 
 ##############################
