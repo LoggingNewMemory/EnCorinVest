@@ -606,7 +606,6 @@ tensor_powersave() {
 # Performance Profile (1)
 ##################################
 performance_basic() {
-    corin_perf
     sync
     dnd_on
 
@@ -712,13 +711,14 @@ performance_basic() {
         5) tensor_performance ;;
         6) tegra_performance ;;
     esac
+    
+    corin_perf
 }
 
 ##########################################
 # Balanced Profile (2)
 ##########################################
 balanced_basic() {
-    corin_balanced
     sync
     dnd_off
 
@@ -774,13 +774,14 @@ balanced_basic() {
         5) tensor_normal ;;
         6) tegra_normal ;;
     esac
+    
+    corin_balanced
 }
 
 ##########################################
 # Powersave Profile (3)
 ##########################################
 powersave_basic() {
-    corin_powersave
     sync
     dnd_off
 
@@ -815,6 +816,8 @@ powersave_basic() {
         5) tensor_powersave ;;
         6) tegra_powersave ;;
     esac
+    
+    corin_powersave
 }
 
 ##########################################
