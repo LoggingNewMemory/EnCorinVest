@@ -1,7 +1,3 @@
-![Banner](https://github.com/user-attachments/assets/45d660bf-c534-49d8-bbed-77b3692236e7)
-
-Performance Module, Collaboration between CorinXMTKVest and Encore Tweaks
-
 Dev: Kanagawa Yamada <br />
 Support: Mediatek, Snapdragon, Exynos <br />
 
