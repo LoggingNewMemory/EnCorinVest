@@ -25,6 +25,8 @@ fi
 DEVICE_MITIGATION=$(grep '^DEVICE_MITIGATION=' "$ENCORIN_CONFIG" | cut -d'=' -f2)
 DND=$(grep '^DND=' "$ENCORIN_CONFIG" | cut -d'=' -f2)
 
+ipv4="/proc/sys/net/ipv4"
+
 ##############################
 # ADDED: Source External Script
 ##############################
@@ -614,11 +616,11 @@ performance_basic() {
         tweak 0 "$dir/queue/add_random"
     done &
 
-    tweak 1 /proc/sys/net/ipv4/tcp_low_latency
-    tweak 1 /proc/sys/net/ipv4/tcp_ecn
-    tweak 3 /proc/sys/net/ipv4/tcp_fastopen
-    tweak 1 /proc/sys/net/ipv4/tcp_sack
-    tweak 0 /proc/sys/net/ipv4/tcp_timestamps
+	tweak 1 "$ipv4/tcp_low_latency"
+	tweak 1 "$ipv4/tcp_ecn"
+	tweak 3 "$ipv4/tcp_fastopen"
+	tweak 1 "$ipv4/tcp_sack"
+	tweak 0 "$ipv4/tcp_timestamps"
     tweak 3 /proc/sys/kernel/perf_cpu_time_max_percent
     tweak 0 /proc/sys/kernel/sched_schedstats
     tweak 0 /proc/sys/kernel/task_cpustats_enable
