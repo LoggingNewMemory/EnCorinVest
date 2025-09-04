@@ -118,10 +118,6 @@ which_midfreq() {
 	tr ' ' '\n' <"$1" | grep -v '^[[:space:]]*$' | sort -nr | head -n $mid_opp | tail -n 1
 }
 
-mtk_gpufreq_maxfreq_index() {
-	awk -F'[][]' '{print $2}' "$1" | head -n 1
-}
-
 mtk_gpufreq_minfreq_index() {
 	awk -F'[][]' '{print $2}' "$1" | tail -n 1
 }
@@ -290,20 +286,15 @@ mediatek_performance() {
 	tweak -1 /proc/gpufreqv2/fix_target_opp_index
 
 	if [ "$LITE_MODE" -eq 1 ]; then
-		if [ -d /proc/gpufreqv2 ]; then
-			opp_freq_index=$(mtk_gpufreq_midfreq_index /proc/gpufreqv2/gpu_working_opp_table)
-		else
-			opp_freq_index=$(mtk_gpufreq_midfreq_index /proc/gpufreq/gpufreq_opp_dump)
-		fi
+    if [ -d /proc/gpufreqv2 ]; then
+        opp_freq_index=$(mtk_gpufreq_midfreq_index /proc/gpufreqv2/gpu_working_opp_table)
+    else
+        opp_freq_index=$(mtk_gpufreq_midfreq_index /proc/gpufreq/gpufreq_opp_dump)
+    fi
 	else
-		if [ -d /proc/gpufreqv2 ]; then
-			opp_freq_index=$(mtk_gpufreq_maxfreq_index /proc/gpufreqv2/gpu_working_opp_table)
-		else
-			opp_freq_index=$(mtk_gpufreq_maxfreq_index /proc/gpufreq/gpufreq_opp_dump)
-		fi
+		opp_freq_index=0
 	fi
 	tweak "$opp_freq_index" /sys/kernel/ged/hal/custom_boost_gpu_freq
-
 
 	# Disable GPU Power limiter
 	[ -f "/proc/gpufreq/gpufreq_power_limited" ] && {
